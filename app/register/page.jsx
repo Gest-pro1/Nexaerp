@@ -4,6 +4,7 @@ import React from "react"
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import Image from "next/image"
 
 const BRAZILIAN_STATES = [
   "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO",
@@ -39,14 +40,14 @@ const PLANS = [
     id: "standard",
     name: "Standart",
     monthlyPrice: 69.90,
-    annualPrice: 55.90,
+    annualPrice: 671.04, // 12 meses com 20% de desconto
     features: "1 Usuário · Até 50 Notas/Mês",
   },
   {
     id: "professional",
     name: "Profissional",
     monthlyPrice: 129.90,
-    annualPrice: 103.90,
+    annualPrice: 1247.04, // 12 meses com 20% de desconto
     features: "3 Usuário · Notas Ilimitadas",
     recommended: true,
   },
@@ -54,7 +55,7 @@ const PLANS = [
     id: "premium",
     name: "Premium +",
     monthlyPrice: 249.90,
-    annualPrice: 199.90,
+    annualPrice: 2399.04, // 12 meses com 20% de desconto
     features: "10 Usuário · Multi-Lojas",
   },
 ]
@@ -79,28 +80,18 @@ export default function CadastroPage() {
         <div className="space-y-8">
           {/* GestPro Logo */}
           <div className="flex items-center gap-3">
-            <div className="relative flex h-12 w-12 items-center justify-center">
-              <svg viewBox="0 0 48 48" className="h-12 w-12" fill="none">
-                <circle cx="24" cy="24" r="20" stroke="#F59E0B" strokeWidth="3" strokeDasharray="8 4" />
-                <circle cx="24" cy="24" r="10" fill="#F59E0B" />
-                <path d="M24 14v10l7 7" stroke="#1E3A8A" strokeWidth="2.5" strokeLinecap="round" />
-              </svg>
-            </div>
-            <span className="text-3xl font-bold">
-              <span className="text-amber-400">Gest</span>
-              <span className="text-white">Pro</span>
-            </span>
+            <Image src="/nova-logo.svg" alt="GestPro Logo" width={300} height={48} />
           </div>
           <div className="space-y-4">
-            <h1 className="text-balance text-3xl font-bold leading-tight text-white xl:text-4xl">
+            <h2 className=" text-gl font-bold leading-tight text-white xl:text-4xl">
               Gestão profissional para o seu negócio.
-            </h1>
+            </h2>
             <p className="text-sm text-white/80">
               Junte-se a centenas de empresas que usam o GestPro para vender mais e gerenciar melhor.
             </p>
           </div>
         </div>
-        <p className="text-sm text-white/60">
+        <p className="text-sm font-light text-white/70 ">
           © 2025 GestPro Tecnologia
         </p>
       </aside>
@@ -127,8 +118,9 @@ export default function CadastroPage() {
         <div className="mx-auto w-full max-w-2xl flex-1">
           {/* Back Button */}
           <button
+          onClick={()=> router.push("/")}
             type="button"
-            className="mb-6 inline-flex items-center gap-2 text-sm text-gray-500 transition-colors hover:text-gray-900"
+            className="mb-6 inline-flex items-center gap-2 text-sm text-gray-500 transition-colors hover:text-gray-900 cursor-pointer font-medium"
           >
             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -141,7 +133,7 @@ export default function CadastroPage() {
             <h2 className="text-2xl font-bold text-gray-900">
               Cadastre sua Empresa
             </h2>
-            <p className="mt-2 text-gray-500">
+            <p className="mt-2 text-gray-500 font-light ">
               Preencha os dados abaixo para criar sua conta e iniciar o período de teste.
             </p>
           </div>
@@ -159,7 +151,7 @@ export default function CadastroPage() {
 
               <div className="space-y-4">
                 <div>
-                  <label className="mb-1.5 block text-sm text-gray-500">
+                  <label className="mb-1.5 block text-sm text-gray-500 font-light">
                     Razão Social/Nome Fantasia <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -172,7 +164,7 @@ export default function CadastroPage() {
 
                 <div className="grid gap-4 md:grid-cols-2">
                   <div>
-                    <label className="mb-1.5 block text-sm text-gray-500">
+                    <label className="mb-1.5 block text-sm text-gray-500 font-light">
                       CNPJ <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -183,7 +175,7 @@ export default function CadastroPage() {
                     />
                   </div>
                   <div>
-                    <label className="mb-1.5 block text-sm text-gray-500">
+                    <label className="mb-1.5 block text-sm text-gray-500 font-light">
                       Telefone/WhatsApp <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
@@ -202,7 +194,7 @@ export default function CadastroPage() {
 
                 <div className="grid gap-4 md:grid-cols-2">
                   <div>
-                    <label className="mb-1.5 block text-sm text-gray-500">
+                    <label className="mb-1.5 block text-sm text-gray-500 font-light">
                       UF <span className="text-red-500">*</span>
                     </label>
                     <select
@@ -221,7 +213,7 @@ export default function CadastroPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="mb-1.5 block text-sm text-gray-500">
+                    <label className="mb-1.5 block text-sm text-gray-500 font-light">
                       Cidade <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
@@ -229,21 +221,14 @@ export default function CadastroPage() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                       </svg>
-                      <select
-                        value={selectedCity}
-                        onChange={(e) => setSelectedCity(e.target.value)}
-                        disabled={!selectedState}
+                      <input
+                        type="text"
+                        placeholder="Ex: São Paulo"     
+                    value={selectedCity}
+                    onChange={(e) => setSelectedCity(e.target.value)}
                         required
-                        className="w-full appearance-none rounded-lg border border-gray-200 bg-white py-3 pl-10 pr-4 text-sm text-gray-900 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:opacity-50 focus:border-[#1f3fbf] focus:outline-none focus:ring-2 focus:ring-[#1f3fbf]/20"
-                      >
-                        <option value="">Selecionar cidade</option>
-                        {selectedState && (
-                          <>
-                            <option value="capital">Capital</option>
-                            <option value="interior">Interior</option>
-                          </>
-                        )}
-                      </select>
+                        className="w-full rounded-lg border border-gray-200 bg-white py-3 pl-10 pr-4 text-sm text-gray-900 placeholder:text-gray-400 focus:border-[#1f3fbf] focus:outline-none focus:ring-2 focus:ring-[#1f3fbf]/20"
+                      />
                     </div>
                   </div>
                 </div>
@@ -261,7 +246,7 @@ export default function CadastroPage() {
 
               <div className="space-y-4">
                 <div>
-                  <label className="mb-1.5 block text-sm text-gray-500">
+                  <label className="mb-1.5 block text-sm text-gray-500 font-light">
                     Nome Completo <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -274,7 +259,7 @@ export default function CadastroPage() {
 
                 <div className="grid gap-4 md:grid-cols-2">
                   <div>
-                    <label className="mb-1.5 block text-sm text-gray-500">
+                    <label className="mb-1.5 block text-sm text-gray-500 font-light">
                       CPF <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -285,7 +270,7 @@ export default function CadastroPage() {
                     />
                   </div>
                   <div>
-                    <label className="mb-1.5 block text-sm text-gray-500">
+                    <label className="mb-1.5 block text-sm text-gray-500 font-light">
                       E-mail <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -379,8 +364,9 @@ export default function CadastroPage() {
                       isAnnual ? "bg-[#1f3fbf]" : "bg-gray-300"
                     }`}
                   >
+                    
                     <span
-                      className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${
+                      className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow-sm transition-transform left-0 ${
                         isAnnual ? "translate-x-6" : "translate-x-1"
                       }`}
                     />
@@ -412,7 +398,7 @@ export default function CadastroPage() {
                             {plan.name}
                           </p>
                           {plan.recommended && (
-                            <span className="rounded bg-amber-400 px-2 py-0.5 text-xs font-medium text-gray-900">
+                            <span className="rounded bg-green-500 px-2 py-0.5 text-xs font-medium text-white">
                               RECOMENDADO
                             </span>
                           )}
@@ -421,11 +407,13 @@ export default function CadastroPage() {
                           {plan.features}
                         </p>
                       </div>
-                      <div className="text-right">
+                      <div className="text-right font-light">
                         <p className={`text-lg font-bold ${isSelected ? "text-[#1f3fbf]" : "text-gray-900"}`}>
                           R${price.toFixed(2).replace(".", ",")}
                         </p>
-                        <p className="text-xs text-gray-500">/mês</p>
+                       <p className="text-xs text-gray-500  font-light">
+                          {isAnnual ? "/ano" : "/mês"}
+                        </p>
                       </div>
                     </button>
                   )
