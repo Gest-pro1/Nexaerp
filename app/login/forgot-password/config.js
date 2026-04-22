@@ -1,6 +1,6 @@
 
-let botao = document.getElementById('#botao-forgot');
-
-botao.addEventListener('click', function() {
-    alert('Botão clicado!');
-});
+let email = document.getElementById("email");
+ function handleSubmit(event) {
+   event.preventDefault();
+   console.log("Email:", email.value);      
+ }

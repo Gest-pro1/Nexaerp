@@ -73,7 +73,7 @@ export default function Main() {
   };
 
   return (
-    <main className="overflow-hidden">
+    <main className="overflow-hidden font-bevietnam font-medium">
       {/* ================= HERO ================= */}
       <section
         id="beneficios"

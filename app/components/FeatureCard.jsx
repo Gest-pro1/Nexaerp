@@ -27,7 +27,7 @@ export default function FeatureCard({ card, onSaibaMais }) {
           </h3>
         </div>
 
-        <p className="text-[#4B4B4B] text-base font-bevietnam">{card.desc}</p>
+        <p className="text-[#4B4B4B] text-base font-bevietnam font-light">{card.desc}</p>
       </div>
 
       <a
@@ -36,7 +36,7 @@ export default function FeatureCard({ card, onSaibaMais }) {
           e.preventDefault()
           onSaibaMais(card)
         }}
-        className="mt-6 text-[#00218F] font-bevietnam font-medium hover:underline"
+        className="mt-6 text-[#00218F] font-bevietnam font-mediun hover:underline"
       >
         Saiba Mais
       </a>

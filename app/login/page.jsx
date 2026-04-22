@@ -135,6 +135,7 @@ export default function LoginPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Digite seu e-mail"
+            required
             className="
               bg-[#F1F3F6]
               w-full
@@ -182,6 +183,7 @@ export default function LoginPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Digite sua senha"
+            required
             className="
               bg-[#F1F3F6]
               w-full
@@ -237,7 +239,7 @@ export default function LoginPage() {
       {/* BOTÃO */}
       <button 
       id="botao"
-        type=""
+        type="submit"
         className={`
           w-full
           h-9 sm:h-10
@@ -257,7 +259,7 @@ export default function LoginPage() {
     {/* CADASTRO */}
     <p className="text-center text-xs text-gray-500 font-light">
       Não tem uma conta?{" "}
-      <a className="font-medium text-indigo-600 hover:text-indigo-500 cursor-pointer">
+      <a onClick={() => router.push("/register")} className="font-medium text-indigo-600 hover:text-indigo-500 cursor-pointer">
         Faça seu cadastro
       </a>
     </p>

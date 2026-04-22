@@ -26,7 +26,7 @@ const router = useRouter();
   };
 
   return (
-    <header className="relative w-full min-h-screen flex flex-col items-center overflow-hidden">
+    <header className="relative w-full min-h-screen flex flex-col items-center overflow-hidden font-bevietnam font-medium">
       {/* ELIPSE AZUL */}
       <div
         className="
@@ -153,7 +153,7 @@ const router = useRouter();
              
                 Entrar
               </button>
-              <button className="bg-white text-purple-600 py-3 rounded-lg text-sm font-medium">
+              <button onClick={()=>router.push("/register")} className="bg-white text-purple-600 py-3 rounded-lg text-sm font-medium">
                 Criar Conta
               </button>
             </div>
@@ -209,7 +209,7 @@ const router = useRouter();
         </div>
 
         {/* GRID DE CARDS */}
-        <div className="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 font-bevietnam  font-medium">
           {/* CARD */}
           {[
             {

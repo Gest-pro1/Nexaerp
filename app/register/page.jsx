@@ -67,9 +67,108 @@ export default function CadastroPage() {
   const [selectedBusinessType, setSelectedBusinessType] = useState("lojas")
   const [selectedPlan, setSelectedPlan] = useState("professional")
   const [isAnnual, setIsAnnual] = useState(false)
+  const [cep, setCep] = useState("")
+  const [cepError, setCepError] = useState("")
+  const [cpf, setCpf] = useState("")
+  const [cpfError, setCpfError] = useState("")
+  const [email, setEmail] = useState("")
+  const [emailError, setEmailError] = useState("")
 
-  const handleSubmit = () => {
+  const validarCPF = (cpf) => {
+    cpf = cpf.replace(/[^\d]/g, '')
+    if (cpf.length !== 11 || /^(\d)\1+$/.test(cpf)) return false
+    let soma = 0
+    for (let i = 0; i < 9; i++) soma += parseInt(cpf.charAt(i)) * (10 - i)
+    let resto = 11 - (soma % 11)
+    if (resto === 10 || resto === 11) resto = 0
+    if (resto !== parseInt(cpf.charAt(9))) return false
+    soma = 0
+    for (let i = 0; i < 10; i++) soma += parseInt(cpf.charAt(i)) * (11 - i)
+    resto = 11 - (soma % 11)
+    if (resto === 10 || resto === 11) resto = 0
+    return resto === parseInt(cpf.charAt(10))
+  }
+
+  const validarEmail = (email) => {
+    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    return regex.test(email)
+  }
+
+  const handleCpfBlur = (e) => {
+    const value = e.target.value
+    setCpf(value)
+    if (value && !validarCPF(value)) {
+      setCpfError("CPF inválido.")
+    } else {
+      setCpfError("")
+    }
+  }
+
+  const handleEmailBlur = (e) => {
+    const value = e.target.value
+    setEmail(value)
+    if (value && !validarEmail(value)) {
+      setEmailError("E-mail inválido.")
+    } else {
+      setEmailError("")
+    }
+  }
+
+  const fetchCepData = async (cepValue) => {
+    const cleanCep = cepValue.replace(/\D/g, '')
+    if (cleanCep.length === 8) {
+      try {
+        const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`)
+        const data = await response.json()
+        if (!data.erro) {
+          setSelectedState(data.uf)
+          setSelectedCity(data.localidade)
+          setCepError("")
+        } else {
+          setCepError("CEP não encontrado.")
+        }
+      } catch (error) {
+        setCepError("Erro ao consultar CEP.")
+      }
+    } else if (cleanCep.length > 0) {
+      setCepError("CEP deve ter 8 dígitos.")
+    } else {
+      setCepError("")
+    }
+  }
+
+  const handleCepChange = (e) => {
+    const value = e.target.value
+    setCep(value)
+    fetchCepData(value)
+  }
+
+  const validateState = () => {
+    return BRAZILIAN_STATES.includes(selectedState)
+  }
+
+  const validateCity = () => {
+    return selectedCity.trim() !== ""
+  }
+
+  const handleSubmit = (e) => {
     e.preventDefault()
+    if (!validateState()) {
+      alert("UF inválida.")
+      return
+    }
+    if (!validateCity()) {
+      alert("Cidade é obrigatória.")
+      return
+    }
+    if (!validarCPF(cpf)) {
+      alert("CPF inválido.")
+      return
+    }
+    if (!validarEmail(email)) {
+      alert("E-mail inválido.")
+      return
+    }
     router.push("/sucesso")
   }
 
@@ -97,23 +196,9 @@ export default function CadastroPage() {
       </aside>
 
       {/* Right Content - Light Gray Background */}
-      <div className="flex min-h-screen flex-col bg-gray-50 p-4 md:p-8 lg:p-10">
+      <div className="flex min-h-screen flex-col bg-gray-50 p-4 md:p-8 lg:p-10 font-medium">
         {/* Mobile Header */}
-        <div className="mb-6 lg:hidden">
-          <div className="flex items-center gap-2">
-            <div className="relative flex h-10 w-10 items-center justify-center">
-              <svg viewBox="0 0 48 48" className="h-10 w-10" fill="none">
-                <circle cx="24" cy="24" r="20" stroke="#F59E0B" strokeWidth="3" strokeDasharray="8 4" />
-                <circle cx="24" cy="24" r="10" fill="#F59E0B" />
-                <path d="M24 14v10l7 7" stroke="#1E3A8A" strokeWidth="2.5" strokeLinecap="round" />
-              </svg>
-            </div>
-            <span className="text-2xl font-bold">
-              <span className="text-amber-500">Gest</span>
-              <span className="text-gray-900">Pro</span>
-            </span>
-          </div>
-        </div>
+     
 
         <div className="mx-auto w-full max-w-2xl flex-1">
           {/* Back Button */}
@@ -192,6 +277,21 @@ export default function CadastroPage() {
                   </div>
                 </div>
 
+                <div>
+                  <label className="mb-1.5 block text-sm text-gray-500 font-light">
+                    CEP <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="00000-000"
+                    value={cep}
+                    onChange={handleCepChange}
+                    required
+                    className="w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-[#1f3fbf] focus:outline-none focus:ring-2 focus:ring-[#1f3fbf]/20"
+                  />
+                  {cepError && <p className="mt-1 text-sm text-red-500">{cepError}</p>}
+                </div>
+
                 <div className="grid gap-4 md:grid-cols-2">
                   <div>
                     <label className="mb-1.5 block text-sm text-gray-500 font-light">
@@ -265,9 +365,13 @@ export default function CadastroPage() {
                     <input
                       type="text"
                       placeholder="000.000.000-00"
+                      value={cpf}
+                      onChange={(e) => setCpf(e.target.value)}
+                      onBlur={handleCpfBlur}
                       required
                       className="w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-[#1f3fbf] focus:outline-none focus:ring-2 focus:ring-[#1f3fbf]/20"
                     />
+                    {cpfError && <p className="mt-1 text-sm text-red-500">{cpfError}</p>}
                   </div>
                   <div>
                     <label className="mb-1.5 block text-sm text-gray-500 font-light">
@@ -276,9 +380,13 @@ export default function CadastroPage() {
                     <input
                       type="email"
                       placeholder="seuemail@dominio.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      onBlur={handleEmailBlur}
                       required
                       className="w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-[#1f3fbf] focus:outline-none focus:ring-2 focus:ring-[#1f3fbf]/20"
                     />
+                    {emailError && <p className="mt-1 text-sm text-red-500">{emailError}</p>}
                   </div>
                 </div>
               </div>
@@ -295,7 +403,7 @@ export default function CadastroPage() {
                 </h3>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
+              <div required className="grid gap-4 md:grid-cols-2">
                 {BUSINESS_TYPES.map((type) => {
                   const isSelected = selectedBusinessType === type.id
                   return (
@@ -348,7 +456,7 @@ export default function CadastroPage() {
             </div>
 
             {/* Escolha do Plano */}
-            <div className="rounded-2xl bg-white p-6 shadow-sm">
+            <div className="rounded-2xl bg-white p-6 shadow-sm px-2">
               <div className="mb-6 flex items-center justify-between">
                 <h3 className="font-semibold text-gray-900">
                   Escolha seu Plano <span className="text-red-500">*</span>
@@ -377,7 +485,9 @@ export default function CadastroPage() {
                 </div>
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-3 "
+              required
+              >
                 {PLANS.map((plan) => {
                   const isSelected = selectedPlan === plan.id
                   const price = isAnnual ? plan.annualPrice : plan.monthlyPrice
@@ -398,12 +508,12 @@ export default function CadastroPage() {
                             {plan.name}
                           </p>
                           {plan.recommended && (
-                            <span className="rounded bg-green-500 px-2 py-0.5 text-xs font-medium text-white">
+                            <span className="rounded bg-green-500 px-2 py-0.5   p-3 text-xs font-medium text-white">
                               RECOMENDADO
                             </span>
                           )}
                         </div>
-                        <p className="mt-1 text-xs text-gray-500">
+                        <p className="mt-1 text-xs text-gray-500">  
                           {plan.features}
                         </p>
                       </div>

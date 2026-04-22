@@ -18,7 +18,7 @@ export default function Footer() {
   };
 
   return (
-    <footer className="overflow-hidden">
+    <footer className="overflow-hidden font-benvietnam font-medium">
 
       {/* ================== SEÇÃO SEGMENTOS ================== */}
       <section className="bg-[#111827] py-14 px-4 sm:px-6 lg:px-8">
@@ -41,7 +41,7 @@ export default function Footer() {
         </div>
 
         {/* ================== CARDS ================== */}
-        <div className="mt-14 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl mx-auto">
+        <div className="mt-14 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl mx-auto font-bevietnam font-medium">
 
           {[
             {
