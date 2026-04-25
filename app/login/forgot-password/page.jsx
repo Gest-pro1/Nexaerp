@@ -2,10 +2,28 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";    
 import Image from "next/image";
+import { validateEmail, handleSubmit as validateAndLog } from "./config";
 
 export default function ForgotPasswordPage() {
    const [email, setEmail] = useState("");
    const router = useRouter();
+
+   // Função para lidar com o envio do formulário
+   const handleSubmit = (event) => {
+     event.preventDefault();
+     
+     if (!validateEmail(email)) {
+       alert("Email inválido! Por favor, insira um email válido.");
+       return;
+     }
+     
+     validateAndLog(email);
+     alert("Email válido! Instruções de recuperação de senha serão enviadas.");
+     // Aqui você pode adicionar a lógica para enviar as instruções de recuperação de senha
+   };
+
+   // Verifica se o email é válido
+   const isEmailValid = validateEmail(email);
 return(
    <>
      <div className="fixed inset-0 -z-10">
@@ -59,7 +77,7 @@ return(
 </section>
 
     {/* FORM */}
-    <form className="w-full flex flex-col gap-4 sm:mt-3 mb-2 p-3">
+    <form className="w-full flex flex-col gap-4 sm:mt-3 mb-2 p-3" onSubmit={handleSubmit}>
 
       {/* EMAIL */}
       <div> 
@@ -111,18 +129,21 @@ return(
       <button
       id="botao-forgot"
         type="submit"
-        className="
+        disabled={!isEmailValid}
+        className={`
           w-full
           h-9 sm:h-10
-          bg-indigo-600
           text-white
           font-semibold
           text-xs sm:text-sm
           rounded-lg
-          hover:bg-indigo-500
           transition
           mt-2
-        "
+          ${isEmailValid 
+            ? 'bg-indigo-600 hover:bg-indigo-500 cursor-pointer' 
+            : 'bg-gray-400 cursor-not-allowed opacity-60'
+          }
+        `}
       >
         Enviar Instruções
       </button>

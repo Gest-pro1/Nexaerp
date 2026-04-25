@@ -5,6 +5,7 @@ import React from "react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
+import { validarCadastro, validarCPF, validarEmail, validarCNPJ, validarTelefone, validarNome } from "./config"
 
 const BRAZILIAN_STATES = [
   "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO",
@@ -62,6 +63,12 @@ const PLANS = [
 
 export default function CadastroPage() {
   const router = useRouter()
+  const [razaoSocial, setRazaoSocial] = useState("")
+  const [razaoSocialError, setRazaoSocialError] = useState("")
+  const [cnpj, setCnpj] = useState("")
+  const [cnpjError, setCnpjError] = useState("")
+  const [telefone, setTelefone] = useState("")
+  const [telefoneError, setTelefoneError] = useState("")
   const [selectedState, setSelectedState] = useState("")
   const [selectedCity, setSelectedCity] = useState("")
   const [selectedBusinessType, setSelectedBusinessType] = useState("lojas")
@@ -69,29 +76,51 @@ export default function CadastroPage() {
   const [isAnnual, setIsAnnual] = useState(false)
   const [cep, setCep] = useState("")
   const [cepError, setCepError] = useState("")
+  const [nomeCompleto, setNomeCompleto] = useState("")
+  const [nomeCompletoError, setNomeCompletoError] = useState("")
   const [cpf, setCpf] = useState("")
   const [cpfError, setCpfError] = useState("")
   const [email, setEmail] = useState("")
   const [emailError, setEmailError] = useState("")
 
-  const validarCPF = (cpf) => {
-    cpf = cpf.replace(/[^\d]/g, '')
-    if (cpf.length !== 11 || /^(\d)\1+$/.test(cpf)) return false
-    let soma = 0
-    for (let i = 0; i < 9; i++) soma += parseInt(cpf.charAt(i)) * (10 - i)
-    let resto = 11 - (soma % 11)
-    if (resto === 10 || resto === 11) resto = 0
-    if (resto !== parseInt(cpf.charAt(9))) return false
-    soma = 0
-    for (let i = 0; i < 10; i++) soma += parseInt(cpf.charAt(i)) * (11 - i)
-    resto = 11 - (soma % 11)
-    if (resto === 10 || resto === 11) resto = 0
-    return resto === parseInt(cpf.charAt(10))
+  const handleRazaoSocialBlur = (e) => {
+    const value = e.target.value
+    setRazaoSocial(value)
+    if (value && value.trim().length < 3) {
+      setRazaoSocialError("Razão Social deve ter pelo menos 3 caracteres.")
+    } else {
+      setRazaoSocialError("")
+    }
   }
 
-  const validarEmail = (email) => {
-    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    return regex.test(email)
+  const handleCnpjBlur = (e) => {
+    const value = e.target.value
+    setCnpj(value)
+    if (value && !validarCNPJ(value)) {
+      setCnpjError("CNPJ inválido.")
+    } else {
+      setCnpjError("")
+    }
+  }
+
+  const handleTelefoneBlur = (e) => {
+    const value = e.target.value
+    setTelefone(value)
+    if (value && !validarTelefone(value)) {
+      setTelefoneError("Telefone inválido. Use formato: (00) 00000-0000")
+    } else {
+      setTelefoneError("")
+    }
+  }
+
+  const handleNomeCompletoBlur = (e) => {
+    const value = e.target.value
+    setNomeCompleto(value)
+    if (value && !validarNome(value)) {
+      setNomeCompletoError("Nome deve ter pelo menos 3 caracteres e sem números.")
+    } else {
+      setNomeCompletoError("")
+    }
   }
 
   const handleCpfBlur = (e) => {
@@ -153,22 +182,42 @@ export default function CadastroPage() {
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    if (!validateState()) {
-      alert("UF inválida.")
+
+    // Validação completa usando a função consolidada
+    const resultadoValidacao = validarCadastro({
+      razaoSocial,
+      cnpj,
+      telefone,
+      cep,
+      estado: selectedState,
+      cidade: selectedCity,
+      nomeCompleto,
+      cpf,
+      email,
+    })
+
+    if (!resultadoValidacao.valido) {
+      alert("Erro ao cadastrar:\n\n" + resultadoValidacao.erros.join("\n"))
+      console.log("Erros de validação:", resultadoValidacao.erros)
       return
     }
-    if (!validateCity()) {
-      alert("Cidade é obrigatória.")
-      return
-    }
-    if (!validarCPF(cpf)) {
-      alert("CPF inválido.")
-      return
-    }
-    if (!validarEmail(email)) {
-      alert("E-mail inválido.")
-      return
-    }
+
+    // Se passou em todas as validações, redireciona para a tela de sucesso
+    console.log("✓ Cadastro válido! Redirecionando para tela de sucesso...")
+    console.log("Dados do cadastro:", {
+      razaoSocial,
+      cnpj,
+      telefone,
+      cep,
+      estado: selectedState,
+      cidade: selectedCity,
+      tipoNegocio: selectedBusinessType,
+      nomeCompleto,
+      cpf,
+      email,
+      plano: selectedPlan,
+      tipoPlano: isAnnual ? "Anual" : "Mensal",
+    })
     router.push("/sucesso")
   }
 
@@ -242,9 +291,13 @@ export default function CadastroPage() {
                   <input
                     type="text"
                     placeholder="Ex: Mercado Silva LTDA"
+                    value={razaoSocial}
+                    onChange={(e) => setRazaoSocial(e.target.value)}
+                    onBlur={handleRazaoSocialBlur}
                     required
                     className="w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-[#1f3fbf] focus:outline-none focus:ring-2 focus:ring-[#1f3fbf]/20"
                   />
+                  {razaoSocialError && <p className="mt-1 text-sm text-red-500">{razaoSocialError}</p>}
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-2">
@@ -255,9 +308,13 @@ export default function CadastroPage() {
                     <input
                       type="text"
                       placeholder="00.000.000/0001-00"
+                      value={cnpj}
+                      onChange={(e) => setCnpj(e.target.value)}
+                      onBlur={handleCnpjBlur}
                       required
                       className="w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-[#1f3fbf] focus:outline-none focus:ring-2 focus:ring-[#1f3fbf]/20"
                     />
+                    {cnpjError && <p className="mt-1 text-sm text-red-500">{cnpjError}</p>}
                   </div>
                   <div>
                     <label className="mb-1.5 block text-sm text-gray-500 font-light">
@@ -270,10 +327,14 @@ export default function CadastroPage() {
                       <input
                         type="tel"
                         placeholder="(00) 00000-0000"
+                        value={telefone}
+                        onChange={(e) => setTelefone(e.target.value)}
+                        onBlur={handleTelefoneBlur}
                         required
                         className="w-full rounded-lg border border-gray-200 bg-white py-3 pl-10 pr-4 text-sm text-gray-900 placeholder:text-gray-400 focus:border-[#1f3fbf] focus:outline-none focus:ring-2 focus:ring-[#1f3fbf]/20"
                       />
                     </div>
+                    {telefoneError && <p className="mt-1 text-sm text-red-500">{telefoneError}</p>}
                   </div>
                 </div>
 
@@ -352,9 +413,13 @@ export default function CadastroPage() {
                   <input
                     type="text"
                     placeholder="Ex: João da Silva"
+                    value={nomeCompleto}
+                    onChange={(e) => setNomeCompleto(e.target.value)}
+                    onBlur={handleNomeCompletoBlur}
                     required
                     className="w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-[#1f3fbf] focus:outline-none focus:ring-2 focus:ring-[#1f3fbf]/20"
                   />
+                  {nomeCompletoError && <p className="mt-1 text-sm text-red-500">{nomeCompletoError}</p>}
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-2">

@@ -1,10 +1,65 @@
 "use client";
 import React, { useState } from "react";                
-import Image from "next/image"; 
+import Image from "next/image";
+import { validarResetSenha, getMensagemForcaSenha } from "./resetConfig";
 
-export default function ForgotPasswordPage() {
+export default function ResetPasswordPage() {
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
+    const [passwordError, setPasswordError] = useState("");
+    const [confirmPasswordError, setConfirmPasswordError] = useState("");
+    const [forcaSenha, setForcaSenha] = useState({});
+    const [mensagemForca, setMensagemForca] = useState("");
+
+    const handlePasswordChange = (e) => {
+      const value = e.target.value;
+      setPassword(value);
+      
+      // Atualizar força da senha em tempo real
+      if (value) {
+        const validacao = validarResetSenha(value, confirmPassword);
+        setForcaSenha(validacao.forcaSenha);
+        setMensagemForca(getMensagemForcaSenha(validacao.forcaSenha).mensagem);
+        setPasswordError("");
+      } else {
+        setForcaSenha({});
+        setMensagemForca("");
+      }
+    };
+
+    const handleConfirmPasswordChange = (e) => {
+      const value = e.target.value;
+      setConfirmPassword(value);
+      
+      if (value) {
+        if (value !== password) {
+          setConfirmPasswordError("As senhas não conferem.");
+        } else {
+          setConfirmPasswordError("");
+        }
+      } else {
+        setConfirmPasswordError("");
+      }
+    };
+
+    const handleSubmit = (e) => {
+      e.preventDefault();
+
+      // Validação completa
+      const validacao = validarResetSenha(password, confirmPassword);
+
+      if (!validacao.valido) {
+        alert("Erro ao redefinir senha:\n\n" + validacao.erros.join("\n"));
+        console.log("Erros de validação:", validacao.erros);
+        return;
+      }
+
+      // Se passou em todas as validações
+      console.log("✓ Senha redefinida com sucesso!");
+      console.log("Nova senha foi definida corretamente.");
+      alert("Senha redefinida com sucesso!");
+      // Aqui você pode adicionar a lógica para enviar a nova senha para o servidor
+    };
 return(
    <>
      <div className="fixed inset-0 -z-10">
@@ -56,9 +111,9 @@ return(
 </section>
 
     {/* FORM */}
-    <form className="w-full flex flex-col gap-4 sm:mt-3 mb-2 p-3">
+    <form className="w-full flex flex-col gap-4 sm:mt-3 mb-2 p-3" onSubmit={handleSubmit}>
 
-      {/* EMAIL */}
+      {/* SENHA */}
       <div> 
         <label className="block text-xs font-medium text-gray-900 mb-1.5">
         Nova Senha
@@ -67,8 +122,9 @@ return(
           <input
             type="password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={handlePasswordChange}
             placeholder="Digite sua nova senha"
+            required
             className="
               bg-[#F1F3F6]
               w-full
@@ -102,6 +158,37 @@ return(
             </svg>
           </span>
         </div>
+        {password && (
+          <div className="mt-2">
+            <div className="flex items-center gap-2">
+              <p className="text-xs text-gray-600">Força da senha:</p>
+              <p className={`text-xs font-medium ${
+                Object.values(forcaSenha).every(v => v) ? 'text-green-600' :
+                Object.values(forcaSenha).filter(v => v).length >= 3 ? 'text-yellow-600' :
+                'text-red-600'
+              }`}>
+                {mensagemForca}
+              </p>
+            </div>
+            <ul className="mt-1 text-xs text-gray-600 space-y-1">
+              <li className={forcaSenha.minimo8Caracteres ? 'text-green-600' : 'text-red-600'}>
+                ✓ Mínimo 8 caracteres
+              </li>
+              <li className={forcaSenha.temMaiuscula ? 'text-green-600' : 'text-red-600'}>
+                ✓ Contém letra maiúscula
+              </li>
+              <li className={forcaSenha.temMinuscula ? 'text-green-600' : 'text-red-600'}>
+                ✓ Contém letra minúscula
+              </li>
+              <li className={forcaSenha.temNumero ? 'text-green-600' : 'text-red-600'}>
+                ✓ Contém número
+              </li>
+              <li className={forcaSenha.temEspecial ? 'text-green-600' : 'text-red-600'}>
+                ✓ Contém caractere especial (!@#$%^&*)
+              </li>
+            </ul>
+          </div>
+        )}
       </div>
         {/* Confirmar Senha */}
       <div>
@@ -112,8 +199,9 @@ return(
           <input
             type="password"
             value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
+            onChange={handleConfirmPasswordChange}
             placeholder="Confirme sua nova senha"
+            required
             className="
               bg-[#F1F3F6]
               w-full
@@ -146,22 +234,29 @@ return(
             </svg>
           </span>
         </div>
+        {confirmPasswordError && <p className="mt-1 text-sm text-red-500">{confirmPasswordError}</p>}
+        {confirmPassword && password === confirmPassword && (
+          <p className="mt-1 text-sm text-green-500">✓ Senhas conferem</p>
+        )}
       </div>
           {/* BOTÃO */}
       <button
         type="submit"
-        className="
+        disabled={!password || !confirmPassword || confirmPasswordError || password !== confirmPassword}
+        className={`
           w-full
           h-9 sm:h-10
-          bg-indigo-600
           text-white
           font-semibold
           text-xs sm:text-sm
           rounded-lg
-          hover:bg-indigo-500
           transition
           mt-2
-        "
+          ${(!password || !confirmPassword || confirmPasswordError || password !== confirmPassword)
+            ? 'bg-gray-400 cursor-not-allowed opacity-60'
+            : 'bg-indigo-600 hover:bg-indigo-500 cursor-pointer'
+          }
+        `}
       >
         Redefinir Senha
       </button>
