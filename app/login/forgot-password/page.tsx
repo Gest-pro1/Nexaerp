@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";    
 import Image from "next/image";
 import { validateEmail, handleSubmit as validateAndLog } from "./config";
@@ -9,7 +9,7 @@ export default function ForgotPasswordPage() {
    const router = useRouter();
 
    // Função para lidar com o envio do formulário
-   const handleSubmit = (event) => {
+   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
      event.preventDefault();
      
      if (!validateEmail(email)) {

@@ -17,30 +17,44 @@ export const validarCPF = (cpf) => {
 // Validação de CNPJ
 export const validarCNPJ = (cnpj) => {
   cnpj = cnpj.replace(/[^\d]/g, "");
+  
+  // Validar comprimento e sequências iguais
   if (cnpj.length !== 14 || /^(\d)\1+$/.test(cnpj)) return false;
+  
+  // Calcular primeiro dígito verificador
   let tamanho = cnpj.length - 2;
   let numeros = cnpj.substring(0, tamanho);
   let digitos = cnpj.substring(tamanho);
   let soma = 0;
-  let pos = 0;
+  let multiplicador = 2;
+  
   for (let i = tamanho - 1; i >= 0; i--) {
-    pos++;
-    soma += numeros.charAt(i) * Math.pow(2, (pos % 8));
-    if (pos === 8) pos = 0;
+    soma += parseInt(numeros.charAt(i)) * multiplicador;
+    multiplicador++;
+    if (multiplicador === 10) multiplicador = 2;
   }
-  let resultado = soma % 11 < 2 ? 0 : 11 - (soma % 11);
-  if (resultado !== parseInt(digitos.charAt(0))) return false;
+  
+  let resto = soma % 11;
+  let dv1 = resto < 2 ? 0 : 11 - resto;
+  
+  if (dv1 !== parseInt(digitos.charAt(0))) return false;
+  
+  // Calcular segundo dígito verificador
   tamanho = tamanho + 1;
   numeros = cnpj.substring(0, tamanho);
   soma = 0;
-  pos = 0;
+  multiplicador = 2;
+  
   for (let i = tamanho - 1; i >= 0; i--) {
-    pos++;
-    soma += numeros.charAt(i) * Math.pow(2, (pos % 8));
-    if (pos === 8) pos = 0;
+    soma += parseInt(numeros.charAt(i)) * multiplicador;
+    multiplicador++;
+    if (multiplicador === 10) multiplicador = 2;
   }
-  resultado = soma % 11 < 2 ? 0 : 11 - (soma % 11);
-  return resultado === parseInt(digitos.charAt(1));
+  
+  resto = soma % 11;
+  let dv2 = resto < 2 ? 0 : 11 - resto;
+  
+  return dv2 === parseInt(digitos.charAt(1));
 };
 
 // Validação de Email

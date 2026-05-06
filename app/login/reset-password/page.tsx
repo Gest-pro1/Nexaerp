@@ -1,17 +1,26 @@
 "use client";
-import React, { useState } from "react";                
+import React, { useState, ChangeEvent, FormEvent } from "react";                
 import Image from "next/image";
 import { validarResetSenha, getMensagemForcaSenha } from "./resetConfig";
+
+interface ForcaSenhaState {
+  minimo8Caracteres?: boolean
+  temMaiuscula?: boolean
+  temMinuscula?: boolean
+  temNumero?: boolean
+  temEspecial?: boolean
+  [key: string]: boolean | undefined
+}
 
 export default function ResetPasswordPage() {
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
     const [passwordError, setPasswordError] = useState("");
     const [confirmPasswordError, setConfirmPasswordError] = useState("");
-    const [forcaSenha, setForcaSenha] = useState({});
+    const [forcaSenha, setForcaSenha] = useState<ForcaSenhaState>({});
     const [mensagemForca, setMensagemForca] = useState("");
 
-    const handlePasswordChange = (e) => {
+    const handlePasswordChange = (e: ChangeEvent<HTMLInputElement>) => {
       const value = e.target.value;
       setPassword(value);
       
@@ -27,7 +36,7 @@ export default function ResetPasswordPage() {
       }
     };
 
-    const handleConfirmPasswordChange = (e) => {
+    const handleConfirmPasswordChange = (e: ChangeEvent<HTMLInputElement>) => {
       const value = e.target.value;
       setConfirmPassword(value);
       
@@ -42,7 +51,7 @@ export default function ResetPasswordPage() {
       }
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
       e.preventDefault();
 
       // Validação completa
@@ -242,7 +251,7 @@ return(
           {/* BOTÃO */}
       <button
         type="submit"
-        disabled={!password || !confirmPassword || confirmPasswordError || password !== confirmPassword}
+        disabled={!password || !confirmPassword || !!confirmPasswordError || password !== confirmPassword}
         className={`
           w-full
           h-9 sm:h-10

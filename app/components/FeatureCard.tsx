@@ -2,7 +2,19 @@
 import React from 'react'
 import Image from 'next/image'
 
-export default function FeatureCard({ card, onSaibaMais }) {
+interface Card {
+  icon: string
+  title: string
+  desc: string
+  modalText: string
+}
+
+interface FeatureCardProps {
+  card: Card
+  onSaibaMais: (card: Card) => void
+}
+
+export default function FeatureCard({ card, onSaibaMais }: FeatureCardProps) {
   return (
     <div
       className="

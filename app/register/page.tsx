@@ -2,7 +2,7 @@
 
 import React from "react"
 
-import { useState } from "react"
+import { useState, ChangeEvent, FormEvent } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { validarCadastro, validarCPF, validarEmail, validarCNPJ, validarTelefone, validarNome } from "./config"
@@ -83,7 +83,7 @@ export default function CadastroPage() {
   const [email, setEmail] = useState("")
   const [emailError, setEmailError] = useState("")
 
-  const handleRazaoSocialBlur = (e) => {
+  const handleRazaoSocialBlur = (e: ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value
     setRazaoSocial(value)
     if (value && value.trim().length < 3) {
@@ -93,7 +93,7 @@ export default function CadastroPage() {
     }
   }
 
-  const handleCnpjBlur = (e) => {
+  const handleCnpjBlur = (e: ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value
     setCnpj(value)
     if (value && !validarCNPJ(value)) {
@@ -103,7 +103,7 @@ export default function CadastroPage() {
     }
   }
 
-  const handleTelefoneBlur = (e) => {
+  const handleTelefoneBlur = (e: ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value
     setTelefone(value)
     if (value && !validarTelefone(value)) {
@@ -113,7 +113,7 @@ export default function CadastroPage() {
     }
   }
 
-  const handleNomeCompletoBlur = (e) => {
+  const handleNomeCompletoBlur = (e: ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value
     setNomeCompleto(value)
     if (value && !validarNome(value)) {
@@ -123,7 +123,7 @@ export default function CadastroPage() {
     }
   }
 
-  const handleCpfBlur = (e) => {
+  const handleCpfBlur = (e: ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value
     setCpf(value)
     if (value && !validarCPF(value)) {
@@ -133,7 +133,7 @@ export default function CadastroPage() {
     }
   }
 
-  const handleEmailBlur = (e) => {
+  const handleEmailBlur = (e: ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value
     setEmail(value)
     if (value && !validarEmail(value)) {
@@ -143,15 +143,15 @@ export default function CadastroPage() {
     }
   }
 
-  const fetchCepData = async (cepValue) => {
+  const fetchCepData = async (cepValue: string): Promise<void> => {
     const cleanCep = cepValue.replace(/\D/g, '')
     if (cleanCep.length === 8) {
       try {
         const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`)
-        const data = await response.json()
+        const data = await response.json() as { erro?: boolean; uf?: string; localidade?: string }
         if (!data.erro) {
-          setSelectedState(data.uf)
-          setSelectedCity(data.localidade)
+          setSelectedState(data.uf || "")
+          setSelectedCity(data.localidade || "")
           setCepError("")
         } else {
           setCepError("CEP não encontrado.")
@@ -166,7 +166,7 @@ export default function CadastroPage() {
     }
   }
 
-  const handleCepChange = (e) => {
+  const handleCepChange = (e: ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value
     setCep(value)
     fetchCepData(value)
@@ -180,7 +180,7 @@ export default function CadastroPage() {
     return selectedCity.trim() !== ""
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
 
     // Validação completa usando a função consolidada
@@ -234,7 +234,7 @@ export default function CadastroPage() {
             <h2 className=" text-gl font-bold leading-tight text-white xl:text-4xl">
               Gestão profissional para o seu negócio.
             </h2>
-            <p className="text-sm text-white/80">
+            <p className=" text-white/80 font-medium text-2xl">
               Junte-se a centenas de empresas que usam o GestPro para vender mais e gerenciar melhor.
             </p>
           </div>
@@ -468,7 +468,7 @@ export default function CadastroPage() {
                 </h3>
               </div>
 
-              <div required className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-4 md:grid-cols-2">
                 {BUSINESS_TYPES.map((type) => {
                   const isSelected = selectedBusinessType === type.id
                   return (
@@ -550,9 +550,7 @@ export default function CadastroPage() {
                 </div>
               </div>
 
-              <div className="space-y-3 "
-              required
-              >
+              <div className="space-y-3">
                 {PLANS.map((plan) => {
                   const isSelected = selectedPlan === plan.id
                   const price = isAnnual ? plan.annualPrice : plan.monthlyPrice

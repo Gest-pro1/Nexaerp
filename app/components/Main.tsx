@@ -7,17 +7,25 @@ import { RadioGroup } from '@headlessui/react';
 import { CheckCircleIcon, CheckIcon } from '@heroicons/react/20/solid';
 
 /* ================= UTIL ================= */
-function classNames(...classes) {
+function classNames(...classes: (string | false | undefined)[]): string {
   return classes.filter(Boolean).join(' ');
 }
 
 /* ================= DATA ================= */
 const frequencies = [
-  { value: 'Mês', label: 'Mês', priceSuffix: '/Mês' },
-  { value: 'Ano', label: 'Ano', priceSuffix: '/Ano' },
+  { value: 'Mês' as const, label: 'Mês', priceSuffix: '/Mês' },
+  { value: 'Ano' as const, label: 'Ano', priceSuffix: '/Ano' },
 ];
 
-const tiers = [
+interface Tier {
+  name: string
+  id: string
+  price: { Mês: string; Ano: string }
+  description: string
+  features: string[]
+}
+
+const tiers: Tier[] = [
   {
     name: 'Stardart',
     id: 'tier-standard',
@@ -67,7 +75,7 @@ export default function Main() {
   const [frequency, setFrequency] = useState(frequencies[0]);
   const [selectedPlan, setSelectedPlan] = useState(tiers[1]);
 
-  const handleSelectPlan = (tier) => {
+  const handleSelectPlan = (tier: Tier) => {
     console.log('Plano escolhido:', tier.name);
     console.log('Frequência:', frequency.value);
   };

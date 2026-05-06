@@ -2,7 +2,19 @@
 import React from 'react'
 import Image from 'next/image'
 
-export default function Modal({ open, content, onClose }) {
+interface ModalContent {
+  icon: string
+  title: string
+  modalText: string
+}
+
+interface ModalProps {
+  open: boolean
+  content: ModalContent | null
+  onClose: () => void
+}
+
+export default function Modal({ open, content, onClose }: ModalProps) {
   if (!open || !content) return null
 
   return (

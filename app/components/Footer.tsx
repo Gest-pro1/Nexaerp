@@ -8,7 +8,7 @@ import menu from '../config/menu';
 
 
 export default function Footer() {
-  const handleScroll = (id) => {
+  const handleScroll = (id: string) => {
     const el = document.getElementById(id);
     if (el) {
       const offset = 80;

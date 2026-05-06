@@ -6,13 +6,20 @@ import FeatureCard from './FeatureCard';
 import Modal from './Modal';
 import { useRouter } from 'next/navigation';
 
+interface Card {
+  title: string
+  icon: string
+  desc: string
+  modalText: string
+}
+
 export default function Header() {
   const [open, setOpen] = useState(false);
-const router = useRouter();
+  const router = useRouter();
   const [modalOpen, setModalOpen] = useState(false);
-  const [modalContent, setModalContent] = useState(null);
+  const [modalContent, setModalContent] = useState<Card | null>(null);
 
-  const handleScroll = (id) => {
+  const handleScroll = (id: string) => {
     const el = document.getElementById(id);
     if (el) {
       const rect = el.getBoundingClientRect();
