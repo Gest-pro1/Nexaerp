@@ -20,7 +20,7 @@ const configuration = [
   { name: "Sair", href: "#", icon: ArrowRightStartOnRectangleIcon },
 ];
 
-function classNames(...classes : string[]) {
+function classNames(...classes: string[]) {
   return classes.filter(Boolean).join(" ");
 }
 
@@ -89,10 +89,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       <div className="flex-1 flex flex-col">
 
         {/* 🔝 HEADER */}
-        <header className="bg-white-500 px-6 py-3 flex items-center justify-between border-2 border-gray-200">
+        <header className="px-6 py-3 flex items-center justify-between border-b border-gray-200 bg-white">
           
           {/* Busca */}
-          <div className="flex items-center bg-gray-100 rounded-lg px-4 py-2 w-100">
+          <div className="flex items-center bg-gray-100 rounded-lg px-4 py-2 w-80">
             <MagnifyingGlassIcon className="w-5 h-5 text-gray-400 mr-2" />
             <input
               type="text"
@@ -123,10 +123,16 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 className="w-10 h-10 rounded-full"
               />
 
-              <ChevronDownIcon className="w-4 h-4 text-white" />
+              <ChevronDownIcon className="w-4 h-4 text-gray-600" />
             </div>
           </div>
         </header>
+
+        {/* 🧩 CONTEÚDO DA PÁGINA */}
+        <main className="flex-1 flex">
+          {children}
+        </main>
+
       </div>
     </div>
   );
