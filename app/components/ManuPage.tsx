@@ -26,9 +26,10 @@ function classNames(...classes: string[]) {
 
 interface AdminLayoutProps {
   children?: React.ReactNode;
+  notificacoes?: number;
 }
 
-export default function AdminLayout({ children }: AdminLayoutProps) {
+export default function AdminLayout({ children, notificacoes = 0 }: AdminLayoutProps) {
   return (
     <div className="flex h-screen">
 
@@ -105,9 +106,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           <div className="flex items-center gap-6">
             <div className="relative">
               <BellIcon className="w-6 h-6 text-black" />
-              <span className="absolute -top-1 -right-1 bg-yellow-400 text-xs font-medium px-1 rounded-full">
-                3
-              </span>
+              {notificacoes > 0 && (
+                <span className="absolute -top-1 -right-1 bg-yellow-400 text-xs font-medium px-1 rounded-full">
+                  {notificacoes}
+                </span>
+              )}
             </div>
 
             <div className="flex items-center gap-3">

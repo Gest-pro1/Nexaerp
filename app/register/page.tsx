@@ -218,6 +218,29 @@ export default function CadastroPage() {
       plano: selectedPlan,
       tipoPlano: isAnnual ? "Anual" : "Mensal",
     })
+
+    // Dispara evento para notificar o admin sobre a nova solicitação
+    const novaSolicitacao = {
+      nomeEmpresa: razaoSocial,
+      cnpj: cnpj,
+      email: email,
+      nomeRepresentante: nomeCompleto,
+      telefone: telefone,
+      tipoNegocio: selectedBusinessType,
+      plano: selectedPlan,
+      tipoPlano: isAnnual ? "Anual" : "Mensal",
+      descricao: `Novo cadastro: ${razaoSocial} - ${selectedBusinessType}`,
+      dataSubmissao: new Date().toLocaleString('pt-BR')
+    };
+
+    // Envia os dados para localStorage e dispara evento
+    const solicitacoes = JSON.parse(localStorage.getItem('solicitacoes') || '[]');
+    solicitacoes.push(novaSolicitacao);
+    localStorage.setItem('solicitacoes', JSON.stringify(solicitacoes));
+
+    // Dispara evento customizado
+    window.dispatchEvent(new CustomEvent('novaSolicitacao', { detail: novaSolicitacao }));
+
     router.push("/sucesso")
   }
 
