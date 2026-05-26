@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
-import { usePathname } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { RadioGroup } from '@headlessui/react';
 import { CheckCircleIcon, CheckIcon } from '@heroicons/react/20/solid';
 
@@ -72,12 +72,12 @@ const tiers: Tier[] = [
 
 /* ================= COMPONENT ================= */
 export default function Main() {
+  const router = useRouter();
   const [frequency, setFrequency] = useState(frequencies[0]);
   const [selectedPlan, setSelectedPlan] = useState(tiers[1]);
 
   const handleSelectPlan = (tier: Tier) => {
-    console.log('Plano escolhido:', tier.name);
-    console.log('Frequência:', frequency.value);
+    router.push('/register');
   };
 
   return (

@@ -241,7 +241,15 @@ export default function CadastroPage() {
     // Dispara evento customizado
     window.dispatchEvent(new CustomEvent('novaSolicitacao', { detail: novaSolicitacao }));
 
-    router.push("/sucesso")
+    // Redirecionar para pagamento com os dados do plano
+    const planSelected = PLANS.find(p => p.id === selectedPlan);
+    const planName = planSelected?.name || 'Profissional';
+    const price = isAnnual ? planSelected?.annualPrice : planSelected?.monthlyPrice;
+    const frequency = isAnnual ? 'Ano' : 'Mês';
+    const formattedPrice = `R$${price?.toLocaleString('pt-BR')}`;
+
+    const paymentUrl = `/payment?plan=${encodeURIComponent(planName)}&frequency=${frequency}&price=${encodeURIComponent(formattedPrice)}&company=${encodeURIComponent(razaoSocial)}&email=${encodeURIComponent(email)}`;
+    router.push(paymentUrl);
   }
 
   return (
