@@ -41,14 +41,14 @@ const PLANS = [
     id: "standard",
     name: "Standart",
     monthlyPrice: 69.90,
-    annualPrice: 671.04, // 12 meses com 20% de desconto
+    annualPrice: 671.04,
     features: "1 Usuário · Até 50 Notas/Mês",
   },
   {
     id: "professional",
     name: "Profissional",
     monthlyPrice: 129.90,
-    annualPrice: 1247.04, // 12 meses com 20% de desconto
+    annualPrice: 1247.04,
     features: "3 Usuário · Notas Ilimitadas",
     recommended: true,
   },
@@ -56,7 +56,7 @@ const PLANS = [
     id: "premium",
     name: "Premium +",
     monthlyPrice: 249.90,
-    annualPrice: 2399.04, // 12 meses com 20% de desconto
+    annualPrice: 2399.04,
     features: "10 Usuário · Multi-Lojas",
   },
 ]
@@ -172,18 +172,9 @@ export default function CadastroPage() {
     fetchCepData(value)
   }
 
-  const validateState = () => {
-    return BRAZILIAN_STATES.includes(selectedState)
-  }
-
-  const validateCity = () => {
-    return selectedCity.trim() !== ""
-  }
-
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
 
-    // Validação completa usando a função consolidada
     const resultadoValidacao = validarCadastro({
       razaoSocial,
       cnpj,
@@ -198,92 +189,70 @@ export default function CadastroPage() {
 
     if (!resultadoValidacao.valido) {
       alert("Erro ao cadastrar:\n\n" + resultadoValidacao.erros.join("\n"))
-      console.log("Erros de validação:", resultadoValidacao.erros)
       return
     }
 
-    // Se passou em todas as validações, redireciona para a tela de sucesso
-    console.log("✓ Cadastro válido! Redirecionando para tela de sucesso...")
-    console.log("Dados do cadastro:", {
-      razaoSocial,
-      cnpj,
-      telefone,
-      cep,
-      estado: selectedState,
-      cidade: selectedCity,
-      tipoNegocio: selectedBusinessType,
-      nomeCompleto,
-      cpf,
-      email,
-      plano: selectedPlan,
-      tipoPlano: isAnnual ? "Anual" : "Mensal",
-    })
-
-    // Dispara evento para notificar o admin sobre a nova solicitação
     const novaSolicitacao = {
       nomeEmpresa: razaoSocial,
-      cnpj: cnpj,
-      email: email,
+      cnpj,
+      email,
       nomeRepresentante: nomeCompleto,
-      telefone: telefone,
+      telefone,
       tipoNegocio: selectedBusinessType,
       plano: selectedPlan,
       tipoPlano: isAnnual ? "Anual" : "Mensal",
       descricao: `Novo cadastro: ${razaoSocial} - ${selectedBusinessType}`,
       dataSubmissao: new Date().toLocaleString('pt-BR')
-    };
+    }
 
-    // Envia os dados para localStorage e dispara evento
-    const solicitacoes = JSON.parse(localStorage.getItem('solicitacoes') || '[]');
-    solicitacoes.push(novaSolicitacao);
-    localStorage.setItem('solicitacoes', JSON.stringify(solicitacoes));
+    const solicitacoes = JSON.parse(localStorage.getItem('solicitacoes') || '[]')
+    solicitacoes.push(novaSolicitacao)
+    localStorage.setItem('solicitacoes', JSON.stringify(solicitacoes))
+    window.dispatchEvent(new CustomEvent('novaSolicitacao', { detail: novaSolicitacao }))
 
-    // Dispara evento customizado
-    window.dispatchEvent(new CustomEvent('novaSolicitacao', { detail: novaSolicitacao }));
+    const planSelected = PLANS.find(p => p.id === selectedPlan)
+    const planName = planSelected?.name || 'Profissional'
+    const price = isAnnual ? planSelected?.annualPrice : planSelected?.monthlyPrice
+    const frequency = isAnnual ? 'Ano' : 'Mês'
+    const formattedPrice = `R$${price?.toLocaleString('pt-BR')}`
 
-    // Redirecionar para pagamento com os dados do plano
-    const planSelected = PLANS.find(p => p.id === selectedPlan);
-    const planName = planSelected?.name || 'Profissional';
-    const price = isAnnual ? planSelected?.annualPrice : planSelected?.monthlyPrice;
-    const frequency = isAnnual ? 'Ano' : 'Mês';
-    const formattedPrice = `R$${price?.toLocaleString('pt-BR')}`;
-
-    const paymentUrl = `/payment?plan=${encodeURIComponent(planName)}&frequency=${frequency}&price=${encodeURIComponent(formattedPrice)}&company=${encodeURIComponent(razaoSocial)}&email=${encodeURIComponent(email)}`;
-    router.push(paymentUrl);
+    const paymentUrl = `/payment?plan=${encodeURIComponent(planName)}&frequency=${frequency}&price=${encodeURIComponent(formattedPrice)}&company=${encodeURIComponent(razaoSocial)}&email=${encodeURIComponent(email)}`
+    router.push(paymentUrl)
   }
 
   return (
-    <main className="min-h-screen lg:grid lg:grid-cols-[40%_60%]">
-      {/* Left Sidebar - Dark Blue Background */}
-      <aside className="hidden bg-[#1f3fbf] lg:flex lg:flex-col lg:justify-between lg:p-10">
+    <main className="min-h-screen flex">
+
+      {/* ── Sidebar ghost: reserves space in flex flow ── */}
+      <div className="hidden lg:block shrink-0 w-[40%]" aria-hidden="true" />
+
+      {/* ── LEFT SIDEBAR — fixed on top of the ghost ── */}
+      <aside className="hidden lg:flex lg:flex-col lg:justify-between lg:p-10 bg-[#1f3fbf] fixed top-0 left-0 h-screen w-[40%] z-10">
         <div className="space-y-8">
-          {/* GestPro Logo */}
           <div className="flex items-center gap-3">
             <Image src="/nova-logo.svg" alt="GestPro Logo" width={300} height={48} />
           </div>
           <div className="space-y-4">
-            <h2 className=" text-gl font-bold leading-tight text-white xl:text-4xl">
+            <h2 className="text-gl font-bold leading-tight text-white xl:text-4xl">
               Gestão profissional para o seu negócio.
             </h2>
-            <p className=" text-white/80 font-medium text-2xl">
+            <p className="text-white/80 font-medium text-2xl">
               Junte-se a centenas de empresas que usam o GestPro para vender mais e gerenciar melhor.
             </p>
           </div>
         </div>
-        <p className="text-sm font-light text-white/70 ">
+        <p className="text-sm font-light text-white/70">
           © 2025 GestPro Tecnologia
         </p>
       </aside>
 
-      {/* Right Content - Light Gray Background */}
-      <div className="flex min-h-screen flex-col bg-gray-50 p-4 md:p-8 lg:p-10 font-medium">
-        {/* Mobile Header */}
-     
-
+      {/* ── RIGHT CONTENT — scrollable, takes remaining space ── */}
+      <div className="flex-1 flex min-h-screen flex-col bg-gray-50 p-4 md:p-8 lg:p-10 font-medium">
         <div className="mx-auto w-full max-w-2xl flex-1">
+
           {/* Back Button */}
           <button
-          onClick={()=> router.push("/")}
+            onClick={() => router.push("/")}
             type="button"
             className="mb-6 inline-flex items-center gap-2 text-sm text-gray-500 transition-colors hover:text-gray-900 cursor-pointer font-medium"
           >
@@ -298,13 +267,14 @@ export default function CadastroPage() {
             <h2 className="text-2xl font-bold text-gray-900">
               Cadastre sua Empresa
             </h2>
-            <p className="mt-2 text-gray-500 font-light ">
+            <p className="mt-2 text-gray-500 font-light">
               Preencha os dados abaixo para criar sua conta e iniciar o período de teste.
             </p>
           </div>
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-6">
+
             {/* Dados da Empresa */}
             <div className="rounded-2xl bg-white p-6 shadow-sm">
               <div className="mb-6 flex items-center gap-2 text-gray-900">
@@ -415,9 +385,9 @@ export default function CadastroPage() {
                       </svg>
                       <input
                         type="text"
-                        placeholder="Ex: São Paulo"     
-                    value={selectedCity}
-                    onChange={(e) => setSelectedCity(e.target.value)}
+                        placeholder="Ex: São Paulo"
+                        value={selectedCity}
+                        onChange={(e) => setSelectedCity(e.target.value)}
                         required
                         className="w-full rounded-lg border border-gray-200 bg-white py-3 pl-10 pr-4 text-sm text-gray-900 placeholder:text-gray-400 focus:border-[#1f3fbf] focus:outline-none focus:ring-2 focus:ring-[#1f3fbf]/20"
                       />
@@ -552,7 +522,7 @@ export default function CadastroPage() {
             </div>
 
             {/* Escolha do Plano */}
-            <div className="rounded-2xl bg-white p-6 shadow-sm px-2">
+            <div className="rounded-2xl bg-white p-6 shadow-sm">
               <div className="mb-6 flex items-center justify-between">
                 <h3 className="font-semibold text-gray-900">
                   Escolha seu Plano <span className="text-red-500">*</span>
@@ -568,7 +538,6 @@ export default function CadastroPage() {
                       isAnnual ? "bg-[#1f3fbf]" : "bg-gray-300"
                     }`}
                   >
-                    
                     <span
                       className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow-sm transition-transform left-0 ${
                         isAnnual ? "translate-x-6" : "translate-x-1"
@@ -602,12 +571,12 @@ export default function CadastroPage() {
                             {plan.name}
                           </p>
                           {plan.recommended && (
-                            <span className="rounded bg-green-500 px-2 py-0.5   p-3 text-xs font-medium text-white">
+                            <span className="rounded bg-green-500 px-2 py-0.5 text-xs font-medium text-white">
                               RECOMENDADO
                             </span>
                           )}
                         </div>
-                        <p className="mt-1 text-xs text-gray-500">  
+                        <p className="mt-1 text-xs text-gray-500">
                           {plan.features}
                         </p>
                       </div>
@@ -615,7 +584,7 @@ export default function CadastroPage() {
                         <p className={`text-lg font-bold ${isSelected ? "text-[#1f3fbf]" : "text-gray-900"}`}>
                           R${price.toFixed(2).replace(".", ",")}
                         </p>
-                       <p className="text-xs text-gray-500  font-light">
+                        <p className="text-xs text-gray-500 font-light">
                           {isAnnual ? "/ano" : "/mês"}
                         </p>
                       </div>
@@ -637,7 +606,7 @@ export default function CadastroPage() {
             </button>
 
             {/* Terms */}
-            <p className="text-center text-xs text-gray-500">
+            <p className="text-center text-xs text-gray-500 pb-10">
               Ao clicar em finalizar, você concorda com nossos{" "}
               <a href="#" className="text-[#1f3fbf] hover:underline">Termos de Uso</a>
               {" "}e{" "}
