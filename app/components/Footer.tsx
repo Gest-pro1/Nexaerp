@@ -150,7 +150,7 @@ export default function Footer() {
               <ul className="space-y-3 text-sm text-white/80">
                 <li>
                   <span className="block font-medium text-white">Email</span>
-                  contato@gestpro.com
+                  nexaerp@nexaerp.com.br
                 </li>
                 <li>
                   <span className="block font-medium text-white">WhatsApp</span>
