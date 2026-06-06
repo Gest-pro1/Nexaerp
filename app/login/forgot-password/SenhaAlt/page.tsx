@@ -1,14 +1,16 @@
-" use client";
-
+"use client";
 
 import Image from "next/image";
-import { validateEmail, handleSubmit as validateAndLog } from "../forgot-password/config";
+import { useRouter, useSearchParams } from 'next/navigation';
 
 {/* tela de sucesso para quando o usuario solicitar a troca de senha, informando que um email foi enviado com as instruções para a troca de senha */}
 
 export default function SenhaAltPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const nome = searchParams.get('name') || '';
 
-return(
+  return(
    <>
      <div className="fixed inset-0 -z-10">
         <div className="h-1/2 bg-[#1E40AF]" />
@@ -50,18 +52,21 @@ return(
 <div className=" flex flex-col text-center gap-4">
 
   <h2 className=" text-3xl sm:text-3xl md:text-4xl font-bold text-gray-900 tracking-tight ">
-   E-mail enviado com  Sucesso!
+   E-mail enviado com Sucesso!
   </h2>
+  
   <p className="font-light text-xs sm:text-lg text-gray-500">
-   Verifique as instruções enviada para sua <br /> caixa de e-mail.
+   Verifique as instruções enviadas para sua <br /> caixa de e-mail.
   </p>
 
+  
 
 </div>
 
 <button
       id="botao-forgot"
-        type="submit"
+        type="button"
+        onClick={() => router.push('/login')}
         
         className={`
           w-full
@@ -73,13 +78,25 @@ return(
           transition
           mt-2
             bg-[#1E40AF]
+            cursor-pointer
+          hover:bg-blue-700
         `}
       >
         Ir para o Login
       </button>
 
 </section>
+ <div className="mt-1 pt-6 border-t border-gray-200 justify-center flex items-center gap-3">
+    <p className="text-sm text-gray-500 font-medium">
+      Problemas para acessar?
+    </p>
+    <a href="/cadastro" className="text-lg font-semibold text-[#1E40AF] hover:text-blue-700 transition">
+     Contate o suporte
+    </a>
+            
+          </div>
   </div>
+  
   </div>
    </main>
    </>    );

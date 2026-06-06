@@ -102,20 +102,21 @@ export default function LoginPage() {
 
 <section className="flex flex-col items-center mb-4 -mt-15 gap-2">
 
+<div className="  h-50">
 
   <Image
     src="/nova-logo.svg"
     alt="logo-login"
     width={380}
     height={60}
-    className=""
   />
+</div>
 
 
-  <h2 className=" text-3xl sm:text-3xl md:text-4xl font-bold text-gray-900 tracking-tight">
+  <h2 className=" mb-4 sm:text-3xl md:text-4xl font-bold text-gray-900 tracking-tight">
     Entrar
   </h2>
-  <p className="font-light text-xs sm:text-sm text-gray-500">
+  <p className="font-medium text-xs sm:text-sm text-gray-500">
     Acesse o painel de gestão do Gest Pro
   </p>
 </section>
@@ -257,7 +258,7 @@ export default function LoginPage() {
         Entrar no Sistema
       </button>
     {/* CADASTRO */}
-    <p className="text-center text-xs text-gray-500 font-light">
+    <p className="text-center text-xs text-gray-500 font-medium">
       Não tem uma conta?{" "}
       <a onClick={() => router.push("/register")} className="font-medium text-indigo-600 hover:text-indigo-500 cursor-pointer">
         Faça seu cadastro

@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, ChangeEvent, FormEvent } from "react";                
 import Image from "next/image";
+import { useRouter } from 'next/navigation';
 import { validarResetSenha, getMensagemForcaSenha } from "./resetConfig";
 
 interface ForcaSenhaState {
@@ -13,12 +14,14 @@ interface ForcaSenhaState {
 }
 
 export default function ResetPasswordPage() {
+    const router = useRouter();
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
     const [passwordError, setPasswordError] = useState("");
     const [confirmPasswordError, setConfirmPasswordError] = useState("");
     const [forcaSenha, setForcaSenha] = useState<ForcaSenhaState>({});
     const [mensagemForca, setMensagemForca] = useState("");
+    const [success, setSuccess] = useState(false);
 
     const handlePasswordChange = (e: ChangeEvent<HTMLInputElement>) => {
       const value = e.target.value;
@@ -65,8 +68,7 @@ export default function ResetPasswordPage() {
 
       // Se passou em todas as validações
       console.log("✓ Senha redefinida com sucesso!");
-      console.log("Nova senha foi definida corretamente.");
-      alert("Senha redefinida com sucesso!");
+      setSuccess(true);
       // Aqui você pode adicionar a lógica para enviar a nova senha para o servidor
     };
 return(
@@ -95,10 +97,41 @@ return(
 >
   {/* WRAPPER INTERNO */}
   <div className="flex flex-col items-center mb-4 -mt-15 gap-2">
+  {success ? (
+    <section className="flex flex-col items-center p-10 gap-10">
+      <Image
+        src="/yes.svg"
+        alt="success"
+        width={80}
+        height={30}
+      />
+      <div className="flex flex-col text-center gap-4">
+        <h2 className="text-3xl sm:text-3xl md:text-4xl font-bold text-gray-900 tracking-tight">
+          Senha Alterada com Sucesso!
+        </h2>
+        <p className="font-medium sm:text-sm text-gray-500">
+          Sua senha foi atualizada. Agora você pode acessar o sistema com sua nova credencial.
+        </p>
+      </div>
+      <button
+        type="button"
+        onClick={() => router.push('/login')}
+        className="w-full h-10 sm:h-13 text-white font-semibold text-xs sm:text-lg rounded-lg transition mt-2 bg-[#1E40AF] cursor-pointer hover:bg-blue-700"
+      >
+        Ir para o Login
+      </button>
+      <div className="mt-1 pt-6 border-t border-gray-200 justify-center flex items-center gap-3">
+        <p className="text-sm text-gray-500 font-medium">Problemas para acessar?</p>
+        <a href="/cadastro" className="text-lg font-semibold text-[#1E40AF] hover:text-blue-700 transition">
+          Contate o suporte
+        </a>
+      </div>
+    </section>
+  ) : (
+    <>
+      {/* TÍTULO  e LOGO*/}
 
-{/* TÍTULO  e LOGO*/}
-
-<section className="flex flex-col items-center ">
+      <section className="flex flex-col items-center ">
 
 
   <Image
@@ -272,8 +305,8 @@ return(
     {/* CADASTRO */}
     
     </form>
-
-
+    </>
+  )}
   </div>
   </div>
    </main>

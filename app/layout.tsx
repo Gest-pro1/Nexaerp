@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Be_Vietnam_Pro, Oswald } from "next/font/google";
+// @ts-ignore
 import "./globals.css";
 
 const beVietnam = Be_Vietnam_Pro({
@@ -15,7 +16,7 @@ const oswald = Oswald({
 });
 
 export const metadata: Metadata = {
-  title: "Cest Pro",
+  title: "Next ERP",
   description: "sistema de gestão empresarial",
 };
 

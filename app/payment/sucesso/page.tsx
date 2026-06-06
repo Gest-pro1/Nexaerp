@@ -69,13 +69,13 @@ export default function SucessoPage() {
  
           {/* Título */}
           <div className="text-center font-medium flex flex-col gap-2 sm:gap-3 md:gap-4"> 
-            <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">Tudo pronto por aqui!</h1>
+            <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">Pagamento Confirmado!!</h1>
             <p className="text-xs sm:text-sm md:text-sm text-gray-500 px-1">
-              A solicitação da empresa{" "}
+              A empresa{" "}
               <span className="font-semibold text-gray-900">
                 {isLoading ? "carregando..." : (cadastroData?.razaoSocial || "sua empresa")}
               </span>{" "}
-              foi recebida com sucesso.
+              já está com o acesso em processamento.
             </p>
           </div>
  
@@ -83,7 +83,7 @@ export default function SucessoPage() {
           <div className="flex flex-col gap-2 mb-4 sm:mb-5 md:mb-6 rounded-lg sm:rounded-xl border border-gray-200 p-3 sm:p-4 md:p-5">
             <div className="mb-3 sm:mb-4 md:mb-5 flex items-center gap-2 sm:gap-3">
               <img src="/vectar.svg" alt="logo-vectar" className="w-5 h-5 sm:w-6 sm:h-6" />
-              <h2 className="text-base sm:text-lg md:text-xl font-semibold text-gray-900">Status da Solicitação</h2>
+              <h2 className="text-base sm:text-lg md:text-xl font-semibold text-gray-900">Status da Ativação</h2>
             </div>
  
             <div className="flex flex-col">
@@ -98,8 +98,8 @@ export default function SucessoPage() {
                   {currentStep === 1 && <div className="w-px flex-1 bg-gray-200 my-2 sm:my-3" />}
                 </div>
                 <div className="pb-5 sm:pb-6 md:pb-8">
-                  <p className="text-xs sm:text-sm font-medium text-gray-900">Cadastro Enviado</p>
-                  <p className="text-xs text-green-600">Recebido agora</p>
+                  <p className="text-xs sm:text-sm font-medium text-gray-900">Pagamento Recebido</p>
+                  <p className="text-xs text-green-600">Confirmado com sucesso</p>
                 </div>
               </div>
  
@@ -115,11 +115,11 @@ export default function SucessoPage() {
                   {currentStep <= 2 && <div className="w-px flex-1 bg-gray-200 my-2 sm:my-3" />}
                 </div>
                 <div className="pb-5 sm:pb-6 md:pb-8">
-                  <p className="text-xs sm:text-sm font-medium text-gray-900">Análise de Dados</p>
+                  <p className="text-xs sm:text-sm font-medium text-gray-900">Configurando Instância</p>
                   <p className={`text-xs ${currentStep > 1 ? 'text-green-600' : 'text-[#1f3fbf]'}`}>
-                    {currentStep > 2 ? 'Análise concluída' : currentStep > 1 ? 'Em processamento...' : 'Aguardando...'}
+                    {currentStep > 2 ? 'Análise concluída' : currentStep > 1 ? 'Criando ambiente...' : 'Criando ambiente...'}
                   </p>
-                  <p className="text-xs text-gray-400">Verificaremos as informações da sua empresa.</p>
+                  <p className="text-xs text-gray-400">Estamos preparando o banco de dados da sua empresa</p>
                 </div>
               </div>
  

@@ -18,8 +18,8 @@ export default function ForgotPasswordPage() {
      }
      
      validateAndLog(email);
-     alert("Email válido! Instruções de recuperação de senha serão enviadas.");
-     // Aqui você pode adicionar a lógica para enviar as instruções de recuperação de senha
+     // Redireciona para a tela de sucesso de email enviado
+     router.push(`/login/forgot-password/SenhaAlt?name=${encodeURIComponent(email)}`);
    };
 
    // Verifica se o email é válido
@@ -151,9 +151,9 @@ return(
     <p className="text-center text-xs text-gray-500 font-light">
      Lembrou da sua senha?{" "}
       <a 
-         onClick={()=> router.push("/login")}      
+         onClick={()=> router.push("/login")}
       className="font-medium text-indigo-600 hover:text-indigo-500 cursor-pointer">
-        Faça  login
+        Faça login
       </a>
     </p>
     </form>

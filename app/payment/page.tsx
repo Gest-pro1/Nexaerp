@@ -63,15 +63,13 @@ function CheckCircle() {
 }
 
 function PixIcon({ active }: { active: boolean }) {
-  const color = active ? "#2563EB" : "#9CA3AF";
   return (
-    <svg width="26" height="26" viewBox="0 0 32 32" fill="none">
-      <path d="M8.5 16L16 8.5L23.5 16L16 23.5L8.5 16Z" stroke={color} strokeWidth="2.2" strokeLinejoin="round" />
-      <path d="M16 8.5V2" stroke={color} strokeWidth="2" strokeLinecap="round" />
-      <path d="M16 30V23.5" stroke={color} strokeWidth="2" strokeLinecap="round" />
-      <path d="M8.5 16H2" stroke={color} strokeWidth="2" strokeLinecap="round" />
-      <path d="M30 16H23.5" stroke={color} strokeWidth="2" strokeLinecap="round" />
-    </svg>
+    <img
+      src="/pix.svg"
+      alt="Pix"
+      className="w-8 h-8"
+      style={{ filter: active ? "brightness(1)" : "grayscale(1) opacity(0.65)" }}
+    />
   );
 }
 
@@ -116,45 +114,6 @@ function ShieldIcon() {
   );
 }
 
-function AmexLogo() {
-  return (
-    <svg width="36" height="23" viewBox="0 0 38 24" fill="none">
-      <rect width="38" height="24" rx="3" fill="#2E77BC" />
-      <text x="19" y="16" textAnchor="middle" fill="white" fontSize="7" fontWeight="bold" fontFamily="Arial">AMEX</text>
-    </svg>
-  );
-}
-
-function MastercardLogo() {
-  return (
-    <svg width="36" height="23" viewBox="0 0 38 24" fill="none">
-      <rect width="38" height="24" rx="3" fill="#1a1a1a" />
-      <circle cx="14" cy="12" r="7" fill="#EB001B" />
-      <circle cx="24" cy="12" r="7" fill="#F79E1B" />
-      <path d="M19 6.8A7 7 0 0 1 22 12a7 7 0 0 1-3 5.2A7 7 0 0 1 16 12a7 7 0 0 1 3-5.2z" fill="#FF5F00" />
-    </svg>
-  );
-}
-
-function VisaLogo() {
-  return (
-    <svg width="36" height="23" viewBox="0 0 38 24" fill="none">
-      <rect width="38" height="24" rx="3" fill="#1A1F71" />
-      <text x="19" y="16.5" textAnchor="middle" fill="white" fontSize="10" fontWeight="bold" fontFamily="Arial" fontStyle="italic">VISA</text>
-    </svg>
-  );
-}
-
-function EloLogo() {
-  return (
-    <svg width="36" height="23" viewBox="0 0 38 24" fill="none">
-      <rect width="38" height="24" rx="3" fill="white" />
-      <rect width="38" height="24" rx="3" stroke="#ddd" strokeWidth="0.5" />
-      <text x="7" y="16" fill="#FFCC00" fontSize="11" fontWeight="bold" fontFamily="Arial">e</text>
-      <text x="16" y="16" fill="#000" fontSize="11" fontWeight="bold" fontFamily="Arial">lo</text>
-    </svg>
-  );
-}
 
 // ── Payment Content ────────────────────────────────────────────────────────
 
@@ -205,10 +164,29 @@ function PaymentContent() {
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!validate()) return;
+    // dispara o fluxo de processamento compartilhado
+    await processPayment();
+  };
+
+  const processPayment = async () => {
     setIsLoading(true);
     await new Promise((r) => setTimeout(r, 2000));
-    router.push(`/payment/success?plan=${planName}&frequency=${frequency}&company=${companyName}`);
+    router.push(`/payment/sucesso?plan=${planName}&frequency=${frequency}&company=${companyName}`);
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-linear-to-b from-blue-600 to-blue-800">
+        <div className="text-center">
+          <div className="mb-8 flex justify-center">
+            <div className="w-20 h-20 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
+          </div>
+          <h2 className="text-3xl font-bold text-white mb-2">Processando pagamento...</h2>
+          <p className="text-blue-100 text-lg">Por favor, aguarde</p>
+        </div>
+      </div>
+    );
+  }
 
   const copyPix = () => {
     navigator.clipboard?.writeText(PIX_CODE);
@@ -216,26 +194,27 @@ function PaymentContent() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const inputBase = "w-full px-4 py-3 border rounded-xl text-sm outline-none transition focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 bg-white text-gray-900 placeholder:text-gray-400";
+  const inputBase = "w-full min-w-0 h-12 px-4 py-3 border rounded-xl text-sm outline-none transition focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 bg-white text-gray-900 placeholder:text-gray-400";
   const inputClass = (field: keyof PaymentErrors) => `${inputBase} ${errors[field] ? "border-red-400 bg-red-50" : "border-gray-200"}`;
 
+  <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />;
   return (
     <div className="min-h-screen flex bg-gray-50">
 
       {/* ── SIDEBAR — fixed, left ── */}
-      <aside className="hidden lg:flex flex-col justify-between fixed top-0 left-0 h-screen w-[30%] p-10 z-10"
+      <aside className="hidden lg:flex flex-col justify-between fixed top-0 left-0 h-screen w-[25%] p-10 z-10"
         style={{ background: "linear-gradient(160deg, #1E3FA0 0%, #1E40AF 70%, #1C3D9E 100%)" }}>
         <div className="flex flex-col gap-8">
 
           {/* Logo */}
-          <div className="flex items-center gap-3">
-            <img src="/nova-logo.svg" alt="Logo Gest Pro"  />
+          <div className="flex items-center gap-3   px-3 mb-6 h-23">
+            <img src="/nova-logo.svg" alt="Logo Gest Pro" width={400}  />
           </div>
 
           {/* Company */}
           <div>
-            <p className="text-white font-extrabold text-lg mb-1">Empresa</p>
-            <p className="text-blue-200 font-semibold text-sm">{companyName}</p>
+            <h1 className="text-white font-extrabold text-3xl mb-3">Empresa</h1>
+            <p className="text-blue-200 font-semibold text-sm ">{companyName}</p>
           </div>
 
           {/* Plan card */}
@@ -262,36 +241,38 @@ function PaymentContent() {
 
         {/* Footer */}
         <div className="border-t border-white/20 pt-6">
-          <p className="text-white/50 text-xs font-semibold leading-relaxed mb-3">
+          <p className="text-white/50 text-lg font-semibold leading-relaxed mb-3">
             Ao finalizar, você concorda com nossos termos de serviço
           </p>
           <div className="flex items-center gap-2">
             <SSLIcon />
-            <span className="text-blue-200 text-xs font-bold">Ambiente seguro e criptografado</span>
+            <span className="text-blue-200 text-lg font-bold">Ambiente seguro e criptografado</span>
           </div>
         </div>
       </aside>
 
       {/* ── GHOST spacer so flex content shifts right ── */}
-      <div className="hidden lg:block shrink-0 w-[38%]" aria-hidden="true" />
+      <div className="hidden lg:block shrink-0 w-[15%] " aria-hidden="true" />
 
       {/* ── MAIN CONTENT — scrollable ── */}
       <div className="flex-1 flex flex-col min-h-screen bg-gray-50 overflow-y-auto">
-        <div className="flex-1 flex flex-col justify-center px-6 py-10 md:px-14 lg:px-20 max-w-2xl w-full mx-auto">
+        <div className="flex-1 flex flex-col justify-center px-4 py-10 md:px-8 lg:px-12 max-w-5xl w-full mx-auto">
 
           {/* Back */}
           <button
             onClick={() => router.back()}
-            className="inline-flex items-center gap-2 text-blue-600 font-bold text-sm mb-8 w-fit hover:text-blue-800 transition"
-          >
-            ← Voltar
+            className="inline-flex items-center gap-2 text-[#969696] font-bold text-lg mb-8 w-fit hover:text-blue-800 transition cursor-pointer">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" className="size-6">
+            
+            </svg>
+              Voltar
           </button>
 
           <h1 className="text-3xl font-extrabold text-gray-900 mb-1">Forma de Pagamento</h1>
-          <p className="text-gray-500 text-sm mb-8">Escolha como deseja ativar sua licença Gest Pro</p>
+          <p className="text-gray-500 text-lg font-medium mb-8">Escolha como deseja ativar sua licença Nexa ERP</p>
 
           {/* Method selector */}
-          <div className="grid grid-cols-3 gap-3 mb-7">
+          <div className="grid grid-cols-3 gap-3 mb-7" >
             {[
               { id: "credit", label: "Crédito", Icon: CreditIcon },
               { id: "debit", label: "Débito", Icon: DebitIcon },
@@ -331,7 +312,7 @@ function PaymentContent() {
                     onChange={handleChange}
                     placeholder="0000 0000 0000 0000"
                     maxLength={19}
-                    className={`${inputClass("cardNumber")} pl-14 font-mono tracking-widest text-base`}
+                    className={`${inputClass("cardNumber")} pl-14 font-medium tracking-widest text-base`}
                   />
                 </div>
                 {errors.cardNumber && <p className="text-red-500 text-xs mt-1">{errors.cardNumber}</p>}
@@ -347,7 +328,7 @@ function PaymentContent() {
                     onChange={handleChange}
                     placeholder="MM/AA"
                     maxLength={5}
-                    className={inputClass("expiryDate")}
+                    className={inputClass("expiryDate") + " font-medium tracking-widest text-base"}
                   />
                   {errors.expiryDate && <p className="text-red-500 text-xs mt-1">{errors.expiryDate}</p>}
                 </div>
@@ -360,7 +341,7 @@ function PaymentContent() {
                     onChange={handleChange}
                     placeholder="123"
                     maxLength={3}
-                    className={inputClass("cvv")}
+                    className={inputClass("cvv") + " font-medium tracking-widest text-base"}
                   />
                   {errors.cvv && <p className="text-red-500 text-xs mt-1">{errors.cvv}</p>}
                 </div>
@@ -374,7 +355,7 @@ function PaymentContent() {
                   value={formData.cardName}
                   onChange={handleChange}
                   placeholder="Como está no cartão"
-                  className={inputClass("cardName")}
+                  className={inputClass("cardName") + " font-medium tracking-widest text-base"}
                 />
                 {errors.cardName && <p className="text-red-500 text-xs mt-1">{errors.cardName}</p>}
               </div>
@@ -394,7 +375,7 @@ function PaymentContent() {
           {paymentMethod === "pix" && (
             <div className="flex flex-col gap-4">
               <div className="border border-gray-200 rounded-2xl p-8 bg-white text-center">
-                <div className="inline-block bg-white p-3 rounded-xl shadow-sm mb-5">
+                <div className="inline-block bg-white p-2 rounded-xl shadow-sm ">
                   <img
                     src={generateQRCode(PIX_CODE)}
                     alt="QR Code PIX"
@@ -417,31 +398,20 @@ function PaymentContent() {
               </div>
 
               <button
+                onClick={processPayment}
+                disabled={isLoading}
                 className="w-full py-4 rounded-xl text-white font-extrabold text-base flex items-center justify-center gap-2 bg-blue-700 hover:bg-blue-800 transition"
+                style={{ background: isLoading ? "#93C5FD" : undefined, cursor: isLoading ? "not-allowed" : "pointer" }}
               >
-                Confirmar Pagamento →
+                {isLoading ? "Processando..." : "Confirmar Pagamento →"}
               </button>
             </div>
           )}
 
           {/* Footer */}
-          <div className="mt-10 pt-6 border-t border-gray-200 flex items-center justify-between flex-wrap gap-4">
-            <div>
-              <p className="text-xs font-bold text-gray-700 mb-2">Formas de Pagamento</p>
-              <div className="flex items-center gap-2">
-                <AmexLogo />
-                <MastercardLogo />
-                <VisaLogo />
-                <EloLogo />
-              </div>
-            </div>
-            <div className="bg-gray-900 text-white rounded-lg px-3 py-2 flex items-center gap-2">
-              <ShieldIcon />
-              <div className="text-xs font-extrabold leading-tight">
-                <div>SITE 100%</div>
-                <div>SEGURO</div>
-              </div>
-            </div>
+          <div className="mt-8 pt-6 border-t border-gray-200 justify-center flex items-center gap-3">
+              <img src="/cartoes-footer.svg" alt="cartoes" width={200} />
+            
           </div>
 
         </div>
