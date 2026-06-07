@@ -1,14 +1,13 @@
 "use client";
 
 import Image from "next/image";
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 
 {/* tela de sucesso para quando o usuario alterar a senha  com sucesso */}
-
+export const dynamic = 'force-dynamic';
 export default function SenhaAltPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const nome = searchParams.get('name') || '';
+ 
 
   return(
    <>
