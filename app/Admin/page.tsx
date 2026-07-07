@@ -1,11 +1,10 @@
 "use client"
 import React from "react";
-import { title } from "process";
 import { useState, useEffect } from "react";
 
 import AdminLayout from "../components/ManuPage";
 
-import { BuildingOffice2Icon, CurrencyDollarIcon, TrashIcon, PencilIcon, EnvelopeIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import { BuildingOffice2Icon, CurrencyDollarIcon, TrashIcon, PencilIcon, EnvelopeIcon, XMarkIcon, CheckCircleIcon, XCircleIcon, ClockIcon } from "@heroicons/react/24/outline";
 
 const infoCards = [
  {name: "Empresas e Acessos", icon: BuildingOffice2Icon, value: "0"},
@@ -122,6 +121,17 @@ export default function AdminPage() {
    const [currentPageFinanceiro, setCurrentPageFinanceiro] = useState(1);
    const itemsPerPage = 5;
 
+   // Cálculos para os cards de métricas
+   const totalEmpresas = empresas.length;
+   const licencasAtivas = empresas.filter(e => e.status === 'ativa').length;
+   const mrrEstimado = empresas
+     .filter(e => e.status === 'ativa')
+     .reduce((acc, emp) => {
+       const valorNumerico = parseFloat(emp.valor.replace('R$ ', '').replace(',', '.'));
+       return acc + valorNumerico;
+     }, 0);
+   const inadimplencia = empresas.filter(e => e.status === 'bloqueado').length;
+
    // useEffect para carregar dados quando o cliente fizer cadastro
    useEffect(() => {
      // Aqui virá a chamada para API ou dados do contexto global
@@ -218,23 +228,25 @@ export default function AdminPage() {
       <div className="flex items-end gap-10">
         <div className="flex flex-col gap-1">
           <span className="text-[11px] font-medium text-white/70">Total de Empresas</span>
-          <span className="text-[22px] font-bold text-white leading-none">0</span>
+          <span className="text-[22px] font-bold text-white leading-none">{totalEmpresas}</span>
         </div>
         <div className="w-px h-9 bg-white/20 self-end mb-1" />
         <div className="flex flex-col gap-1">
           <span className="text-[11px] font-medium text-white/70">Licenças Ativas</span>
-          <span className="text-[22px] font-bold text-green-400 leading-none">0</span>
+          <span className="text-[22px] font-bold text-green-400 leading-none">{licencasAtivas}</span>
         </div>
         <div className="w-px h-9 bg-white/20 self-end mb-1" />
         
         <div className="flex flex-col gap-1">
           <span className="text-[11px] font-medium text-white/70">MRR Estimado</span>
-          <span className="text-[22px] font-bold text-white leading-none">R$ 00.000,00</span>
+          <span className="text-[22px] font-bold text-white leading-none">
+            {mrrEstimado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+          </span>
         </div>
         <div className="w-px h-9 bg-white/20 self-end mb-1" />
         <div className="flex flex-col gap-1">
           <span className="text-[11px] font-medium text-white/70">Inadimplência</span>
-          <span className="text-[22px] font-bold text-red-400 leading-none">0</span>
+          <span className="text-[22px] font-bold text-red-400 leading-none">{inadimplencia}</span>
         </div>
       </div>
     </div>
@@ -302,7 +314,7 @@ export default function AdminPage() {
         
         {/* Barra de Pesquisa e Filtro */}
         <div className="flex gap-3 mb-6">
-          <div className="flex-1 relative">
+          <div className="flex   text-black font-medium">
             <input
               type="text"
               placeholder="Buscar empresa, responsável ou e-mail..."
@@ -316,6 +328,7 @@ export default function AdminPage() {
             <svg className="absolute left-3 top-2.5 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
+
           </div>
           <select
             value={statusFilter}
@@ -323,7 +336,7 @@ export default function AdminPage() {
               setStatusFilter(e.target.value);
               setCurrentPage(1);
             }}
-            className="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-600"
+            className="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-600 text-black font-bold"
           >
             <option value="todos">Status: Todos</option>
             <option value="ativa">Status: Ativa</option>
@@ -334,95 +347,100 @@ export default function AdminPage() {
         </div>
         
         {/* Tabela de Empresas */}
-        <div className="overflow-x-auto bg-white rounded-lg border border-gray-200">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="text-left py-4 px-6 font-semibold text-gray-700">Empresa</th>
-                <th className="text-left py-4 px-6 font-semibold text-gray-700">Plano</th>
-                <th className="text-left py-4 px-6 font-semibold text-gray-700">Responsável</th>
-                <th className="text-left py-4 px-6 font-semibold text-gray-700">Status</th>
-                <th className="text-left py-4 px-6 font-semibold text-gray-700">Próx. Cobrança</th>
-                <th className="text-center py-4 px-6 font-semibold text-gray-700">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {empresasPaginadas.map((empresa) => {
-                const statusColor = getStatusColor(empresa.status);
-                return (
-                  <tr key={empresa.id} className="border-b border-gray-100 hover:bg-gray-50 transition">
-                    {/* Empresa com Avatar */}
-                    <td className="py-4 px-6">
-                      <div className="flex items-center gap-3">
-                        <div className={`${empresa.cor} w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm`}>
-                          {getInitials(empresa.nome)}
+        <div className="rounded-lg border border-gray-200 overflow-hidden bg-white">
+          <div className="max-h-72 overflow-y-auto overflow-x-auto" style={{ scrollbarGutter: "stable" }}>
+            <table className="w-full min-w-225">
+              <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
+                <tr>
+                  <th className="text-left py-4 px-6 font-semibold text-gray-700">Empresa</th>
+                  <th className="text-left py-4 px-6 font-semibold text-gray-700">Plano</th>
+                  <th className="text-left py-4 px-6 font-semibold text-gray-700">Responsável</th>
+                  <th className="text-left py-4 px-6 font-semibold text-gray-700">Status</th>
+                  <th className="text-left py-4 px-6 font-semibold text-gray-700">Próx. Cobrança</th>
+                  <th className="text-center py-4 px-6 font-semibold text-gray-700">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {empresasPaginadas.map((empresa) => {
+                  const statusColor = getStatusColor(empresa.status);
+                  return (
+                    <tr key={empresa.id} className="border-b border-gray-100 hover:bg-gray-50 transition">
+                      {/* Empresa com Avatar */}
+                      <td className="py-4 px-6">
+                        <div className="flex items-center gap-3">
+                          <div className={`${empresa.cor} w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm`}>
+                            {getInitials(empresa.nome)}
+                          </div>
+                          <div>
+                            <p className="font-semibold text-gray-900">{empresa.nome}</p>
+                            <p className="text-xs text-gray-500">{empresa.cnpj}</p>
+                          </div>
                         </div>
+                      </td>
+                      
+                      {/* Plano */}
+                      <td className="py-4 px-6 text-gray-700">{empresa.plano}</td>
+                      
+                      {/* Responsável */}
+                      <td className="py-4 px-6">
                         <div>
-                          <p className="font-semibold text-gray-900">{empresa.nome}</p>
-                          <p className="text-xs text-gray-500">{empresa.cnpj}</p>
+                          <p className="font-medium text-gray-900">{empresa.responsavel}</p>
+                          <p className="text-xs text-gray-500">{empresa.email}</p>
                         </div>
-                      </div>
-                    </td>
-                    
-                    {/* Plano */}
-                    <td className="py-4 px-6 text-gray-700">{empresa.plano}</td>
-                    
-                    {/* Responsável */}
-                    <td className="py-4 px-6">
-                      <div>
-                        <p className="font-medium text-gray-900">{empresa.responsavel}</p>
-                        <p className="text-xs text-gray-500">{empresa.email}</p>
-                      </div>
-                    </td>
-                    
-                    {/* Status */}
-                    <td className="py-4 px-6">
-                      <div className="flex items-center gap-2">
-                        <span className={`w-2 h-2 rounded-full ${statusColor.dot}`}></span>
-                        <span className={`text-sm font-medium ${statusColor.text}`}>
-                          {getStatusLabel(empresa.status)}
-                        </span>
-                      </div>
-                    </td>
-                    
-                    {/* Próxima Cobrança */}
-                    <td className="py-4 px-6 text-gray-700">{empresa.dataCobranca}</td>
-                    
-                    {/* Ações */}
-                    <td className="py-4 px-6">
-                      <div className="flex justify-center gap-2">
-                        <button
-                          onClick={() => handleEnviarMensagem(empresa.id, empresa.nome)}
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
-                          title="Enviar mensagem"
-                        >
-                          <EnvelopeIcon className="w-5 h-5" />
-                        </button>
-                        <button
-                          onClick={() => handleEditar(empresa.id, empresa.nome)}
-                          className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition"
-                          title="Editar"
-                        >
-                          <PencilIcon className="w-5 h-5" />
-                        </button>
-                        <button
-                          onClick={() => handleDeletar(empresa.id, empresa.nome)}
-                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
-                          title="Deletar"
-                        >
-                          <TrashIcon className="w-5 h-5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                      </td>
+                      
+                      {/* Status */}
+                      <td className="py-4 px-6">
+                        <div className="flex items-center">
+                          <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${statusColor.bg} ${statusColor.text}`}>
+                            {empresa.status === 'ativa' && <CheckCircleIcon className="w-4 h-4 text-green-500" />}
+                            {empresa.status === 'inativa' && <XCircleIcon className="w-4 h-4 text-gray-500" />}
+                            {empresa.status === 'bloqueado' && <XCircleIcon className="w-4 h-4 text-red-500" />}
+                            {empresa.status === 'pendente' && <ClockIcon className="w-4 h-4 text-yellow-500" />}
+                            <span>{getStatusLabel(empresa.status)}</span>
+                          </span>
+                        </div>
+                      </td>
+                      
+                      {/* Próxima Cobrança */}
+                      <td className="py-4 px-6 text-gray-700">{empresa.dataCobranca}</td>
+                      
+                      {/* Ações */}
+                      <td className="py-4 px-6">
+                        <div className="flex justify-center gap-2">
+                          <button
+                            onClick={() => handleEnviarMensagem(empresa.id, empresa.nome)}
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                            title="Enviar mensagem"
+                          >
+                            <EnvelopeIcon className="w-5 h-5" />
+                          </button>
+                          <button
+                            onClick={() => handleEditar(empresa.id, empresa.nome)}
+                            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition"
+                            title="Editar"
+                          >
+                            <PencilIcon className="w-5 h-5" />
+                          </button>
+                          <button
+                            onClick={() => handleDeletar(empresa.id, empresa.nome)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
+                            title="Deletar"
+                          >
+                            <TrashIcon className="w-5 h-5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         {/* Paginação */}
-        <div className="flex items-center justify-between mt-6 py-4">
+        <div className="flex items-center justify-between mt-6 py-4 bg-light">
           <p className="text-sm text-gray-600">0 de {empresasFiltradas.length} linha(s) selecionadas.</p>
           <div className="flex gap-3">
             <button
@@ -462,52 +480,60 @@ export default function AdminPage() {
         </div>
 
         {/* Tabela de Cobranças */}
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-300">
-                <th className="text-left py-3 px-4 font-semibold text-gray-800 text-sm">Empresa</th>
-                <th className="text-left py-3 px-4 font-semibold text-gray-800 text-sm">Plano</th>
-                <th className="text-left py-3 px-4 font-semibold text-gray-800 text-sm">Valor</th>
-                <th className="text-left py-3 px-4 font-semibold text-gray-800 text-sm">Vencimento</th>
-                <th className="text-left py-3 px-4 font-semibold text-gray-800 text-sm">Status</th>
-                <th className="text-center py-3 px-4 font-semibold text-gray-800 text-sm">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {empresas.slice((currentPageFinanceiro - 1) * itemsPerPage, currentPageFinanceiro * itemsPerPage).map((empresa) => {
-                const statusColor = getStatusColor(empresa.status);
-                return (
-                  <tr key={empresa.id} className="border-b border-gray-200 hover:bg-gray-50 transition">
-                    <td className="py-4 px-4">
-                      <div>
-                        <p className="font-medium text-gray-900">{empresa.nome}</p>
-                        <p className="text-xs text-gray-500">{empresa.cnpj}</p>
-                      </div>
-                    </td>
-                    <td className="py-4 px-4 text-gray-700 text-sm">{empresa.plano}</td>
-                    <td className="py-4 px-4 text-gray-900 font-semibold text-sm">{empresa.valor}</td>
-                    <td className="py-4 px-4 text-gray-700 text-sm">{empresa.dataCobranca}</td>
-                    <td className="py-4 px-4">
-                      <div className="flex items-center gap-2">
-                        <span className={`w-2 h-2 rounded-full ${statusColor.dot}`}></span>
-                        <span className={`text-sm font-medium ${statusColor.text}`}>
-                          {getStatusLabel(empresa.status)}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="py-4 px-4">
-                      <div className="flex justify-center">
-                        <button className="px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium text-sm">
-                          + Enviar
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        <div className="rounded-lg border border-gray-200 overflow-hidden bg-white font-bold">
+          <div className="max-h-72 overflow-y-auto overflow-x-auto" style={{ scrollbarGutter: "stable" }}>
+            <table className="w-full min-w-200">
+              <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-10 font-medium">
+                <tr>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-800 text-sm">Empresa</th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-800 text-sm">Plano</th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-800 text-sm">Valor</th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-800 text-sm">Vencimento</th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-800 text-sm">Status</th>
+                  <th className="text-center py-3 px-4 font-semibold text-gray-800 text-sm">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {empresas.slice((currentPageFinanceiro - 1) * itemsPerPage, currentPageFinanceiro * itemsPerPage).map((empresa) => {
+                  const statusColor = getStatusColor(empresa.status);
+                  return (
+                    <tr key={empresa.id} className="border-b border-gray-200 hover:bg-gray-50 transition">
+                      <td className="py-4 px-4">
+                        <div>
+                          <p className="font-medium text-gray-900">{empresa.nome}</p>
+                          <p className="text-xs text-gray-500">{empresa.cnpj}</p>
+                        </div>
+                      </td>
+                      <td className="py-4 px-4 text-gray-700 text-sm">{empresa.plano}</td>
+                      <td className="py-4 px-4 text-gray-900 font-semibold text-sm">{empresa.valor}</td>
+                      <td className="py-4 px-4 text-gray-700 text-sm">{empresa.dataCobranca}</td>
+                      <td className="py-4 px-4">
+                        <div className="flex items-center">
+                          <span className={`inline-flex items-center gap-2 px-2 py-1 rounded-full text-sm font-medium ${statusColor.bg} ${statusColor.text}`}>
+                            {empresa.status === 'ativa' && <CheckCircleIcon className="w-4 h-4 text-green-500" />}
+                            {empresa.status === 'inativa' && <XCircleIcon className="w-4 h-4 text-gray-500" />}
+                            {empresa.status === 'bloqueado' && <XCircleIcon className="w-4 h-4 text-red-500" />}
+                            {empresa.status === 'pendente' && <ClockIcon className="w-4 h-4 text-yellow-500" />}
+                            <span>{getStatusLabel(empresa.status)}</span>
+                          </span>
+                        </div>
+                      </td>
+                      <td className="py-4 px-4">
+                        <div className="flex justify-center">
+                          <button
+                            title="Enviar cobrança"
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                          >
+                            <EnvelopeIcon className="w-5 h-5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         {/* Paginação */}

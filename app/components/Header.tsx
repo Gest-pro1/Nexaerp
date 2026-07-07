@@ -177,7 +177,7 @@ export default function Header() {
         </h1>
 
         <p className="mt-4 text-white/90 text-base md:text-xl font-bevietnam">
-          O Gest Pro é a solução completa para pequenos e médios comércios.
+          O   NEXA ERP é a solução completa para pequenos e médios comércios.
           <br />
           PDV, CRM, estoque, financeiro e fiscal em uma única plataforma.
         </p>

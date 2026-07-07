@@ -69,7 +69,7 @@ export default function AdminLayout({ children, notificacoes = 0 }: AdminLayoutP
           </ul>
 
           {/* CONFIG */}
-          <div className="mt-auto">
+          <div className="mt-auto font-bold">
             <div className="border-t border-gray-300 my-4"></div>
 
             {configuration.map((item) => (

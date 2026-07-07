@@ -20,6 +20,7 @@ export default function ResetPasswordPage() {
     const [passwordError, setPasswordError] = useState("");
     const [confirmPasswordError, setConfirmPasswordError] = useState("");
     const [forcaSenha, setForcaSenha] = useState<ForcaSenhaState>({});
+    const [submitError, setSubmitError] = useState("");
     const [mensagemForca, setMensagemForca] = useState("");
     const [success, setSuccess] = useState(false);
 
@@ -56,12 +57,13 @@ export default function ResetPasswordPage() {
 
     const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
       e.preventDefault();
+      setSubmitError("");
 
       // Validação completa
       const validacao = validarResetSenha(password, confirmPassword);
 
       if (!validacao.valido) {
-        alert("Erro ao redefinir senha:\n\n" + validacao.erros.join("\n"));
+        setSubmitError(validacao.erros.join("\n"));
         console.log("Erros de validação:", validacao.erros);
         return;
       }
@@ -154,6 +156,11 @@ return(
 
     {/* FORM */}
     <form className="w-full flex flex-col gap-4 sm:mt-3 mb-2 p-3" onSubmit={handleSubmit}>
+      {submitError && (
+        <div className="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50" role="alert">
+          {submitError.split('\n').map((line, i) => <div key={i}>{line}</div>)}
+        </div>
+      )}
 
       {/* SENHA */}
       <div> 
