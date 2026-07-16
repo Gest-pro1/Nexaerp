@@ -1,3 +1,7 @@
+"use client";
+
+import { useEffect, type ReactNode } from "react";
+import { useState } from "react";
 import {
   ShieldCheckIcon,
   BanknotesIcon,
@@ -7,6 +11,8 @@ import {
   MagnifyingGlassIcon,
   BellIcon,
   ChevronDownIcon,
+  Bars3Icon,
+  XMarkIcon,
 } from "@heroicons/react/24/outline";
 
 const navigation = [
@@ -20,46 +26,81 @@ const configuration = [
   { name: "Sair", href: "#", icon: ArrowRightStartOnRectangleIcon },
 ];
 
-function classNames(...classes: string[]) {
+function classNames(...classes: (string | false | undefined)[]) {
   return classes.filter(Boolean).join(" ");
 }
 
 interface AdminLayoutProps {
-  children?: React.ReactNode;
+  children?: ReactNode;
   notificacoes?: number;
 }
 
 export default function AdminLayout({ children, notificacoes = 0 }: AdminLayoutProps) {
-  return (
-    <div className="flex h-screen">
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-      {/* 🔵 MENU */}
-      <aside className="w-60 bg-blue-800 text-white flex flex-col px-6">
-        <div className="h-16 flex items-center">
-          <img src="/nova-logo.svg" className="w-40" />
+  // Trava o scroll do body quando o menu mobile está aberto
+  useEffect(() => {
+    if (isMenuOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isMenuOpen]);
+
+  // Fecha o menu com a tecla Esc
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setIsMenuOpen(false);
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  return (
+    <div className="flex min-h-screen bg-gray-50">
+      {/* Sidebar */}
+      <aside
+        className={classNames(
+          "fixed inset-y-0 left-0 z-40 flex w-64 max-w-[80vw] flex-shrink-0 flex-col overflow-y-auto bg-blue-800 px-4 text-white transition-transform duration-300 ease-in-out sm:px-6",
+          "lg:sticky lg:top-0 lg:h-screen lg:max-w-none lg:translate-x-0",
+          isMenuOpen ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
+        <div className="flex h-16 shrink-0 items-center justify-between">
+          <img src="/nova-logo.svg" className="w-36 sm:w-40" alt="Logo Nexaerp" />
+          <button
+            type="button"
+            className="rounded-lg p-1 text-white hover:bg-indigo-700 lg:hidden"
+            onClick={() => setIsMenuOpen(false)}
+            aria-label="Fechar menu"
+          >
+            <XMarkIcon className="h-5 w-5" />
+          </button>
         </div>
 
-        <p className="text-indigo-200 font-semibold">
-          Área Administrativa
-        </p>
+        <p className="mt-1 shrink-0 font-semibold text-indigo-200">Área Administrativa</p>
 
-        <nav className="flex flex-1 flex-col mt-6">
+        <nav className="mt-6 flex flex-1 flex-col">
           <ul className="space-y-2">
             {navigation.map((item) => (
               <li key={item.name}>
                 <a
                   href={item.href}
+                  onClick={() => setIsMenuOpen(false)}
                   className={classNames(
                     item.current
                       ? "bg-indigo-700 text-white"
                       : "text-indigo-200 hover:bg-indigo-700 hover:text-white",
-                    "flex items-center gap-3 p-2 rounded-md text-sm font-semibold"
+                    "flex items-center gap-3 rounded-md p-2 text-sm font-semibold"
                   )}
                 >
-                  <item.icon className="w-5 h-5" />
-                  {item.name}
+                  <item.icon className="h-5 w-5 shrink-0" />
+                  <span className="truncate">{item.name}</span>
                   {item.count && (
-                    <span className="ml-auto bg-indigo-600 px-2 text-xs rounded-full">
+                    <span className="ml-auto shrink-0 rounded-full bg-indigo-600 px-2 text-xs">
                       {item.count}
                     </span>
                   )}
@@ -68,74 +109,84 @@ export default function AdminLayout({ children, notificacoes = 0 }: AdminLayoutP
             ))}
           </ul>
 
-          {/* CONFIG */}
-          <div className="mt-auto font-bold">
-            <div className="border-t border-gray-300 my-4"></div>
+          <div className="mt-auto pb-4 font-bold">
+            <div className="my-4 border-t border-indigo-700"></div>
 
             {configuration.map((item) => (
               <a
                 key={item.name}
                 href={item.href}
-                className="flex items-center gap-3 p-2 text-sm text-indigo-200 hover:bg-indigo-700 rounded-md"
+                onClick={() => setIsMenuOpen(false)}
+                className="flex items-center gap-3 rounded-md p-2 text-sm text-indigo-200 hover:bg-indigo-700"
               >
-                <item.icon className="w-5 h-5" />
-                {item.name}
+                <item.icon className="h-5 w-5 shrink-0" />
+                <span className="truncate">{item.name}</span>
               </a>
             ))}
           </div>
         </nav>
       </aside>
 
-      {/* ⚪ LADO DIREITO */}
-      <div className="flex-1 flex flex-col">
+      {/* Overlay mobile */}
+      {isMenuOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/40 transition-opacity lg:hidden"
+          onClick={() => setIsMenuOpen(false)}
+          aria-hidden="true"
+        />
+      )}
 
-        {/* 🔝 HEADER */}
-        <header className="px-6 py-3 flex items-center justify-between border-b border-gray-200 bg-white">
-          
-          {/* Busca */}
-          <div className="flex items-center bg-gray-100 rounded-lg px-4 py-2 w-80">
-            <MagnifyingGlassIcon className="w-5 h-5 text-gray-400 mr-2" />
-            <input
-              type="text"
-              placeholder="Buscar produtos, clientes, vendas..."
-              className="bg-transparent outline-none w-full text-sm text-black font-light"
-            />
+      {/* Coluna principal */}
+      <div className="flex min-h-screen min-w-0 flex-1 flex-col">
+        <header className="sticky top-0 z-20 flex shrink-0 flex-col gap-2 border-b border-gray-200 bg-white px-3 py-2 sm:flex-row sm:items-center sm:justify-between sm:px-4">
+          <div className="flex w-full items-center gap-3 sm:w-auto">
+            <button
+              type="button"
+              className="rounded-lg border border-gray-200 p-2 text-gray-700 lg:hidden"
+              onClick={() => setIsMenuOpen(true)}
+              aria-label="Abrir menu"
+              aria-expanded={isMenuOpen}
+            >
+              <Bars3Icon className="h-5 w-5" />
+            </button>
+
+            <div className="flex w-full items-center rounded-lg bg-gray-100 px-3 py-1.5 sm:w-72">
+              <MagnifyingGlassIcon className="mr-2 h-5 w-5 shrink-0 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Buscar produtos, clientes, vendas..."
+                className="w-full min-w-0 bg-transparent text-sm font-light text-black outline-none"
+              />
+            </div>
           </div>
 
-          {/* Usuário */}
-          <div className="flex items-center gap-6">
-            <div className="relative">
-              <BellIcon className="w-6 h-6 text-black" />
+          <div className="flex w-full items-center justify-between gap-3 sm:w-auto sm:justify-end sm:gap-6">
+            <div className="relative shrink-0">
+              <BellIcon className="h-6 w-6 text-black" />
               {notificacoes > 0 && (
-                <span className="absolute -top-1 -right-1 bg-yellow-400 text-xs font-medium px-1 rounded-full">
+                <span className="absolute -right-1 -top-1 rounded-full bg-yellow-400 px-1 text-xs font-medium">
                   {notificacoes}
                 </span>
               )}
             </div>
 
-            <div className="flex items-center gap-3">
-              <div className="text-right text-black">
-                <p className="text-sm font-medium">Administrador</p>
-                <p className="text-xs opacity-80 font-light">
-                  alex.silva@gestpro.com.br
-                </p>
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="hidden min-w-0 text-right text-black sm:block">
+                <p className="truncate text-sm font-medium">Administrador</p>
+                <p className="truncate text-xs font-light opacity-80">alex.silva@gestpro.com.br</p>
               </div>
 
               <img
                 src="https://i.pravatar.cc/40"
-                className="w-10 h-10 rounded-full"
+                className="h-10 w-10 shrink-0 rounded-full"
+                alt="Usuário"
               />
-
-              <ChevronDownIcon className="w-4 h-4 text-gray-600" />
+              <ChevronDownIcon className="h-4 w-4 shrink-0 text-gray-600" />
             </div>
           </div>
         </header>
 
-        {/* 🧩 CONTEÚDO DA PÁGINA */}
-        <main className="flex-1 flex">
-          {children}
-        </main>
-
+        <main className="flex min-h-0 flex-1 flex-col overflow-y-auto">{children}</main>
       </div>
     </div>
   );

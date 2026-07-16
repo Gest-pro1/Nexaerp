@@ -1,18 +1,25 @@
-"use client"
-import React from "react";
+"use client";
 import { useState, useEffect } from "react";
 
 import AdminLayout from "../components/ManuPage";
 
-import { BuildingOffice2Icon, CurrencyDollarIcon, TrashIcon, PencilIcon, EnvelopeIcon, XMarkIcon, CheckCircleIcon, XCircleIcon, ClockIcon } from "@heroicons/react/24/outline";
+import {
+  BuildingOffice2Icon,
+  CurrencyDollarIcon,
+  TrashIcon,
+  PencilIcon,
+  EnvelopeIcon,
+  XMarkIcon,
+  CheckCircleIcon,
+  XCircleIcon,
+  ClockIcon,
+} from "@heroicons/react/24/outline";
 
 const infoCards = [
- {name: "Empresas e Acessos", icon: BuildingOffice2Icon, value: "0"},
- {name: "Financeiro e Cobranças", icon: CurrencyDollarIcon, value: "R$ 00.000,00"},
+  { name: "Empresas e Acessos", icon: BuildingOffice2Icon, value: "0" },
+  { name: "Financeiro e Cobranças", icon: CurrencyDollarIcon, value: "R$ 00.000,00" },
+];
 
-]
-
-// Dados serão carregados dinamicamente quando o cliente fizer cadastro
 type Empresa = {
   id: number;
   nome: string;
@@ -24,81 +31,85 @@ type Empresa = {
   dataCobranca: string;
   valor: string;
   cor: string;
-}
+  cidade?: string;
+  uf?: string;
+  senha?: string;
+  telefone?: string;
+};
 
 // Dados de exemplo para teste
 const empresasExemplo: Empresa[] = [
-  { 
-    id: 1, 
-    nome: "Bony Custo Barbearia", 
-    cnpj: "15.548.254/0001-65", 
-    plano: "Profissional", 
-    responsavel: "Bony Costa", 
-    email: "bony.custo@gmail.com", 
-    status: "ativa", 
-    dataCobranca: "20/12/2025", 
-    valor: "R$ 129,90", 
-    cor: "bg-black" 
+  {
+    id: 1,
+    nome: "Bony Custo Barbearia",
+    cnpj: "15.548.254/0001-65",
+    plano: "Profissional",
+    responsavel: "Bony Costa",
+    email: "bony.custo@gmail.com",
+    status: "ativa",
+    dataCobranca: "20/12/2025",
+    valor: "R$ 129,90",
+    cor: "bg-black",
   },
-  { 
-    id: 2, 
-    nome: "Amobily Ponificadora", 
-    cnpj: "26.254.254/0001-86", 
-    plano: "Premium +", 
-    responsavel: "Josimar Alves", 
-    email: "amobily.ponificadora@gmail.com", 
-    status: "ativa", 
-    dataCobranca: "20/12/2025", 
-    valor: "R$ 249,90", 
-    cor: "bg-red-700" 
+  {
+    id: 2,
+    nome: "Amobily Ponificadora",
+    cnpj: "26.254.254/0001-86",
+    plano: "Premium +",
+    responsavel: "Josimar Alves",
+    email: "amobily.ponificadora@gmail.com",
+    status: "ativa",
+    dataCobranca: "20/12/2025",
+    valor: "R$ 249,90",
+    cor: "bg-red-700",
   },
-  { 
-    id: 3, 
-    nome: "AG Frios", 
-    cnpj: "11.478.954/0001-01", 
-    plano: "Standart", 
-    responsavel: "Carlos José", 
-    email: "carlos@gmail.com", 
-    status: "bloqueado", 
-    dataCobranca: "25/12/2025", 
-    valor: "R$ 69,90", 
-    cor: "bg-blue-600" 
+  {
+    id: 3,
+    nome: "AG Frios",
+    cnpj: "11.478.954/0001-01",
+    plano: "Standart",
+    responsavel: "Carlos José",
+    email: "carlos@gmail.com",
+    status: "bloqueado",
+    dataCobranca: "25/12/2025",
+    valor: "R$ 69,90",
+    cor: "bg-blue-600",
   },
-  { 
-    id: 4, 
-    nome: "Ingó Forma", 
-    cnpj: "99.507.944/0001-67", 
-    plano: "Profissional", 
-    responsavel: "Maria Lúcia", 
-    email: "maria@gmail.com", 
-    status: "pendente", 
-    dataCobranca: "28/12/2025", 
-    valor: "R$ 129,90", 
-    cor: "bg-blue-900" 
+  {
+    id: 4,
+    nome: "Ingó Forma",
+    cnpj: "99.507.944/0001-67",
+    plano: "Profissional",
+    responsavel: "Maria Lúcia",
+    email: "maria@gmail.com",
+    status: "pendente",
+    dataCobranca: "28/12/2025",
+    valor: "R$ 129,90",
+    cor: "bg-blue-900",
   },
-  { 
-    id: 5, 
-    nome: "Grupo Gestão", 
-    cnpj: "97.501.651/0000-55", 
-    plano: "Profissional", 
-    responsavel: "Antônio Nunes", 
-    email: "antonio@gmail.com", 
-    status: "ativa", 
-    dataCobranca: "30/12/2025", 
-    valor: "R$ 129,90", 
-    cor: "bg-purple-600" 
+  {
+    id: 5,
+    nome: "Grupo Gestão",
+    cnpj: "97.501.651/0000-55",
+    plano: "Profissional",
+    responsavel: "Antônio Nunes",
+    email: "antonio@gmail.com",
+    status: "ativa",
+    dataCobranca: "30/12/2025",
+    valor: "R$ 129,90",
+    cor: "bg-purple-600",
   },
-  { 
-    id: 6, 
-    nome: "Mercadinho do Kinho", 
-    cnpj: "97.786.954/0000-01", 
-    plano: "Profissional", 
-    responsavel: "José da Silva", 
-    email: "jose@gmail.com", 
-    status: "ativa", 
-    dataCobranca: "20/12/2025", 
-    valor: "R$ 129,90", 
-    cor: "bg-green-600" 
+  {
+    id: 6,
+    nome: "Mercadinho do Kinho",
+    cnpj: "97.786.954/0000-01",
+    plano: "Profissional",
+    responsavel: "José da Silva",
+    email: "jose@gmail.com",
+    status: "ativa",
+    dataCobranca: "20/12/2025",
+    valor: "R$ 129,90",
+    cor: "bg-green-600",
   },
 ];
 
@@ -109,666 +120,814 @@ interface ModalData {
   empresaNome: string;
 }
 
+// Tipo próprio do formulário de edição (antes usava o tipo nativo `FormData`, incompatível)
+type EditFormState = {
+  nome: string;
+  cnpj: string;
+  plano: string;
+  cidade: string;
+  uf: string;
+  responsavel: string;
+  email: string;
+  senha: string;
+  telefone: string;
+  status: Empresa["status"];
+};
+
+const STORAGE_KEY = "nexaerp-empresas";
+
 export default function AdminPage() {
-   const [selectedCard, setSelectedCard] = useState(0);
-   const [notificacoes, setNotificacoes] = useState(0);
-   const [modalType, setModalType] = useState<ModalType>(null);
-   const [modalData, setModalData] = useState<ModalData | null>(null);
-   const [empresas, setEmpresas] = useState<Empresa[]>(empresasExemplo);
-   const [searchTerm, setSearchTerm] = useState("");
-   const [statusFilter, setStatusFilter] = useState("todos");
-   const [currentPage, setCurrentPage] = useState(1);
-   const [currentPageFinanceiro, setCurrentPageFinanceiro] = useState(1);
-   const itemsPerPage = 5;
+  const [selectedCard, setSelectedCard] = useState(0);
+  const [notificacoes, setNotificacoes] = useState(0);
+  const [modalType, setModalType] = useState<ModalType>(null);
+  const [modalData, setModalData] = useState<ModalData | null>(null);
 
-   // Cálculos para os cards de métricas
-   const totalEmpresas = empresas.length;
-   const licencasAtivas = empresas.filter(e => e.status === 'ativa').length;
-   const mrrEstimado = empresas
-     .filter(e => e.status === 'ativa')
-     .reduce((acc, emp) => {
-       const valorNumerico = parseFloat(emp.valor.replace('R$ ', '').replace(',', '.'));
-       return acc + valorNumerico;
-     }, 0);
-   const inadimplencia = empresas.filter(e => e.status === 'bloqueado').length;
+  // Lê o que foi salvo no localStorage (se existir) já na primeira renderização,
+  // assim editar/deletar uma empresa e dar refresh não perde mais os dados.
+  const [empresas, setEmpresas] = useState<Empresa[]>(() => {
+    if (typeof window === "undefined") return empresasExemplo;
+    try {
+      const saved = window.localStorage.getItem(STORAGE_KEY);
+      return saved ? (JSON.parse(saved) as Empresa[]) : empresasExemplo;
+    } catch {
+      return empresasExemplo;
+    }
+  });
 
-   // useEffect para carregar dados quando o cliente fizer cadastro
-   useEffect(() => {
-     // Aqui virá a chamada para API ou dados do contexto global
-     // Por enquanto, usando dados de exemplo para teste
-   }, []);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("todos");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPageFinanceiro, setCurrentPageFinanceiro] = useState(1);
+  const [editForm, setEditForm] = useState<EditFormState>({
+    nome: "",
+    cnpj: "",
+    plano: "Profissional",
+    cidade: "",
+    uf: "PB",
+    responsavel: "",
+    email: "",
+    senha: "",
+    telefone: "",
+    status: "ativa",
+  });
+  const itemsPerPage = 5;
 
-   const handleEnviarMensagem = (id: number, nome: string) => {
-     setModalData({ empresaId: id, empresaNome: nome });
-     setModalType("mensagem");
-   };
+  // Cálculos para os cards de métricas
+  const totalEmpresas = empresas.length;
+  const licencasAtivas = empresas.filter((e) => e.status === "ativa").length;
+  const mrrEstimado = empresas
+    .filter((e) => e.status === "ativa")
+    .reduce((acc, emp) => {
+      const valorNumerico = parseFloat(emp.valor.replace("R$ ", "").replace(",", "."));
+      return acc + valorNumerico;
+    }, 0);
+  const inadimplencia = empresas.filter((e) => e.status === "bloqueado").length;
 
-   const handleEditar = (id: number, nome: string) => {
-     setModalData({ empresaId: id, empresaNome: nome });
-     setModalType("editar");
-   };
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(empresas));
+    }
+  }, [empresas]);
 
-   const handleDeletar = (id: number, nome: string) => {
-     setModalData({ empresaId: id, empresaNome: nome });
-     setModalType("deletar");
-   };
+  const handleEnviarMensagem = (id: number, nome: string) => {
+    setModalData({ empresaId: id, empresaNome: nome });
+    setModalType("mensagem");
+  };
 
-   const confirmarDelecao = () => {
-     if (modalData) {
-       setEmpresas(empresas.filter(emp => emp.id !== modalData.empresaId));
-       setModalType(null);
-       setModalData(null);
-     }
-   };
+  const handleEditar = (id: number, nome: string) => {
+    const empresa = empresas.find((emp) => emp.id === id);
+    if (!empresa) return;
 
-   const closeModal = () => {
-     setModalType(null);
-     setModalData(null);
-   };
+    setEditForm({
+      nome: empresa.nome,
+      cnpj: empresa.cnpj,
+      plano: empresa.plano,
+      cidade: empresa.cidade ?? "",
+      uf: empresa.uf ?? "PB",
+      responsavel: empresa.responsavel,
+      email: empresa.email,
+      senha: empresa.senha ?? "",
+      telefone: empresa.telefone ?? "",
+      status: empresa.status,
+    });
 
-   // Filtrar empresas baseado na pesquisa e status
-   const empresasFiltradas = empresas.filter(emp => {
-     const matchSearch = emp.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        emp.responsavel.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        emp.email.toLowerCase().includes(searchTerm.toLowerCase());
-     const matchStatus = statusFilter === "todos" || emp.status === statusFilter;
-     return matchSearch && matchStatus;
-   });
+    setModalData({ empresaId: id, empresaNome: nome });
+    setModalType("editar");
+  };
 
-   // Paginação
-   const totalPages = Math.ceil(empresasFiltradas.length / itemsPerPage);
-   const startIndex = (currentPage - 1) * itemsPerPage;
-   const empresasPaginadas = empresasFiltradas.slice(startIndex, startIndex + itemsPerPage);
+  const handleDeletar = (id: number, nome: string) => {
+    setModalData({ empresaId: id, empresaNome: nome });
+    setModalType("deletar");
+  };
 
-   // Função para obter iniciais
-   const getInitials = (nome: string) => {
-     return nome.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
-   };
+  const salvarEdicao = () => {
+    if (!modalData) return;
 
-   // Função para obter cor do status
-   const getStatusColor = (status: string) => {
-     switch(status) {
-       case "ativa":
-         return { bg: "bg-green-50", text: "text-green-700", dot: "bg-green-500" };
-       case "inativa":
-         return { bg: "bg-gray-50", text: "text-gray-700", dot: "bg-gray-500" };
-       case "bloqueado":
-         return { bg: "bg-red-50", text: "text-red-700", dot: "bg-red-500" };
-       case "pendente":
-         return { bg: "bg-yellow-50", text: "text-yellow-700", dot: "bg-yellow-500" };
-       default:
-         return { bg: "bg-gray-50", text: "text-gray-700", dot: "bg-gray-500" };
-     }
-   };
+    setEmpresas((prev) =>
+      prev.map((emp) =>
+        emp.id === modalData.empresaId
+          ? {
+              ...emp,
+              nome: editForm.nome.trim() || emp.nome,
+              cnpj: editForm.cnpj.trim() || emp.cnpj,
+              plano: editForm.plano.trim() || emp.plano,
+              cidade: editForm.cidade.trim(),
+              uf: editForm.uf,
+              responsavel: editForm.responsavel.trim() || emp.responsavel,
+              email: editForm.email.trim() || emp.email,
+              senha: editForm.senha.trim(),
+              telefone: editForm.telefone.trim(),
+              status: editForm.status,
+            }
+          : emp
+      )
+    );
 
-   const getStatusLabel = (status: string) => {
-     return status.charAt(0).toUpperCase() + status.slice(1);
-   };
-    return (
-      <>
+    setModalType(null);
+    setModalData(null);
+  };
+
+  const confirmarDelecao = () => {
+    if (modalData) {
+      setEmpresas((prev) => prev.filter((emp) => emp.id !== modalData.empresaId));
+      setModalType(null);
+      setModalData(null);
+    }
+  };
+
+  const closeModal = () => {
+    setModalType(null);
+    setModalData(null);
+  };
+
+  // Filtrar empresas baseado na pesquisa e status
+  const empresasFiltradas = empresas.filter((emp) => {
+    const matchSearch =
+      emp.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      emp.responsavel.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      emp.email.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchStatus = statusFilter === "todos" || emp.status === statusFilter;
+    return matchSearch && matchStatus;
+  });
+
+  // Paginação
+  const totalPages = Math.max(1, Math.ceil(empresasFiltradas.length / itemsPerPage));
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const empresasPaginadas = empresasFiltradas.slice(startIndex, startIndex + itemsPerPage);
+
+  const totalPagesFinanceiro = Math.max(1, Math.ceil(empresas.length / itemsPerPage));
+
+  const getInitials = (nome: string) => {
+    return nome
+      .split(" ")
+      .filter(Boolean)
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "ativa":
+        return { bg: "bg-green-50", text: "text-green-700", dot: "bg-green-500" };
+      case "inativa":
+        return { bg: "bg-gray-50", text: "text-gray-700", dot: "bg-gray-500" };
+      case "bloqueado":
+        return { bg: "bg-red-50", text: "text-red-700", dot: "bg-red-500" };
+      case "pendente":
+        return { bg: "bg-yellow-50", text: "text-yellow-700", dot: "bg-yellow-500" };
+      default:
+        return { bg: "bg-gray-50", text: "text-gray-700", dot: "bg-gray-500" };
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    return status.charAt(0).toUpperCase() + status.slice(1);
+  };
+
+  return (
     <AdminLayout notificacoes={notificacoes}>
-   <main className="flex-1 flex flex-col p-6 gap-7 bg-[#ece6e6]">
+      <div className="flex min-w-0 flex-1 flex-col gap-2 bg-[#ece6e6] p-2 sm:gap-4 sm:p-4">
+        {/* Card principal: tela de valores e métricas do Admin */}
+        <div className="flex w-full min-h-[180px] flex-col gap-4 rounded-lg bg-[#1E40AF] px-3 py-3 sm:px-5 sm:py-4 md:min-h-[160px] md:flex-row md:items-stretch md:justify-between">
+          <div className="flex flex-1 flex-col">
+            <div className="mb-1.5 flex items-center gap-2.5">
+              <img src="/escudo.svg" alt="Escudo" className="h-6 w-6" />
+              <span className="text-[11px] font-semibold uppercase tracking-widest text-white/80">
+                Administração do Sistema
+              </span>
+            </div>
 
-    {/* Card principal  tela de valores e metricas do Admin */ }
-  <div className="bg-[#1E40AF] rounded-lg w-full px-7 py-5 flex justify-between items-stretch h-50">
+            <h1 className="mb-5 text-[22px] font-bold tracking-tight text-white">Gestão de Licenças</h1>
 
-    {/* Conteúdo esquerdo */}
-    <div className="flex flex-col flex-1">
-      <div className="flex items-center gap-2.5 mb-1.5">
-        <img src="/escudo.svg" alt="Escudo" className="w-6 h-6" />
-        <span className="text-[11px] font-semibold tracking-widest text-white/80 uppercase">
-          Administração do Sistema
-        </span>
-      </div>
-
-      <h1 className="text-[22px] font-bold text-white mb-5 tracking-tight">
-        Gestão de Licenças
-      </h1>
-
-      <div className="flex items-end gap-10">
-        <div className="flex flex-col gap-1">
-          <span className="text-[11px] font-medium text-white/70">Total de Empresas</span>
-          <span className="text-[22px] font-bold text-white leading-none">{totalEmpresas}</span>
-        </div>
-        <div className="w-px h-9 bg-white/20 self-end mb-1" />
-        <div className="flex flex-col gap-1">
-          <span className="text-[11px] font-medium text-white/70">Licenças Ativas</span>
-          <span className="text-[22px] font-bold text-green-400 leading-none">{licencasAtivas}</span>
-        </div>
-        <div className="w-px h-9 bg-white/20 self-end mb-1" />
-        
-        <div className="flex flex-col gap-1">
-          <span className="text-[11px] font-medium text-white/70">MRR Estimado</span>
-          <span className="text-[22px] font-bold text-white leading-none">
-            {mrrEstimado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-          </span>
-        </div>
-        <div className="w-px h-9 bg-white/20 self-end mb-1" />
-        <div className="flex flex-col gap-1">
-          <span className="text-[11px] font-medium text-white/70">Inadimplência</span>
-          <span className="text-[22px] font-bold text-red-400 leading-none">{inadimplencia}</span>
-        </div>
-      </div>
-    </div>
-
-    {/* Escudo decorativo direita */}
-    <div className="flex items-end pl-6 opacity-25">
-      <img src="/escudo.svg" alt="Escudo" className="w-30" />
-    </div>
-
-  </div>
-
-  {
-    /* Card de informações  de " empresas e Acessos  " " solicitação de cadrastro para a plataforma" " financeiro e cobrança"*/
-  }
-
-  <div id="" className=" flex bg-white rounded-lg w-full px-7 py-5  h-17 items-center justify-content-between" >
-
-    {/* Conteúdo do esquerdo */ }
-    <div className="flex flex-1">
-
-    {infoCards.map((card, index) => {
-      const IconComponent = card.icon;
-      const isSelected = selectedCard === index;
-      return (
-        <div 
-          key={index} 
-          onClick={() => setSelectedCard(index)}
-          className="p-4 cursor-pointer flex items-center gap-2"
-        >
-          <IconComponent className={`w-6 h-6 transition-colors ${
-            isSelected 
-              ? 'text-blue-600' 
-              : 'text-[#8680A4]'
-          }`} />
-          <span>
-            <h2 className={`text-lg  font-semibold border-b-2 pb-1 transition-colors ${
-              isSelected 
-                ? 'border-blue-600 text-blue-600' 
-                : 'border-transparent text-[#8680A4] hover:text-blue-600'
-            }`}>{card.name}</h2>
-          </span>
-        </div>
-      );
-    })}
-    </div>
-
-    {/* Botão */ }
-    <div> 
-      <button className="cursor-pointer bg-[#009699] text-white px-4 py-2 rounded-xl hover:bg-blue-600 transition-colors font-medium">
-        + Nova Empresa
-      </button>
-
-    </div>
-
-  </div>
-
-  {/* Conteúdo dinâmico baseado no card selecionado */}
-  <div className="bg-white rounded-lg w-full px-7 py-5">
-    {selectedCard === 0 && (
-      <div>
-        <div className="flex items-center gap-3 mb-6">
-          <BuildingOffice2Icon className="w-6 h-6 text-blue-600" />
-          <h2 className="text-2xl font-bold text-[#1E40AF]">Empresas e Acessos</h2>
-        </div>
-        
-        {/* Barra de Pesquisa e Filtro */}
-        <div className="flex gap-3 mb-6">
-          <div className="flex   text-black font-medium">
-            <input
-              type="text"
-              placeholder="Buscar empresa, responsável ou e-mail..."
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="w-full border border-gray-300 rounded-lg pl-10 pr-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-600"
-            />
-            <svg className="absolute left-3 top-2.5 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-
-          </div>
-          <select
-            value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-600 text-black font-bold"
-          >
-            <option value="todos">Status: Todos</option>
-            <option value="ativa">Status: Ativa</option>
-            <option value="inativa">Status: Inativa</option>
-            <option value="bloqueado">Status: Bloqueado</option>
-            <option value="pendente">Status: Pendente</option>
-          </select>
-        </div>
-        
-        {/* Tabela de Empresas */}
-        <div className="rounded-lg border border-gray-200 overflow-hidden bg-white">
-          <div className="max-h-72 overflow-y-auto overflow-x-auto" style={{ scrollbarGutter: "stable" }}>
-            <table className="w-full min-w-225">
-              <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
-                <tr>
-                  <th className="text-left py-4 px-6 font-semibold text-gray-700">Empresa</th>
-                  <th className="text-left py-4 px-6 font-semibold text-gray-700">Plano</th>
-                  <th className="text-left py-4 px-6 font-semibold text-gray-700">Responsável</th>
-                  <th className="text-left py-4 px-6 font-semibold text-gray-700">Status</th>
-                  <th className="text-left py-4 px-6 font-semibold text-gray-700">Próx. Cobrança</th>
-                  <th className="text-center py-4 px-6 font-semibold text-gray-700">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {empresasPaginadas.map((empresa) => {
-                  const statusColor = getStatusColor(empresa.status);
-                  return (
-                    <tr key={empresa.id} className="border-b border-gray-100 hover:bg-gray-50 transition">
-                      {/* Empresa com Avatar */}
-                      <td className="py-4 px-6">
-                        <div className="flex items-center gap-3">
-                          <div className={`${empresa.cor} w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm`}>
-                            {getInitials(empresa.nome)}
-                          </div>
-                          <div>
-                            <p className="font-semibold text-gray-900">{empresa.nome}</p>
-                            <p className="text-xs text-gray-500">{empresa.cnpj}</p>
-                          </div>
-                        </div>
-                      </td>
-                      
-                      {/* Plano */}
-                      <td className="py-4 px-6 text-gray-700">{empresa.plano}</td>
-                      
-                      {/* Responsável */}
-                      <td className="py-4 px-6">
-                        <div>
-                          <p className="font-medium text-gray-900">{empresa.responsavel}</p>
-                          <p className="text-xs text-gray-500">{empresa.email}</p>
-                        </div>
-                      </td>
-                      
-                      {/* Status */}
-                      <td className="py-4 px-6">
-                        <div className="flex items-center">
-                          <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${statusColor.bg} ${statusColor.text}`}>
-                            {empresa.status === 'ativa' && <CheckCircleIcon className="w-4 h-4 text-green-500" />}
-                            {empresa.status === 'inativa' && <XCircleIcon className="w-4 h-4 text-gray-500" />}
-                            {empresa.status === 'bloqueado' && <XCircleIcon className="w-4 h-4 text-red-500" />}
-                            {empresa.status === 'pendente' && <ClockIcon className="w-4 h-4 text-yellow-500" />}
-                            <span>{getStatusLabel(empresa.status)}</span>
-                          </span>
-                        </div>
-                      </td>
-                      
-                      {/* Próxima Cobrança */}
-                      <td className="py-4 px-6 text-gray-700">{empresa.dataCobranca}</td>
-                      
-                      {/* Ações */}
-                      <td className="py-4 px-6">
-                        <div className="flex justify-center gap-2">
-                          <button
-                            onClick={() => handleEnviarMensagem(empresa.id, empresa.nome)}
-                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
-                            title="Enviar mensagem"
-                          >
-                            <EnvelopeIcon className="w-5 h-5" />
-                          </button>
-                          <button
-                            onClick={() => handleEditar(empresa.id, empresa.nome)}
-                            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition"
-                            title="Editar"
-                          >
-                            <PencilIcon className="w-5 h-5" />
-                          </button>
-                          <button
-                            onClick={() => handleDeletar(empresa.id, empresa.nome)}
-                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
-                            title="Deletar"
-                          >
-                            <TrashIcon className="w-5 h-5" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Paginação */}
-        <div className="flex items-center justify-between mt-6 py-4 bg-light">
-          <p className="text-sm text-gray-600">0 de {empresasFiltradas.length} linha(s) selecionadas.</p>
-          <div className="flex gap-3">
-            <button
-              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-              disabled={currentPage === 1}
-              className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
-            >
-              Anterior
-            </button>
-            <button
-              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-              disabled={currentPage === totalPages}
-              className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
-            >
-              Próximo
-            </button>
-          </div>
-        </div>
-      </div>
-    )}
-    
-    
-    
-    {selectedCard === 1 && (
-      <div className="bg-white rounded-lg p-6">
-        <div className="mb-6">
-          <div className="relative inline-block w-full max-w-sm">
-            <input
-              type="text"
-              placeholder="Buscar cobrança por empresa..."
-              className="w-full border border-gray-300 rounded-lg pl-10 pr-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-600"
-            />
-            <svg className="absolute left-3 top-2.5 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-          </div>
-        </div>
-
-        {/* Tabela de Cobranças */}
-        <div className="rounded-lg border border-gray-200 overflow-hidden bg-white font-bold">
-          <div className="max-h-72 overflow-y-auto overflow-x-auto" style={{ scrollbarGutter: "stable" }}>
-            <table className="w-full min-w-200">
-              <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-10 font-medium">
-                <tr>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-800 text-sm">Empresa</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-800 text-sm">Plano</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-800 text-sm">Valor</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-800 text-sm">Vencimento</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-800 text-sm">Status</th>
-                  <th className="text-center py-3 px-4 font-semibold text-gray-800 text-sm">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {empresas.slice((currentPageFinanceiro - 1) * itemsPerPage, currentPageFinanceiro * itemsPerPage).map((empresa) => {
-                  const statusColor = getStatusColor(empresa.status);
-                  return (
-                    <tr key={empresa.id} className="border-b border-gray-200 hover:bg-gray-50 transition">
-                      <td className="py-4 px-4">
-                        <div>
-                          <p className="font-medium text-gray-900">{empresa.nome}</p>
-                          <p className="text-xs text-gray-500">{empresa.cnpj}</p>
-                        </div>
-                      </td>
-                      <td className="py-4 px-4 text-gray-700 text-sm">{empresa.plano}</td>
-                      <td className="py-4 px-4 text-gray-900 font-semibold text-sm">{empresa.valor}</td>
-                      <td className="py-4 px-4 text-gray-700 text-sm">{empresa.dataCobranca}</td>
-                      <td className="py-4 px-4">
-                        <div className="flex items-center">
-                          <span className={`inline-flex items-center gap-2 px-2 py-1 rounded-full text-sm font-medium ${statusColor.bg} ${statusColor.text}`}>
-                            {empresa.status === 'ativa' && <CheckCircleIcon className="w-4 h-4 text-green-500" />}
-                            {empresa.status === 'inativa' && <XCircleIcon className="w-4 h-4 text-gray-500" />}
-                            {empresa.status === 'bloqueado' && <XCircleIcon className="w-4 h-4 text-red-500" />}
-                            {empresa.status === 'pendente' && <ClockIcon className="w-4 h-4 text-yellow-500" />}
-                            <span>{getStatusLabel(empresa.status)}</span>
-                          </span>
-                        </div>
-                      </td>
-                      <td className="py-4 px-4">
-                        <div className="flex justify-center">
-                          <button
-                            title="Enviar cobrança"
-                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
-                          >
-                            <EnvelopeIcon className="w-5 h-5" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Paginação */}
-        <div className="flex items-center justify-between mt-6 py-4">
-          <p className="text-sm text-gray-600">0 de 5 linha(s) selecionadas.</p>
-          <div className="flex gap-3">
-            <button
-              onClick={() => setCurrentPageFinanceiro(Math.max(1, currentPageFinanceiro - 1))}
-              disabled={currentPageFinanceiro === 1}
-              className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition text-sm"
-            >
-              Anterior
-            </button>
-            <button
-              onClick={() => setCurrentPageFinanceiro(Math.min(Math.ceil(empresas.length / itemsPerPage), currentPageFinanceiro + 1))}
-              disabled={currentPageFinanceiro === Math.ceil(empresas.length / itemsPerPage)}
-              className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition text-sm"
-            >
-              Próximo
-            </button>
-          </div>
-        </div>
-      </div>
-    )}
-  </div>
-
-  {/* Modal de Mensagem */}
-  {modalType === "mensagem" && modalData && (
-    <div className="fixed inset-0 z-999 flex items-center justify-center px-4">
-      <div className="absolute inset-0 bg-black/50" onClick={closeModal} />
-      <div className="relative w-full max-w-md bg-white rounded-lg shadow-xl p-6 z-10">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-bold text-gray-800">Enviar Mensagem</h3>
-          <button onClick={closeModal} className="text-gray-500 hover:text-gray-700">
-            <XMarkIcon className="w-5 h-5" />
-          </button>
-        </div>
-        <p className="text-gray-600 mb-4">Enviar mensagem para <strong>{modalData.empresaNome}</strong></p>
-        <textarea 
-          className="w-full border border-gray-300 rounded-lg p-3 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-600"
-          rows={4}
-          placeholder="Digite sua mensagem..."
-        />
-        <div className="flex justify-end gap-3">
-          <button 
-            onClick={closeModal}
-            className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
-          >
-            Cancelar
-          </button>
-          <button 
-            onClick={closeModal}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-          >
-            Enviar
-          </button>
-        </div>
-      </div>
-    </div>
-  )}
-
-  {/* Modal de Editar */}
-  {modalType === "editar" && modalData && (
-    <div className="fixed inset-0 z-999 flex items-center justify-center px-4 bg-black/50 overflow-y-auto py-8">
-      <div className="relative w-full max-w-2xl bg-white rounded-2xl shadow-xl p-8 z-10">
-        <div className="flex justify-between items-center mb-6">
-          <h3 className="text-2xl font-bold text-gray-800">Editar Empresa</h3>
-          <button onClick={closeModal} className="text-gray-500 hover:text-gray-700">
-            <XMarkIcon className="w-6 h-6" />
-          </button>
-        </div>
-        
-        <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-4">
-          {/* Dados da empresa */}
-          <div>
-            <h4 className="text-lg font-semibold text-gray-800 mb-4">Dados da empresa</h4>
-            <div className="space-y-3">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Razão Social/Nome Fantasia</label>
-                <input 
-                  type="text" 
-                  placeholder="Bony Custo Barberaria"
-                  className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-600"
-                />
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="flex flex-col gap-1 rounded-lg px-3 py-2">
+                <span className="text-[11px] font-medium text-white/70">Total de Empresas</span>
+                <span className="text-[22px] font-bold leading-none text-white">{totalEmpresas}</span>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">CNPJ</label>
-                  <input 
-                    type="text" 
-                    placeholder="15.548.254/0001-65"
-                    className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-600"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Planos</label>
-                  <select className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-600">
-                    <option>Profissional</option>
-                    <option>Básico</option>
-                    <option>Premium</option>
-                  </select>
-                </div>
+
+              <div className="flex flex-col gap-1 rounded-lg  px-3 py-2">
+                <span className="text-[11px] font-medium text-white/70">Licenças Ativas</span>
+                <span className="text-[22px] font-bold leading-none text-green-400">{licencasAtivas}</span>
+              </div>
+
+              <div className="flex flex-col gap-1 rounded-lg px-3 py-2">
+                <span className="text-[11px] font-medium text-white/70">MRR Estimado</span>
+                <span className="text-[20px] font-bold leading-none text-white sm:text-[22px]">
+                  {mrrEstimado.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                </span>
+              </div>
+
+              <div className="flex flex-col gap-1 rounded-lg px-3 py-2">
+                <span className="text-[11px] font-medium text-white/70">Inadimplência</span>
+                <span className="text-[22px] font-bold leading-none text-red-400">{inadimplencia}</span>
               </div>
             </div>
           </div>
 
-          {/* Localização */}
-          <div>
-            <h4 className="text-lg font-semibold text-gray-800 mb-4">Localização</h4>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Cidade</label>
-                <input 
-                  type="text" 
-                  placeholder="Ingoá"
-                  className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-600"
-                />
+          <div className="flex items-center justify-center opacity-25 md:justify-end md:pl-6">
+            <img src="/escudo.svg" alt="" className="w-24 sm:w-28 md:w-30" />
+          </div>
+        </div>
+
+        {/* Card de informações: "Empresas e Acessos" / "Financeiro e Cobrança" */}
+        <div className="flex w-full flex-col gap-2 rounded-lg bg-white px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+          <div className="flex flex-1 flex-wrap gap-2">
+            {infoCards.map((card, index) => {
+              const IconComponent = card.icon;
+              const isSelected = selectedCard === index;
+              return (
+                <button
+                  key={card.name}
+                  type="button"
+                  onClick={() => setSelectedCard(index)}
+                  className="flex cursor-pointer items-center gap-2 rounded-lg p-3 transition-colors hover:bg-blue-50 sm:p-4"
+                >
+                  <IconComponent
+                    className={`h-6 w-6 shrink-0 transition-colors ${
+                      isSelected ? "text-blue-600" : "text-[#8680A4]"
+                    }`}
+                  />
+                  <h2
+                    className={`whitespace-nowrap border-b-2 pb-1 text-base font-semibold transition-colors sm:text-lg ${
+                      isSelected ? "border-blue-600 text-blue-600" : "border-transparent text-[#8680A4] hover:text-blue-600"
+                    }`}
+                  >
+                    {card.name}
+                  </h2>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="w-full sm:w-auto">
+            <button className="w-full cursor-pointer rounded-xl bg-[#009699] px-4 py-2 font-medium text-white transition-colors hover:bg-blue-600 sm:w-auto">
+              + Nova Empresa
+            </button>
+          </div>
+        </div>
+
+        {/* Conteúdo dinâmico baseado no card selecionado */}
+        <div className="w-full overflow-hidden rounded-lg bg-white px-2 py-2">
+          {selectedCard === 0 && (
+            <div className="p-2 sm:p-4">
+              <div className="mb-6 flex items-center gap-3">
+                <BuildingOffice2Icon className="h-6 w-6 shrink-0 text-blue-600" />
+                <h2 className="text-xl font-bold text-[#1E40AF] sm:text-2xl">Empresas e Acessos</h2>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">UF</label>
-                <select className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-600">
-                  <option>PB</option>
-                  <option>SP</option>
-                  <option>RJ</option>
-                  <option>MG</option>
+
+              {/* Barra de Pesquisa e Filtro */}
+              <div className="mb-5 flex flex-col gap-2 sm:flex-row">
+                <div className="relative flex-1 font-medium text-black">
+                  <input
+                    type="text"
+                    placeholder="Buscar empresa, responsável ou e-mail..."
+                    value={searchTerm}
+                    onChange={(e) => {
+                      setSearchTerm(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                  />
+                  <svg
+                    className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                    />
+                  </svg>
+                </div>
+                <select
+                  value={statusFilter}
+                  onChange={(e) => {
+                    setStatusFilter(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="w-full rounded-lg border border-gray-300 px-4 py-2 font-bold text-black focus:outline-none focus:ring-2 focus:ring-blue-600 sm:w-auto"
+                >
+                  <option value="todos">Status: Todos</option>
+                  <option value="ativa">Status: Ativa</option>
+                  <option value="inativa">Status: Inativa</option>
+                  <option value="bloqueado">Status: Bloqueado</option>
+                  <option value="pendente">Status: Pendente</option>
                 </select>
               </div>
+
+              {/* Tabela de Empresas */}
+              <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
+                <div className="max-h-96 overflow-x-auto overflow-y-auto sm:max-h-72" style={{ scrollbarGutter: "stable" }}>
+                  <table className="w-full min-w-[780px]">
+                    <thead className="sticky top-0 z-10 border-b border-gray-200 bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-4 text-left font-semibold text-gray-700">Empresa</th>
+                        <th className="px-6 py-4 text-left font-semibold text-gray-700">Plano</th>
+                        <th className="px-6 py-4 text-left font-semibold text-gray-700">Responsável</th>
+                        <th className="px-6 py-4 text-left font-semibold text-gray-700">Status</th>
+                        <th className="px-6 py-4 text-left font-semibold text-gray-700">Próx. Cobrança</th>
+                        <th className="px-6 py-4 text-center font-semibold text-gray-700">Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {empresasPaginadas.map((empresa) => {
+                        const statusColor = getStatusColor(empresa.status);
+                        return (
+                          <tr key={empresa.id} className="border-b border-gray-100 transition hover:bg-gray-50">
+                            <td className="px-6 py-4">
+                              <div className="flex items-center gap-3">
+                                <div
+                                  className={`${empresa.cor} flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white`}
+                                >
+                                  {getInitials(empresa.nome)}
+                                </div>
+                                <div>
+                                  <p className="font-semibold text-gray-900">{empresa.nome}</p>
+                                  <p className="text-xs font-light text-gray-500">{empresa.cnpj}</p>
+                                </div>
+                              </div>
+                            </td>
+
+                            <td className="px-6 py-4 font-medium text-gray-700">{empresa.plano}</td>
+
+                            <td className="px-6 py-4">
+                              <div>
+                                <p className="font-medium text-gray-900">{empresa.responsavel}</p>
+                                <p className="text-xs font-light text-gray-500">{empresa.email}</p>
+                              </div>
+                            </td>
+
+                            <td className="px-6 py-4">
+                              <div className="flex items-center">
+                                <span
+                                  className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm font-medium ${statusColor.bg} ${statusColor.text}`}
+                                >
+                                  {empresa.status === "ativa" && <CheckCircleIcon className="h-4 w-4 text-green-500" />}
+                                  {empresa.status === "inativa" && <XCircleIcon className="h-4 w-4 text-gray-500" />}
+                                  {empresa.status === "bloqueado" && <XCircleIcon className="h-4 w-4 text-red-500" />}
+                                  {empresa.status === "pendente" && <ClockIcon className="h-4 w-4 text-yellow-500" />}
+                                  <span>{getStatusLabel(empresa.status)}</span>
+                                </span>
+                              </div>
+                            </td>
+
+                            <td className="px-6 py-4 font-light text-gray-700">{empresa.dataCobranca}</td>
+
+                            <td className="px-6 py-4">
+                              <div className="flex justify-center gap-2">
+                                <button
+                                  onClick={() => handleEnviarMensagem(empresa.id, empresa.nome)}
+                                  className="rounded-lg p-2 text-blue-600 transition hover:bg-blue-50"
+                                  title="Enviar mensagem"
+                                >
+                                  <EnvelopeIcon className="h-5 w-5" />
+                                </button>
+                                <button
+                                  onClick={() => handleEditar(empresa.id, empresa.nome)}
+                                  className="rounded-lg p-2 text-gray-600 transition hover:bg-gray-100"
+                                  title="Editar"
+                                >
+                                  <PencilIcon className="h-5 w-5" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeletar(empresa.id, empresa.nome)}
+                                  className="rounded-lg p-2 text-red-600 transition hover:bg-red-50"
+                                  title="Deletar"
+                                >
+                                  <TrashIcon className="h-5 w-5" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      {empresasPaginadas.length === 0 && (
+                        <tr>
+                          <td colSpan={6} className="px-6 py-8 text-center text-sm text-gray-500">
+                            Nenhuma empresa encontrada.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Paginação */}
+              <div className="mt-3 flex flex-col items-start justify-between gap-3 py-4 sm:flex-row sm:items-center">
+                <p className="text-sm font-light text-gray-600">
+                  {empresasPaginadas.length} de {empresasFiltradas.length} linha(s) exibida(s).
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="rounded-lg border border-gray-300 px-4 py-2 font-medium text-black transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Anterior
+                  </button>
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    className="rounded-lg border border-gray-300 px-4 py-2 font-medium text-black transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Próximo
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {selectedCard === 1 && (
+            <div className="p-2 sm:p-6">
+              <div className="mb-6">
+                <div className="relative w-full max-w-sm">
+                  <input
+                    type="text"
+                    placeholder="Buscar cobrança por empresa..."
+                    className="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                  />
+                  <svg
+                    className="absolute left-3 top-2.5 h-5 w-5 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                    />
+                  </svg>
+                </div>
+              </div>
+
+              {/* Tabela de Cobranças */}
+              <div className="overflow-hidden rounded-lg border border-gray-200 bg-white font-bold">
+                <div className="max-h-72 overflow-x-auto overflow-y-auto" style={{ scrollbarGutter: "stable" }}>
+                  <table className="w-full min-w-[760px]">
+                    <thead className="sticky top-0 z-10 border-b border-gray-200 bg-gray-50 font-medium">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-800">Empresa</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-800">Plano</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-800">Valor</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-800">Vencimento</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-800">Status</th>
+                        <th className="px-4 py-3 text-center text-sm font-semibold text-gray-800">Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {empresas
+                        .slice((currentPageFinanceiro - 1) * itemsPerPage, currentPageFinanceiro * itemsPerPage)
+                        .map((empresa) => {
+                          const statusColor = getStatusColor(empresa.status);
+                          return (
+                            <tr key={empresa.id} className="border-b border-gray-200 transition hover:bg-gray-50">
+                              <td className="px-4 py-4">
+                                <div>
+                                  <p className="font-medium text-gray-900">{empresa.nome}</p>
+                                  <p className="text-xs text-gray-500">{empresa.cnpj}</p>
+                                </div>
+                              </td>
+                              <td className="px-4 py-4 text-sm text-gray-700">{empresa.plano}</td>
+                              <td className="px-4 py-4 text-sm font-semibold text-gray-900">{empresa.valor}</td>
+                              <td className="px-4 py-4 text-sm text-gray-700">{empresa.dataCobranca}</td>
+                              <td className="px-4 py-4">
+                                <div className="flex items-center">
+                                  <span
+                                    className={`inline-flex items-center gap-2 rounded-full px-2 py-1 text-sm font-medium ${statusColor.bg} ${statusColor.text}`}
+                                  >
+                                    {empresa.status === "ativa" && <CheckCircleIcon className="h-4 w-4 text-green-500" />}
+                                    {empresa.status === "inativa" && <XCircleIcon className="h-4 w-4 text-gray-500" />}
+                                    {empresa.status === "bloqueado" && <XCircleIcon className="h-4 w-4 text-red-500" />}
+                                    {empresa.status === "pendente" && <ClockIcon className="h-4 w-4 text-yellow-500" />}
+                                    <span>{getStatusLabel(empresa.status)}</span>
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="px-4 py-4">
+                                <div className="flex justify-center">
+                                  <button title="Enviar cobrança" className="rounded-lg p-2 text-blue-600 transition hover:bg-blue-50">
+                                    <EnvelopeIcon className="h-5 w-5" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Paginação */}
+              <div className="mt-6 flex flex-col items-start justify-between gap-3 py-4 sm:flex-row sm:items-center">
+                <p className="text-sm text-gray-600">
+                  Página {currentPageFinanceiro} de {totalPagesFinanceiro}
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setCurrentPageFinanceiro((p) => Math.max(1, p - 1))}
+                    disabled={currentPageFinanceiro === 1}
+                    className="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Anterior
+                  </button>
+                  <button
+                    onClick={() => setCurrentPageFinanceiro((p) => Math.min(totalPagesFinanceiro, p + 1))}
+                    disabled={currentPageFinanceiro === totalPagesFinanceiro}
+                    className="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Próximo
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Modal de Mensagem */}
+        {modalType === "mensagem" && modalData && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center px-3 py-4 sm:px-4">
+            <div className="absolute inset-0 bg-black/50" onClick={closeModal} aria-hidden="true" />
+            <div className="relative z-10 max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-4 shadow-2xl sm:p-6">
+              <div className="mb-5 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-100">
+                    <EnvelopeIcon className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-black">Enviar mensagem</h3>
+                    <p className="text-sm text-gray-600">
+                      Para <span className="font-semibold text-black">{modalData.empresaNome}</span>
+                    </p>
+                  </div>
+                </div>
+                <button onClick={closeModal} className="text-gray-500 hover:text-black" aria-label="Fechar">
+                  <XMarkIcon className="h-6 w-6" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-black">Assunto</label>
+                  <input
+                    type="text"
+                    placeholder="Ex: Cobrança / Atualização de plano"
+                    className="w-full rounded-lg border border-gray-300 p-3 text-black placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-black">Mensagem</label>
+                  <textarea
+                    className="min-h-[150px] w-full rounded-lg border border-gray-300 p-3 text-black placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                    rows={6}
+                    placeholder="Digite sua mensagem..."
+                  />
+                </div>
+              </div>
+
+              <div className="mt-6 flex flex-col-reverse justify-end gap-3 border-t pt-4 sm:flex-row">
+                <button
+                  onClick={closeModal}
+                  className="w-full rounded-lg border border-gray-300 px-5 py-2 font-medium text-gray-700 transition hover:bg-gray-50 sm:w-auto"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={closeModal}
+                  className="w-full rounded-lg bg-blue-600 px-5 py-2 font-medium text-white transition hover:bg-blue-700 sm:w-auto"
+                >
+                  Enviar
+                </button>
+              </div>
             </div>
           </div>
+        )}
 
-          {/* Contato e Acesso */}
-          <div>
-            <h4 className="text-lg font-semibold text-gray-800 mb-4">Contato e Acesso</h4>
-            <div className="space-y-3">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Responsável</label>
-                <input 
-                  type="text" 
-                  placeholder="Bony Custo"
-                  className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-600"
-                />
+        {/* Modal de Editar */}
+        {modalType === "editar" && modalData && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 px-3 py-4 sm:px-4">
+            <div className="relative z-10 max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-4 shadow-xl sm:p-8">
+              <div className="max-h-[70vh] space-y-6 overflow-y-auto pr-0 font-medium text-black sm:pr-4">
+                <div>
+                  <h4 className="mb-4 text-lg font-semibold text-gray-800">Dados da empresa</h4>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-gray-700">Razão Social/Nome Fantasia</label>
+                      <input
+                        type="text"
+                        value={editForm.nome}
+                        onChange={(e) => setEditForm((prev) => ({ ...prev, nome: e.target.value }))}
+                        placeholder="Bony Custo Barberaria"
+                        className="w-full rounded-lg border border-gray-300 p-3 text-black placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <div>
+                        <label className="mb-1 block text-sm font-medium text-gray-700">CNPJ</label>
+                        <input
+                          type="text"
+                          value={editForm.cnpj}
+                          onChange={(e) => setEditForm((prev) => ({ ...prev, cnpj: e.target.value }))}
+                          placeholder="15.548.254/0001-65"
+                          className="w-full rounded-lg border border-gray-300 p-3 text-black placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-sm font-medium text-gray-700">Planos</label>
+                        <select
+                          value={editForm.plano}
+                          onChange={(e) => setEditForm((prev) => ({ ...prev, plano: e.target.value }))}
+                          className="w-full rounded-lg border border-gray-300 p-3 text-black focus:outline-none focus:ring-2 focus:ring-blue-600"
+                        >
+                          <option value="Profissional">Profissional</option>
+                          <option value="Básico">Básico</option>
+                          <option value="Premium">Premium</option>
+                          <option value="Standart">Standart</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="mb-4 text-lg font-semibold text-gray-800">Localização</h4>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-gray-700">Cidade</label>
+                      <input
+                        type="text"
+                        value={editForm.cidade}
+                        onChange={(e) => setEditForm((prev) => ({ ...prev, cidade: e.target.value }))}
+                        placeholder="Ingoá"
+                        className="w-full rounded-lg border border-gray-300 p-3 text-black placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-gray-700">UF</label>
+                      <select
+                        value={editForm.uf}
+                        onChange={(e) => setEditForm((prev) => ({ ...prev, uf: e.target.value }))}
+                        className="w-full rounded-lg border border-gray-300 p-3 text-black focus:outline-none focus:ring-2 focus:ring-blue-600"
+                      >
+                        <option value="PB">PB</option>
+                        <option value="SP">SP</option>
+                        <option value="RJ">RJ</option>
+                        <option value="MG">MG</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="mb-4 text-lg font-semibold text-gray-800">Contato e Acesso</h4>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-gray-700">Responsável</label>
+                      <input
+                        type="text"
+                        value={editForm.responsavel}
+                        onChange={(e) => setEditForm((prev) => ({ ...prev, responsavel: e.target.value }))}
+                        placeholder="Bony Custo"
+                        className="w-full rounded-lg border border-gray-300 p-3 text-black placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <div>
+                        <label className="mb-1 block text-sm font-medium text-gray-700">E-mail de Acesso</label>
+                        <input
+                          type="email"
+                          value={editForm.email}
+                          onChange={(e) => setEditForm((prev) => ({ ...prev, email: e.target.value }))}
+                          placeholder="bony.costobarberaria@gmail.com"
+                          className="w-full rounded-lg border border-gray-300 p-3 text-black placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-sm font-medium text-gray-700">Senha de Acesso</label>
+                        <input
+                          type="password"
+                          value={editForm.senha}
+                          onChange={(e) => setEditForm((prev) => ({ ...prev, senha: e.target.value }))}
+                          placeholder="bony123"
+                          className="w-full rounded-lg border border-gray-300 p-3 text-black placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <div>
+                        <label className="mb-1 block text-sm font-medium text-gray-700">Telefone/Whatsapp</label>
+                        <input
+                          type="tel"
+                          value={editForm.telefone}
+                          onChange={(e) => setEditForm((prev) => ({ ...prev, telefone: e.target.value }))}
+                          placeholder="(83) 99999-9999"
+                          className="w-full rounded-lg border border-gray-300 p-3 text-black placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-sm font-medium text-gray-700">Status</label>
+                        <select
+                          value={editForm.status}
+                          onChange={(e) =>
+                            setEditForm((prev) => ({ ...prev, status: e.target.value as Empresa["status"] }))
+                          }
+                          className="w-full rounded-lg border border-gray-300 p-3 text-black focus:outline-none focus:ring-2 focus:ring-blue-600"
+                        >
+                          <option value="ativa">Ativo</option>
+                          <option value="inativa">Inativo</option>
+                          <option value="bloqueado">Bloqueado</option>
+                          <option value="pendente">Pendente</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">E-mail de Acesso</label>
-                  <input 
-                    type="email" 
-                    placeholder="bony.costobarberaria@gmail.com"
-                    className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-600"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Senha de Acesso</label>
-                  <input 
-                    type="password" 
-                    placeholder="bony123"
-                    className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-600"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Telefone/Whatsapp</label>
-                  <input 
-                    type="tel" 
-                    placeholder="(83) 99999-9999"
-                    className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-600"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                  <select className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-600">
-                    <option>Ativo</option>
-                    <option>Inativo</option>
-                  </select>
-                </div>
+
+              <div className="mt-8 flex flex-col-reverse justify-end gap-3 border-t pt-6 sm:flex-row">
+                <button
+                  onClick={closeModal}
+                  className="w-full rounded-lg border border-gray-300 px-6 py-2 font-medium text-gray-700 transition hover:bg-gray-50 sm:w-auto"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={salvarEdicao}
+                  className="w-full rounded-lg bg-blue-600 px-6 py-2 font-medium text-white transition hover:bg-blue-700 sm:w-auto"
+                >
+                  Salvar Dados
+                </button>
               </div>
             </div>
           </div>
-        </div>
-        
-        <div className="flex justify-end gap-3 mt-8 border-t pt-6">
-          <button 
-            onClick={closeModal}
-            className="px-6 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition font-medium"
-          >
-            Cancelar
-          </button>
-          <button 
-            onClick={closeModal}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
-          >
-            Salvar Dados
-          </button>
-        </div>
+        )}
+
+        {/* Modal de Deletar */}
+        {modalType === "deletar" && modalData && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center px-3 py-4 sm:px-4">
+            <div className="absolute inset-0 bg-black/50" onClick={closeModal} aria-hidden="true" />
+            <div className="relative z-10 w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-lg font-bold text-red-600">Confirmar Exclusão</h3>
+                <button onClick={closeModal} className="text-gray-500 hover:text-gray-700" aria-label="Fechar">
+                  <XMarkIcon className="h-5 w-5" />
+                </button>
+              </div>
+              <p className="mb-6 text-gray-600">
+                Você tem certeza que deseja deletar <strong>{modalData.empresaNome}</strong>? Esta ação não pode ser
+                desfeita.
+              </p>
+
+              <div className="flex flex-col-reverse justify-end gap-3 sm:flex-row">
+                <button
+                  onClick={closeModal}
+                  className="rounded-lg border border-gray-300 px-4 py-2 text-gray-700 transition hover:bg-gray-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={confirmarDelecao}
+                  className="rounded-lg bg-red-600 px-4 py-2 text-white transition hover:bg-red-700"
+                >
+                  Deletar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
-    </div>
-  )}
-
-  {/* Modal de Deletar */}
-  {modalType === "deletar" && modalData && (
-    <div className="fixed inset-0 z-999 flex items-center justify-center px-4">
-      <div className="absolute inset-0 bg-black/50" onClick={closeModal} />
-      <div className="relative w-full max-w-md bg-white rounded-lg shadow-xl p-6 z-10">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-bold text-red-600">Confirmar Exclusão</h3>
-          <button onClick={closeModal} className="text-gray-500 hover:text-gray-700">
-            <XMarkIcon className="w-5 h-5" />
-          </button>
-        </div>
-        <p className="text-gray-600 mb-6">
-          Você tem certeza que deseja deletar <strong>{modalData.empresaNome}</strong>? Esta ação não pode ser desfeita.
-        </p>
-        
-        <div className="flex justify-end gap-3">
-          <button 
-            onClick={closeModal}
-            className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
-          >
-            Cancelar
-          </button>
-          <button 
-            onClick={confirmarDelecao}
-            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
-          >
-            Deletar
-          </button>
-        </div>
-      </div>
-    </div>
-  )}
-
-</main>
-
     </AdminLayout>
-      </>
   );
 }
