@@ -16,9 +16,9 @@ import {
 } from "@heroicons/react/24/outline";
 
 const navigation = [
-  { name: "Licenças", href: "#", icon: ShieldCheckIcon, count: "1", current: true },
-  { name: "Estatísticas", href: "#", icon: PresentationChartLineIcon, count: "1", current: false },
-  { name: "Receita", href: "#", icon: BanknotesIcon, count: "1", current: false },
+  { name: "Licenças", href: "/Admin", icon: ShieldCheckIcon, count: "1", current: true },
+  { name: "Estatísticas", href: "/Admin/Estatisticas", icon: PresentationChartLineIcon, count: "1", current: false },
+  { name: "Receita", href: "/Admin/Receitas", icon: BanknotesIcon, count: "1", current: false },
 ];
 
 const configuration = [
