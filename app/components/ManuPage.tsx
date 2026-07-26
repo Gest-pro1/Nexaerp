@@ -22,7 +22,7 @@ const navigation = [
 ];
 
 const configuration = [
-  { name: "Configurações", href: "#", icon: Cog6ToothIcon },
+  { name: "Configurações", href: "/Admin/gear", icon: Cog6ToothIcon },
   { name: "Sair", href: "#", icon: ArrowRightStartOnRectangleIcon },
 ];
 
