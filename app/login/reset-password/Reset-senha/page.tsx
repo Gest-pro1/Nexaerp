@@ -90,7 +90,7 @@ export default function SenhaAltPage() {
     <p className="text-sm text-gray-500 font-medium">
       Problemas para acessar?
     </p>
-    <a href="/cadastro" className="text-lg font-semibold text-[#1E40AF] hover:text-blue-700 transition">
+    <a href="/register" className="text-lg font-semibold text-[#1E40AF] hover:text-blue-700 transition">
      Contate o suporte
     </a>
             

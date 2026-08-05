@@ -124,7 +124,7 @@ return(
       </button>
       <div className="mt-1 pt-6 border-t border-gray-200 justify-center flex items-center gap-3">
         <p className="text-sm text-gray-500 font-medium">Problemas para acessar?</p>
-        <a href="/cadastro" className="text-lg font-semibold text-[#1E40AF] hover:text-blue-700 transition">
+        <a href="/register" className="text-lg font-semibold text-[#1E40AF] hover:text-blue-700 transition">
           Contate o suporte
         </a>
       </div>
