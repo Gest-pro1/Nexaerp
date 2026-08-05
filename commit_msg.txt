@@ -1,0 +1,6 @@
+﻿Fix: corrige redirecionamento em /payment/success e ajustar configs do ESLint
+
+- Corrige handler em app/payment/success/route.ts para construir URL absoluta a partir dos headers e evitar erro "Invalid URL" em dev/prod
+- Renomeia eslint.config.js e eslint.config.mjs para .disabled para evitar conflitos com a configuração existente (.eslintrc.cjs)
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
