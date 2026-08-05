@@ -122,7 +122,7 @@ export default function LoginPage() {
 </section>
 
     {/* FORM */}
-    <form className="w-full flex flex-col gap-4 sm:mt-3 mb-2 p-3">
+    <form onSubmit={(e) => { e.preventDefault(); if (!email || !password) { alert('Preencha e-mail e senha'); return; } router.push('/Admin'); }} className="w-full flex flex-col gap-4 sm:mt-3 mb-2 p-3">
 
       {/* EMAIL */}
       <div> 

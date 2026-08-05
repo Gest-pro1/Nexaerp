@@ -262,7 +262,7 @@ function PaymentContent() {
           <button
             onClick={() => router.back()}
             className="inline-flex items-center gap-2 text-[#969696] font-bold text-lg mb-8 w-fit hover:text-blue-800 transition cursor-pointer">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" className="size-6">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
             
             </svg>
               Voltar
