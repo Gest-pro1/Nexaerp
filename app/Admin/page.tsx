@@ -223,25 +223,47 @@ export default function AdminPage() {
   const salvarEdicao = () => {
     if (!modalData) return;
 
-    setEmpresas((prev) =>
-      prev.map((emp) =>
-        emp.id === modalData.empresaId
-          ? {
-              ...emp,
-              nome: editForm.nome.trim() || emp.nome,
-              cnpj: editForm.cnpj.trim() || emp.cnpj,
-              plano: editForm.plano.trim() || emp.plano,
-              cidade: editForm.cidade.trim(),
-              uf: editForm.uf,
-              responsavel: editForm.responsavel.trim() || emp.responsavel,
-              email: editForm.email.trim() || emp.email,
-              senha: editForm.senha.trim(),
-              telefone: editForm.telefone.trim(),
-              status: editForm.status,
-            }
-          : emp
-      )
-    );
+    setEmpresas((prev) => {
+      const exists = prev.some((emp) => emp.id === modalData.empresaId);
+      if (exists) {
+        return prev.map((emp) =>
+          emp.id === modalData.empresaId
+            ? {
+                ...emp,
+                nome: editForm.nome.trim() || emp.nome,
+                cnpj: editForm.cnpj.trim() || emp.cnpj,
+                plano: editForm.plano.trim() || emp.plano,
+                cidade: editForm.cidade.trim(),
+                uf: editForm.uf,
+                responsavel: editForm.responsavel.trim() || emp.responsavel,
+                email: editForm.email.trim() || emp.email,
+                senha: editForm.senha.trim(),
+                telefone: editForm.telefone.trim(),
+                status: editForm.status,
+              }
+            : emp
+        );
+      } else {
+        // Criar nova empresa com campos do formulário (usando valores padrão quando necessário)
+        const newEmpresa: Empresa = {
+          id: modalData.empresaId,
+          nome: editForm.nome.trim() || 'Nova Empresa',
+          cnpj: editForm.cnpj.trim() || '',
+          plano: editForm.plano.trim() || 'Profissional',
+          responsavel: editForm.responsavel.trim() || '',
+          email: editForm.email.trim() || '',
+          status: editForm.status || 'ativa',
+          dataCobranca: new Date().toLocaleDateString('pt-BR'),
+          valor: 'R$ 0,00',
+          cor: 'bg-gray-600',
+          cidade: editForm.cidade.trim(),
+          uf: editForm.uf,
+          senha: editForm.senha.trim(),
+          telefone: editForm.telefone.trim(),
+        };
+        return [newEmpresa, ...prev];
+      }
+    });
 
     setModalType(null);
     setModalData(null);
@@ -382,9 +404,27 @@ export default function AdminPage() {
           </div>
 
           <div className="w-full sm:w-auto">
-            <button className="w-full cursor-pointer rounded-xl bg-[#009699] px-4 py-2 font-medium text-white transition-colors hover:bg-blue-600 sm:w-auto">
-              + Nova Empresa
-            </button>
+          <button onClick={() => {
+            // Abrir modal de edição para criar nova empresa
+            const maxId = empresas.length ? Math.max(...empresas.map(e => e.id)) : 0;
+            const newId = maxId + 1;
+            setEditForm({
+              nome: "",
+              cnpj: "",
+              plano: "Profissional",
+              cidade: "",
+              uf: "PB",
+              responsavel: "",
+              email: "",
+              senha: "",
+              telefone: "",
+              status: "ativa",
+            });
+            setModalData({ empresaId: newId, empresaNome: 'Nova Empresa' });
+            setModalType('editar');
+          }} className="w-full cursor-pointer rounded-xl bg-[#009699] px-4 py-2 font-medium text-white transition-colors hover:bg-blue-600 sm:w-auto">
+            + Nova Empresa
+          </button>
           </div>
         </div>
 
