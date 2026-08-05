@@ -208,6 +208,8 @@ export default function CadastroPage() {
     const solicitacoes = JSON.parse(localStorage.getItem('solicitacoes') || '[]')
     solicitacoes.push(novaSolicitacao)
     localStorage.setItem('solicitacoes', JSON.stringify(solicitacoes))
+    // Persistir dados que a página de sucesso espera ler
+    localStorage.setItem('cadastroDados', JSON.stringify({ razaoSocial, email }))
     window.dispatchEvent(new CustomEvent('novaSolicitacao', { detail: novaSolicitacao }))
 
     const planSelected = PLANS.find(p => p.id === selectedPlan)
