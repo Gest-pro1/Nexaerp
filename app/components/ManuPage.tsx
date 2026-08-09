@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
 import { useState } from "react";
 import {
@@ -16,14 +17,14 @@ import {
 } from "@heroicons/react/24/outline";
 
 const navigation = [
-  { name: "Licenças", href: "/Admin", icon: ShieldCheckIcon, count: "1", current: true },
-  { name: "Estatísticas", href: "/Admin/Estatisticas", icon: PresentationChartLineIcon, count: "1", current: false },
-  { name: "Receita", href: "/Admin/Receitas", icon: BanknotesIcon, count: "1", current: false },
+  { name: "Licenças", href: "/Admin", icon: ShieldCheckIcon },
+  { name: "Estatísticas", href: "/Admin/Estatisticas", icon: PresentationChartLineIcon },
+  { name: "Receita", href: "/Admin/Receitas", icon: BanknotesIcon },
 ];
 
 const configuration = [
   { name: "Configurações", href: "/Admin/gear", icon: Cog6ToothIcon },
-  { name: "Sair", href: "#", icon: ArrowRightStartOnRectangleIcon },
+  { name: "Sair", href: "/login", icon: ArrowRightStartOnRectangleIcon },
 ];
 
 function classNames(...classes: (string | false | undefined)[]) {
@@ -37,6 +38,7 @@ interface AdminLayoutProps {
 
 export default function AdminLayout({ children, notificacoes = 0 }: AdminLayoutProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const pathname = usePathname();
 
   // Trava o scroll do body quando o menu mobile está aberto
   useEffect(() => {
@@ -85,44 +87,50 @@ export default function AdminLayout({ children, notificacoes = 0 }: AdminLayoutP
 
         <nav className="mt-6 flex flex-1 flex-col">
           <ul className="space-y-2">
-            {navigation.map((item) => (
-              <li key={item.name}>
-                <a
-                  href={item.href}
-                  onClick={() => setIsMenuOpen(false)}
-                  className={classNames(
-                    item.current
-                      ? "bg-indigo-700 text-white"
-                      : "text-indigo-200 hover:bg-indigo-700 hover:text-white",
-                    "flex items-center gap-3 rounded-md p-2 text-sm font-semibold"
-                  )}
-                >
-                  <item.icon className="h-5 w-5 shrink-0" />
-                  <span className="truncate">{item.name}</span>
-                  {item.count && (
-                    <span className="ml-auto shrink-0 rounded-full bg-indigo-600 px-2 text-xs">
-                      {item.count}
-                    </span>
-                  )}
-                </a>
-              </li>
-            ))}
+            {navigation.map((item) => {
+              const isCurrent = pathname === item.href;
+              return (
+                <li key={item.name}>
+                  <a
+                    href={item.href}
+                    onClick={() => setIsMenuOpen(false)}
+                    className={classNames(
+                      isCurrent
+                        ? "bg-indigo-700 text-white font-bold shadow-sm"
+                        : "text-indigo-200 hover:bg-indigo-700 hover:text-white",
+                      "flex items-center gap-3 rounded-md p-2.5 text-sm font-semibold transition-colors"
+                    )}
+                  >
+                    <item.icon className="h-5 w-5 shrink-0" />
+                    <span className="truncate">{item.name}</span>
+                  </a>
+                </li>
+              );
+            })}
           </ul>
 
           <div className="mt-auto pb-4 font-bold">
             <div className="my-4 border-t border-indigo-700"></div>
 
-            {configuration.map((item) => (
-              <a
-                key={item.name}
-                href={item.href}
-                onClick={() => setIsMenuOpen(false)}
-                className="flex items-center gap-3 rounded-md p-2 text-sm text-indigo-200 hover:bg-indigo-700"
-              >
-                <item.icon className="h-5 w-5 shrink-0" />
-                <span className="truncate">{item.name}</span>
-              </a>
-            ))}
+            {configuration.map((item) => {
+              const isCurrent = pathname === item.href;
+              return (
+                <a
+                  key={item.name}
+                  href={item.href}
+                  onClick={() => setIsMenuOpen(false)}
+                  className={classNames(
+                    isCurrent
+                      ? "bg-indigo-700 text-white font-bold"
+                      : "text-indigo-200 hover:bg-indigo-700 hover:text-white",
+                    "flex items-center gap-3 rounded-md p-2.5 text-sm transition-colors mb-1"
+                  )}
+                >
+                  <item.icon className="h-5 w-5 shrink-0" />
+                  <span className="truncate">{item.name}</span>
+                </a>
+              );
+            })}
           </div>
         </nav>
       </aside>

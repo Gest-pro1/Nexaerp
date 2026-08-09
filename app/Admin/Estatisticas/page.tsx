@@ -1,5 +1,6 @@
 "use client";
 import React from "react";
+import { useRouter } from "next/navigation";
 import AdminLayout from "../../components/ManuPage";
 import {
   Area,
@@ -73,6 +74,8 @@ const planosConfig = {
 } satisfies ChartConfig;
 
 const Estatisticas = () => {
+  const router = useRouter();
+
   // Dados para o gráfico de crescimento de assinantes
   const crescimentoData = [
     { mes: "Jan", assinantes: 600 },
@@ -143,27 +146,31 @@ const Estatisticas = () => {
     },
   ];
 
-  // Dados de acesso rápido
+  // Dados de acesso rápido com links
   const acessoRapido = [
     {
       titulo: "Gerenciar Licenças",
       descricao: "Aprovar ou bloquear empresas",
       icon: ShieldCheckIcon,
+      href: "/Admin",
     },
     {
       titulo: "Configurar Planos",
       descricao: "Alterar preços e recursos",
       icon: Cog6ToothIcon,
+      href: "/Admin/gear",
     },
     {
       titulo: "Financeiro",
       descricao: "Ver inadimplência e receita",
       icon: CreditCardIcon,
+      href: "/Admin/Receitas",
     },
     {
       titulo: "Aprovar Cadastros",
       descricao: "Ver fila de solicitações",
       icon: UserPlusIcon,
+      href: "/Admin",
     },
   ];
 
@@ -333,7 +340,8 @@ const Estatisticas = () => {
                     return (
                       <button
                         key={index}
-                        className="w-full rounded-lg p-3 flex items-center gap-3 hover:bg-accent transition-colors text-left"
+                        onClick={() => router.push(item.href)}
+                        className="w-full rounded-lg p-3 flex items-center gap-3 hover:bg-accent transition-colors text-left cursor-pointer"
                       >
                         <div className="w-10 h-10 rounded-lg bg-blue-500 flex items-center justify-center flex-shrink-0">
                           <Icon className="w-5 h-5 text-white" />

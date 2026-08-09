@@ -245,55 +245,130 @@ const gateways = [
 /* Componente principal                                              */
 /* ---------------------------------------------------------------- */
 
+const STORAGE_KEY_CONFIG = "nexaerp-configuracoes";
+
+type SegmentoState = Record<string, { disponivel: boolean; manutencao: boolean }>;
+type DestaqueState = Record<string, boolean>;
+type FinanceiroState = {
+  multaAtraso: string;
+  jurosMora: string;
+  avisarDepois: string;
+  descontoAntecipacao: string;
+  avisarAntes: string;
+  reenvioCobranca: string;
+  diasBloqueio: string;
+};
+type SandboxState = Record<string, boolean>;
+
 const ConfiguracoesSistema = () => {
   const [secaoAtiva, setSecaoAtiva] = useState<SecaoId>("geral");
+  const [salvoSucesso, setSalvoSucesso] = useState(false);
+
+  // Função auxiliar para carregar do localStorage
+  const loadSavedConfig = () => {
+    if (typeof window === "undefined") return null;
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_CONFIG);
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const initialConfig = loadSavedConfig();
 
   // Geral
-  const [email, setEmail] = useState("");
-  const [manutencaoGlobal, setManutencaoGlobal] = useState(false);
-  const [whatsappNotif, setWhatsappNotif] = useState(true);
+  const [email, setEmail] = useState<string>(initialConfig?.email ?? "suporte@gestpro.com.br");
+  const [manutencaoGlobal, setManutencaoGlobal] = useState<boolean>(initialConfig?.manutencaoGlobal ?? false);
+  const [whatsappNotif, setWhatsappNotif] = useState<boolean>(initialConfig?.whatsappNotif ?? true);
 
   // Módulos
-  const [segmentos, setSegmentos] = useState(
-    Object.fromEntries(segmentosIniciais.map((s) => [s.id, { disponivel: true, manutencao: false }]))
+  const [segmentos, setSegmentos] = useState<SegmentoState>(
+    initialConfig?.segmentos ??
+      Object.fromEntries(segmentosIniciais.map((s) => [s.id, { disponivel: true, manutencao: false }]))
   );
 
   // Planos
-  const [destaque, setDestaque] = useState(
-    Object.fromEntries(planosIniciais.map((p) => [p.id, p.popular]))
+  const [destaque, setDestaque] = useState<DestaqueState>(
+    initialConfig?.destaque ?? Object.fromEntries(planosIniciais.map((p) => [p.id, p.popular]))
   );
 
   // Financeiro
-  const [financeiro, setFinanceiro] = useState({
-    multaAtraso: "2,00",
-    jurosMora: "1,00",
-    avisarDepois: "1",
-    descontoAntecipacao: "2,00",
-    avisarAntes: "5",
-    reenvioCobranca: "5",
-    diasBloqueio: "5",
-  });
-  const [ativarLembretes, setAtivarLembretes] = useState(true);
+  const [financeiro, setFinanceiro] = useState<FinanceiroState>(
+    initialConfig?.financeiro ?? {
+      multaAtraso: "2,00",
+      jurosMora: "1,00",
+      avisarDepois: "1",
+      descontoAntecipacao: "2,00",
+      avisarAntes: "5",
+      reenvioCobranca: "5",
+      diasBloqueio: "5",
+    }
+  );
+  const [ativarLembretes, setAtivarLembretes] = useState<boolean>(initialConfig?.ativarLembretes ?? true);
 
   // Integrações
   const [gatewayAtivo, setGatewayAtivo] = useState<string>("asaas");
-  const [sandbox, setSandbox] = useState(
-    Object.fromEntries(gateways.map((g) => [g.id, true]))
+  const [sandbox, setSandbox] = useState<SandboxState>(
+    initialConfig?.sandbox ?? Object.fromEntries(gateways.map((g) => [g.id, true]))
+  );
+  const [gatewayKeys, setGatewayKeys] = useState<Record<string, Record<string, string>>>(
+    initialConfig?.gatewayKeys ?? {
+      asaas: { chave1: "", chave2: "" },
+      mercadopago: { chave1: "", chave2: "" },
+      stripe: { chave1: "", chave2: "" },
+    }
   );
 
   const gatewaySelecionado = gateways.find((g) => g.id === gatewayAtivo)!;
+
+  const salvarAlteracoes = () => {
+    const dataToSave = {
+      email,
+      manutencaoGlobal,
+      whatsappNotif,
+      segmentos,
+      destaque,
+      financeiro,
+      ativarLembretes,
+      sandbox,
+      gatewayKeys,
+    };
+
+    if (typeof window !== "undefined") {
+      localStorage.setItem(STORAGE_KEY_CONFIG, JSON.stringify(dataToSave));
+    }
+
+    setSalvoSucesso(true);
+    setTimeout(() => {
+      setSalvoSucesso(false);
+    }, 3000);
+  };
 
   return (
     <AdminLayout>
       <div className="min-h-screen bg-gray-50 p-8">
         <div className="max-w-7xl mx-auto">
+          {/* Alerta de confirmação ao salvar */}
+          {salvoSucesso && (
+            <div className="mb-6 flex items-center justify-between rounded-lg bg-emerald-500 p-4 text-white shadow-lg transition-all">
+              <div className="flex items-center gap-2">
+                <CheckIcon className="w-5 h-5 font-bold" />
+                <span className="font-semibold text-sm">Configurações salvas com sucesso!</span>
+              </div>
+            </div>
+          )}
+
           {/* Título + botão salvar */}
           <div className="flex items-center justify-between mb-8">
             <div>
               <h1 className="text-2xl font-bold text-blue-700">Configurações do Sistema</h1>
               <p className="text-gray-500 text-sm">Área de gerenciamento de planos e integrações do sistema.</p>
             </div>
-            <button className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium px-4 py-2 rounded-md transition-colors">
+            <button
+              onClick={salvarAlteracoes}
+              className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium px-4 py-2 rounded-md transition-colors cursor-pointer"
+            >
               <BookmarkSquareIcon className="w-4 h-4" />
               Salvar Alterações
             </button>
@@ -621,7 +696,21 @@ const ConfiguracoesSistema = () => {
                     </div>
 
                     {gatewaySelecionado.campos.map((campo) => (
-                      <LabeledInput key={campo.chave} label={campo.label} placeholder={campo.placeholder} />
+                      <LabeledInput
+                        key={campo.chave}
+                        label={campo.label}
+                        placeholder={campo.placeholder}
+                        value={gatewayKeys[gatewayAtivo]?.[campo.chave] ?? ""}
+                        onChange={(val) =>
+                          setGatewayKeys((prev) => ({
+                            ...prev,
+                            [gatewayAtivo]: {
+                              ...(prev[gatewayAtivo] || {}),
+                              [campo.chave]: val,
+                            },
+                          }))
+                        }
+                      />
                     ))}
 
                     <div>
@@ -635,7 +724,17 @@ const ConfiguracoesSistema = () => {
                           value={gatewaySelecionado.webhook}
                           className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm text-gray-500 bg-gray-50 focus:outline-none"
                         />
-                        <button className="w-9 h-9 flex-shrink-0 rounded-md border border-gray-200 flex items-center justify-center hover:bg-gray-50">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (navigator.clipboard) {
+                              navigator.clipboard.writeText(gatewaySelecionado.webhook);
+                              alert("Webhook URL copiada para a área de transferência!");
+                            }
+                          }}
+                          title="Copiar URL"
+                          className="w-9 h-9 flex-shrink-0 rounded-md border border-gray-200 flex items-center justify-center hover:bg-gray-50 cursor-pointer"
+                        >
                           <LinkIcon className="w-4 h-4 text-gray-500" />
                         </button>
                       </div>

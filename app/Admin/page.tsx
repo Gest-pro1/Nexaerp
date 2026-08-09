@@ -113,14 +113,14 @@ const empresasExemplo: Empresa[] = [
   },
 ];
 
-type ModalType = null | "mensagem" | "editar" | "deletar";
+type ModalType = null | "mensagem" | "editar" | "deletar" | "criar";
 
 interface ModalData {
   empresaId: number;
   empresaNome: string;
 }
 
-// Tipo próprio do formulário de edição (antes usava o tipo nativo `FormData`, incompatível)
+// Tipo próprio do formulário de edição e criação
 type EditFormState = {
   nome: string;
   cnpj: string;
@@ -132,6 +132,7 @@ type EditFormState = {
   senha: string;
   telefone: string;
   status: Empresa["status"];
+  valor: string;
 };
 
 const STORAGE_KEY = "nexaerp-empresas";
@@ -142,8 +143,7 @@ export default function AdminPage() {
   const [modalType, setModalType] = useState<ModalType>(null);
   const [modalData, setModalData] = useState<ModalData | null>(null);
 
-  // Lê o que foi salvo no localStorage (se existir) já na primeira renderização,
-  // assim editar/deletar uma empresa e dar refresh não perde mais os dados.
+  // Lê o que foi salvo no localStorage (se existir) já na primeira renderização
   const [empresas, setEmpresas] = useState<Empresa[]>(() => {
     if (typeof window === "undefined") return empresasExemplo;
     try {
@@ -155,10 +155,12 @@ export default function AdminPage() {
   });
 
   const [searchTerm, setSearchTerm] = useState("");
+  const [searchTermFinanceiro, setSearchTermFinanceiro] = useState("");
   const [statusFilter, setStatusFilter] = useState("todos");
   const [currentPage, setCurrentPage] = useState(1);
   const [currentPageFinanceiro, setCurrentPageFinanceiro] = useState(1);
-  const [editForm, setEditForm] = useState<EditFormState>({
+
+  const defaultFormState: EditFormState = {
     nome: "",
     cnpj: "",
     plano: "Profissional",
@@ -169,7 +171,11 @@ export default function AdminPage() {
     senha: "",
     telefone: "",
     status: "ativa",
-  });
+    valor: "R$ 129,90",
+  };
+
+  const [editForm, setEditForm] = useState<EditFormState>(defaultFormState);
+  const [createForm, setCreateForm] = useState<EditFormState>(defaultFormState);
   const itemsPerPage = 5;
 
   // Cálculos para os cards de métricas
@@ -179,7 +185,7 @@ export default function AdminPage() {
     .filter((e) => e.status === "ativa")
     .reduce((acc, emp) => {
       const valorNumerico = parseFloat(emp.valor.replace("R$ ", "").replace(",", "."));
-      return acc + valorNumerico;
+      return acc + (isNaN(valorNumerico) ? 0 : valorNumerico);
     }, 0);
   const inadimplencia = empresas.filter((e) => e.status === "bloqueado").length;
 
@@ -192,6 +198,46 @@ export default function AdminPage() {
   const handleEnviarMensagem = (id: number, nome: string) => {
     setModalData({ empresaId: id, empresaNome: nome });
     setModalType("mensagem");
+  };
+
+  const handleNovaEmpresa = () => {
+    setCreateForm({ ...defaultFormState });
+    setModalType("criar");
+  };
+
+  const salvarCriacao = () => {
+    if (!createForm.nome.trim() || !createForm.cnpj.trim() || !createForm.email.trim()) {
+      alert("Por favor, preencha os campos obrigatórios: Razão Social/Nome Fantasia, CNPJ e E-mail.");
+      return;
+    }
+
+    const cores = ["bg-black", "bg-red-700", "bg-blue-600", "bg-purple-600", "bg-green-600", "bg-indigo-600"];
+    const corSorteada = cores[Math.floor(Math.random() * cores.length)];
+
+    let valorPlano = createForm.valor;
+    if (createForm.plano === "Standart") valorPlano = "R$ 69,90";
+    else if (createForm.plano === "Profissional") valorPlano = "R$ 129,90";
+    else if (createForm.plano === "Premium +") valorPlano = "R$ 249,90";
+
+    const novaEmpresa: Empresa = {
+      id: Date.now(),
+      nome: createForm.nome.trim(),
+      cnpj: createForm.cnpj.trim(),
+      plano: createForm.plano,
+      responsavel: createForm.responsavel.trim() || "Responsável",
+      email: createForm.email.trim(),
+      status: createForm.status,
+      dataCobranca: "30/12/2025",
+      valor: valorPlano,
+      cor: corSorteada,
+      cidade: createForm.cidade.trim(),
+      uf: createForm.uf,
+      senha: createForm.senha.trim(),
+      telefone: createForm.telefone.trim(),
+    };
+
+    setEmpresas((prev) => [novaEmpresa, ...prev]);
+    setModalType(null);
   };
 
   const handleEditar = (id: number, nome: string) => {
@@ -209,6 +255,7 @@ export default function AdminPage() {
       senha: empresa.senha ?? "",
       telefone: empresa.telefone ?? "",
       status: empresa.status,
+      valor: empresa.valor,
     });
 
     setModalData({ empresaId: id, empresaNome: nome });
@@ -382,7 +429,10 @@ export default function AdminPage() {
           </div>
 
           <div className="w-full sm:w-auto">
-            <button className="w-full cursor-pointer rounded-xl bg-[#009699] px-4 py-2 font-medium text-white transition-colors hover:bg-blue-600 sm:w-auto">
+            <button
+              onClick={handleNovaEmpresa}
+              className="w-full cursor-pointer rounded-xl bg-[#009699] px-4 py-2 font-medium text-white transition-colors hover:bg-blue-600 sm:w-auto"
+            >
               + Nova Empresa
             </button>
           </div>
@@ -569,7 +619,12 @@ export default function AdminPage() {
                 <div className="relative w-full max-w-sm">
                   <input
                     type="text"
-                    placeholder="Buscar cobrança por empresa..."
+                    placeholder="Buscar cobrança por empresa ou CNPJ..."
+                    value={searchTermFinanceiro}
+                    onChange={(e) => {
+                      setSearchTermFinanceiro(e.target.value);
+                      setCurrentPageFinanceiro(1);
+                    }}
                     className="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-blue-600"
                   />
                   <svg
@@ -604,6 +659,12 @@ export default function AdminPage() {
                     </thead>
                     <tbody>
                       {empresas
+                        .filter(
+                          (emp) =>
+                            emp.nome.toLowerCase().includes(searchTermFinanceiro.toLowerCase()) ||
+                            emp.cnpj.toLowerCase().includes(searchTermFinanceiro.toLowerCase()) ||
+                            emp.email.toLowerCase().includes(searchTermFinanceiro.toLowerCase())
+                        )
                         .slice((currentPageFinanceiro - 1) * itemsPerPage, currentPageFinanceiro * itemsPerPage)
                         .map((empresa) => {
                           const statusColor = getStatusColor(empresa.status);
@@ -633,7 +694,11 @@ export default function AdminPage() {
                               </td>
                               <td className="px-4 py-4">
                                 <div className="flex justify-center">
-                                  <button title="Enviar cobrança" className="rounded-lg p-2 text-blue-600 transition hover:bg-blue-50">
+                                  <button
+                                    onClick={() => handleEnviarMensagem(empresa.id, empresa.nome)}
+                                    title="Enviar cobrança / mensagem"
+                                    className="rounded-lg p-2 text-blue-600 transition hover:bg-blue-50"
+                                  >
                                     <EnvelopeIcon className="h-5 w-5" />
                                   </button>
                                 </div>
@@ -888,6 +953,177 @@ export default function AdminPage() {
                   className="w-full rounded-lg bg-blue-600 px-6 py-2 font-medium text-white transition hover:bg-blue-700 sm:w-auto"
                 >
                   Salvar Dados
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de Nova Empresa */}
+        {modalType === "criar" && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 px-3 py-4 sm:px-4">
+            <div className="relative z-10 max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-4 shadow-xl sm:p-8">
+              <div className="mb-4 flex items-center justify-between border-b pb-3">
+                <h3 className="text-xl font-bold text-[#1E40AF]">Cadastrar Nova Empresa</h3>
+                <button onClick={closeModal} className="text-gray-500 hover:text-black" aria-label="Fechar">
+                  <XMarkIcon className="h-6 w-6" />
+                </button>
+              </div>
+
+              <div className="max-h-[70vh] space-y-6 overflow-y-auto pr-0 font-medium text-black sm:pr-4">
+                <div>
+                  <h4 className="mb-3 text-base font-semibold text-gray-800">Dados Principais</h4>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-gray-700">Razão Social / Nome Fantasia *</label>
+                      <input
+                        type="text"
+                        value={createForm.nome}
+                        onChange={(e) => setCreateForm((prev) => ({ ...prev, nome: e.target.value }))}
+                        placeholder="Ex: Minha Empresa LTDA"
+                        className="w-full rounded-lg border border-gray-300 p-3 text-black placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <div>
+                        <label className="mb-1 block text-sm font-medium text-gray-700">CNPJ *</label>
+                        <input
+                          type="text"
+                          value={createForm.cnpj}
+                          onChange={(e) => setCreateForm((prev) => ({ ...prev, cnpj: e.target.value }))}
+                          placeholder="00.000.000/0001-00"
+                          className="w-full rounded-lg border border-gray-300 p-3 text-black placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-sm font-medium text-gray-700">Plano</label>
+                        <select
+                          value={createForm.plano}
+                          onChange={(e) => setCreateForm((prev) => ({ ...prev, plano: e.target.value }))}
+                          className="w-full rounded-lg border border-gray-300 p-3 text-black focus:outline-none focus:ring-2 focus:ring-blue-600"
+                        >
+                          <option value="Standart">Standart (R$ 69,90/mês)</option>
+                          <option value="Profissional">Profissional (R$ 129,90/mês)</option>
+                          <option value="Premium +">Premium + (R$ 249,90/mês)</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="mb-3 text-base font-semibold text-gray-800">Localização</h4>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-gray-700">Cidade</label>
+                      <input
+                        type="text"
+                        value={createForm.cidade}
+                        onChange={(e) => setCreateForm((prev) => ({ ...prev, cidade: e.target.value }))}
+                        placeholder="Ex: João Pessoa"
+                        className="w-full rounded-lg border border-gray-300 p-3 text-black placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-gray-700">UF</label>
+                      <select
+                        value={createForm.uf}
+                        onChange={(e) => setCreateForm((prev) => ({ ...prev, uf: e.target.value }))}
+                        className="w-full rounded-lg border border-gray-300 p-3 text-black focus:outline-none focus:ring-2 focus:ring-blue-600"
+                      >
+                        <option value="PB">PB</option>
+                        <option value="SP">SP</option>
+                        <option value="RJ">RJ</option>
+                        <option value="MG">MG</option>
+                        <option value="PE">PE</option>
+                        <option value="BA">BA</option>
+                        <option value="CE">CE</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="mb-3 text-base font-semibold text-gray-800">Contato & Acesso</h4>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-gray-700">Nome do Responsável</label>
+                      <input
+                        type="text"
+                        value={createForm.responsavel}
+                        onChange={(e) => setCreateForm((prev) => ({ ...prev, responsavel: e.target.value }))}
+                        placeholder="Ex: Carlos Silva"
+                        className="w-full rounded-lg border border-gray-300 p-3 text-black placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <div>
+                        <label className="mb-1 block text-sm font-medium text-gray-700">E-mail de Acesso *</label>
+                        <input
+                          type="email"
+                          value={createForm.email}
+                          onChange={(e) => setCreateForm((prev) => ({ ...prev, email: e.target.value }))}
+                          placeholder="contato@empresa.com"
+                          className="w-full rounded-lg border border-gray-300 p-3 text-black placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-sm font-medium text-gray-700">Senha Inicial</label>
+                        <input
+                          type="password"
+                          value={createForm.senha}
+                          onChange={(e) => setCreateForm((prev) => ({ ...prev, senha: e.target.value }))}
+                          placeholder="••••••••"
+                          className="w-full rounded-lg border border-gray-300 p-3 text-black placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <div>
+                        <label className="mb-1 block text-sm font-medium text-gray-700">Telefone / WhatsApp</label>
+                        <input
+                          type="tel"
+                          value={createForm.telefone}
+                          onChange={(e) => setCreateForm((prev) => ({ ...prev, telefone: e.target.value }))}
+                          placeholder="(83) 99999-9999"
+                          className="w-full rounded-lg border border-gray-300 p-3 text-black placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-sm font-medium text-gray-700">Status Inicial</label>
+                        <select
+                          value={createForm.status}
+                          onChange={(e) =>
+                            setCreateForm((prev) => ({ ...prev, status: e.target.value as Empresa["status"] }))
+                          }
+                          className="w-full rounded-lg border border-gray-300 p-3 text-black focus:outline-none focus:ring-2 focus:ring-blue-600"
+                        >
+                          <option value="ativa">Ativo</option>
+                          <option value="inativa">Inativo</option>
+                          <option value="bloqueado">Bloqueado</option>
+                          <option value="pendente">Pendente</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-8 flex flex-col-reverse justify-end gap-3 border-t pt-6 sm:flex-row">
+                <button
+                  onClick={closeModal}
+                  className="w-full rounded-lg border border-gray-300 px-6 py-2 font-medium text-gray-700 transition hover:bg-gray-50 sm:w-auto"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={salvarCriacao}
+                  className="w-full rounded-lg bg-[#009699] px-6 py-2 font-medium text-white transition hover:bg-blue-600 sm:w-auto"
+                >
+                  Cadastrar Empresa
                 </button>
               </div>
             </div>
