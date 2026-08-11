@@ -23,12 +23,13 @@ interface Tier {
   price: { Mês: string; Ano: string }
   description: string
   features: string[]
+  popular?: boolean
 }
 
 const tiers: Tier[] = [
   {
-    name: 'Stardart',
-    id: 'tier-standard',
+    name: 'Standart',
+    id: 'standard',
     price: { Mês: 'R$69,90', Ano: 'R$ 671,04' },
     description: 'Para começar agora.',
     features: [
@@ -39,10 +40,11 @@ const tiers: Tier[] = [
       'Suporte WhatsApp',
       'Módulos Personalizados',
     ],
+    popular: false,
   },
   {
-    name: 'Professional',
-    id: 'tier-professional',
+    name: 'Profissional',
+    id: 'professional',
     price: { Mês: 'R$129,90', Ano: 'R$ 1.247,04' },
     description: 'Para quem quer crescer.',
     features: [
@@ -53,10 +55,11 @@ const tiers: Tier[] = [
       'Suporte 24 Horas',
       'Controle Financeiro',
     ],
+    popular: true,
   },
   {
     name: 'Premium +',
-    id: 'tier-premium-plus',
+    id: 'premium',
     price: { Mês: 'R$249,90', Ano: 'R$ 2.399,04' },
     description: 'Para gestão e consultoria.',
     features: [
@@ -67,17 +70,72 @@ const tiers: Tier[] = [
       'Gráficos Avançados',
       'Módulos Personalizados',
     ],
+    popular: false,
   },
 ];
+
+function formatPriceObject(precoStr: string, priceAnoStr?: string) {
+  const clean = (precoStr || "").replace("R$", "").replace(/\s/g, "").replace(",", ".");
+  const val = parseFloat(clean);
+  const mes = isNaN(val) ? precoStr : `R$${val.toFixed(2).replace(".", ",")}`;
+
+  if (priceAnoStr) {
+    return { Mês: mes, Ano: priceAnoStr };
+  }
+  const valAno = isNaN(val) ? 0 : val * 12 * 0.8;
+  const ano = isNaN(val) ? precoStr : `R$ ${valAno.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return { Mês: mes, Ano: ano };
+}
 
 /* ================= COMPONENT ================= */
 export default function Main() {
   const router = useRouter();
   const [frequency, setFrequency] = useState(frequencies[0]);
-  const [selectedPlan, setSelectedPlan] = useState(tiers[1]);
+  const [displayTiers, setDisplayTiers] = useState<Tier[]>(tiers);
+  const [selectedPlan, setSelectedPlan] = useState<Tier>(tiers[1]);
+
+  React.useEffect(() => {
+    const loadSavedPlans = () => {
+      if (typeof window === "undefined") return;
+      try {
+        const raw = localStorage.getItem("nexaerp-configuracoes");
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed.planos) && parsed.planos.length > 0) {
+          const mapped: Tier[] = parsed.planos.map((p: any) => {
+            const isPop = !!(p.popular || (parsed.destaque && parsed.destaque[p.id]));
+            return {
+              name: p.nome,
+              id: p.id || p.nome.toLowerCase().replace(/\s+/g, "-"),
+              price: formatPriceObject(p.preco, p.priceAno),
+              description: p.description || (isPop ? "Para quem quer crescer." : "Para o seu negócio."),
+              features: p.recursos || [],
+              popular: isPop,
+            };
+          });
+
+          setDisplayTiers(mapped);
+          const highlighted = mapped.find((t) => t.popular) || mapped[0];
+          setSelectedPlan(highlighted);
+        }
+      } catch (e) {
+        console.error("Erro ao carregar planos:", e);
+      }
+    };
+
+    loadSavedPlans();
+
+    window.addEventListener("nexaerp-configuracoes-updated", loadSavedPlans);
+    window.addEventListener("storage", loadSavedPlans);
+
+    return () => {
+      window.removeEventListener("nexaerp-configuracoes-updated", loadSavedPlans);
+      window.removeEventListener("storage", loadSavedPlans);
+    };
+  }, []);
 
   const handleSelectPlan = (tier: Tier) => {
-    router.push('/register');
+    router.push(`/register?plan=${tier.id}&frequency=${frequency.value}`);
   };
 
   return (
@@ -171,7 +229,7 @@ export default function Main() {
 
           {/* Cards */}
           <div className="mx-auto mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 justify-items-center">
-            {tiers.map((tier) => {
+            {displayTiers.map((tier) => {
               const isSelected = selectedPlan.id === tier.id;
 
               return (
@@ -183,6 +241,7 @@ export default function Main() {
                       ? 'bg-[#00218F] text-white ring-2 ring-[#00218F] shadow-xl'
                       : 'bg-white text-gray-900 ring-1 ring-gray-200',
                     `
+                      relative
                       cursor-pointer
                       rounded-[14px]
                       p-6 sm:p-8
@@ -196,8 +255,14 @@ export default function Main() {
                     `,
                   )}
                 >
+                  {tier.popular && (
+                    <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-[#39FF14] text-[#0B0B3B] text-xs font-extrabold px-3 py-1 rounded-full shadow-md uppercase tracking-wider">
+                      Mais Popular
+                    </div>
+                  )}
+
                   {/* Título */}
-                  <h3 className="text-2xl font-semibold text-center">{tier.name}</h3>
+                  <h3 className="text-2xl font-semibold text-center mt-2">{tier.name}</h3>
 
                   {/* Descrição */}
                   <p

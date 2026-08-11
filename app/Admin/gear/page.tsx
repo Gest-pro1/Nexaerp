@@ -289,9 +289,128 @@ const ConfiguracoesSistema = () => {
   );
 
   // Planos
+  type PlanoItem = {
+    id: string;
+    nome: string;
+    preco: string;
+    popular: boolean;
+    recursos: string[];
+  };
+
+  const [planos, setPlanos] = useState<PlanoItem[]>(
+    initialConfig?.planos ?? planosIniciais
+  );
   const [destaque, setDestaque] = useState<DestaqueState>(
     initialConfig?.destaque ?? Object.fromEntries(planosIniciais.map((p) => [p.id, p.popular]))
   );
+
+  // Modal de criar plano
+  const [mostrarModalPlano, setMostrarModalPlano] = useState(false);
+  const [novoPlanoNome, setNovoPlanoNome] = useState("");
+  const [novoPlanoPreco, setNovoPlanoPreco] = useState("");
+  const [novoPlanoPopular, setNovoPlanoPopular] = useState(false);
+  const [novoPlanoRecursos, setNovoPlanoRecursos] = useState("");
+
+  // Modal de adicionar recurso
+  const [modalRecurso, setModalRecurso] = useState<{ planoId: string; planoNome: string } | null>(null);
+  const [novoRecursoTexto, setNovoRecursoTexto] = useState("");
+
+  const handleCriarPlanoSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!novoPlanoNome.trim() || !novoPlanoPreco.trim()) {
+      alert("Por favor, preencha o nome e o preço do plano.");
+      return;
+    }
+
+    const recursosArray = novoPlanoRecursos
+      .split("\n")
+      .map((r) => r.trim())
+      .filter(Boolean);
+
+    const id = novoPlanoNome.toLowerCase().replace(/\s+/g, "-");
+    const novoPlanoObj: PlanoItem = {
+      id: id + "-" + Date.now(),
+      nome: novoPlanoNome.trim(),
+      preco: novoPlanoPreco.startsWith("R$") ? novoPlanoPreco.trim() : `R$ ${novoPlanoPreco.trim()}`,
+      popular: novoPlanoPopular,
+      recursos: recursosArray.length > 0 ? recursosArray : ["Suporte Básico"],
+    };
+
+    if (novoPlanoPopular) {
+      setPlanos((prev) =>
+        prev.map((p) => ({ ...p, popular: false })).concat(novoPlanoObj)
+      );
+      setDestaque((prev) => {
+        const next: DestaqueState = {};
+        Object.keys(prev).forEach((k) => (next[k] = false));
+        next[novoPlanoObj.id] = true;
+        return next;
+      });
+    } else {
+      setPlanos((prev) => [...prev, novoPlanoObj]);
+      setDestaque((prev) => ({ ...prev, [novoPlanoObj.id]: false }));
+    }
+
+    setNovoPlanoNome("");
+    setNovoPlanoPreco("");
+    setNovoPlanoPopular(false);
+    setNovoPlanoRecursos("");
+    setMostrarModalPlano(false);
+  };
+
+  const handleAbrirModalRecurso = (planoId: string, planoNome: string) => {
+    setModalRecurso({ planoId, planoNome });
+    setNovoRecursoTexto("");
+  };
+
+  const handleSalvarNovoRecurso = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!modalRecurso || !novoRecursoTexto.trim()) return;
+
+    setPlanos((prev) =>
+      prev.map((p) =>
+        p.id === modalRecurso.planoId
+          ? { ...p, recursos: [...p.recursos, novoRecursoTexto.trim()] }
+          : p
+      )
+    );
+
+    setNovoRecursoTexto("");
+    setModalRecurso(null);
+  };
+
+  const toggleDestaque = (planoId: string) => {
+    const proximoStatus = !destaque[planoId];
+
+    setDestaque((prev) => {
+      const next = { ...prev };
+      if (proximoStatus) {
+        Object.keys(next).forEach((k) => (next[k] = false));
+        next[planoId] = true;
+      } else {
+        next[planoId] = false;
+      }
+      return next;
+    });
+
+    setPlanos((prev) =>
+      prev.map((p) => ({
+        ...p,
+        popular: p.id === planoId ? proximoStatus : proximoStatus ? false : p.popular,
+      }))
+    );
+  };
+
+  const handleDeletarPlano = (planoId: string, planoNome: string) => {
+    if (confirm(`Deseja realmente excluir o plano "${planoNome}"?`)) {
+      setPlanos((prev) => prev.filter((p) => p.id !== planoId));
+      setDestaque((prev) => {
+        const copy = { ...prev };
+        delete copy[planoId];
+        return copy;
+      });
+    }
+  };
 
   // Financeiro
   const [financeiro, setFinanceiro] = useState<FinanceiroState>(
@@ -328,6 +447,7 @@ const ConfiguracoesSistema = () => {
       manutencaoGlobal,
       whatsappNotif,
       segmentos,
+      planos,
       destaque,
       financeiro,
       ativarLembretes,
@@ -337,6 +457,7 @@ const ConfiguracoesSistema = () => {
 
     if (typeof window !== "undefined") {
       localStorage.setItem(STORAGE_KEY_CONFIG, JSON.stringify(dataToSave));
+      window.dispatchEvent(new Event("nexaerp-configuracoes-updated"));
     }
 
     setSalvoSucesso(true);
@@ -523,14 +644,17 @@ const ConfiguracoesSistema = () => {
                       <CreditCardIcon className="w-5 h-5 text-gray-500" />
                       Planos de Assinatura
                     </CardTitle>
-                    <button className="flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-700">
+                    <button
+                      onClick={() => setMostrarModalPlano(true)}
+                      className="flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 cursor-pointer"
+                    >
                       <PlusIcon className="w-4 h-4" />
                       Criar Plano
                     </button>
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                      {planosIniciais.map((plano) => (
+                      {planos.map((plano) => (
                         <div
                           key={plano.id}
                           className={`relative rounded-xl border overflow-hidden flex flex-col ${
@@ -559,19 +683,26 @@ const ConfiguracoesSistema = () => {
                                 </li>
                               ))}
                             </ul>
-                            <button className="flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:text-blue-700 mt-3">
+                            <button
+                              onClick={() => handleAbrirModalRecurso(plano.id, plano.nome)}
+                              className="flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:text-blue-700 mt-3 cursor-pointer"
+                            >
                               <PlusIcon className="w-3.5 h-3.5" />
                               Adicionar Recurso
                             </button>
                             <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
                               <div className="flex items-center gap-2">
                                 <Toggle
-                                  checked={destaque[plano.id]}
-                                  onChange={() => setDestaque((prev) => ({ ...prev, [plano.id]: !prev[plano.id] }))}
+                                  checked={!!destaque[plano.id]}
+                                  onChange={() => toggleDestaque(plano.id)}
                                 />
                                 <span className="text-[11px] font-semibold text-gray-500 tracking-wide">DESTAQUE</span>
                               </div>
-                              <button className="text-gray-300 hover:text-red-500">
+                              <button
+                                onClick={() => handleDeletarPlano(plano.id, plano.nome)}
+                                className="text-gray-300 hover:text-red-500 cursor-pointer"
+                                title="Excluir Plano"
+                              >
                                 <TrashIcon className="w-4 h-4" />
                               </button>
                             </div>
@@ -581,6 +712,110 @@ const ConfiguracoesSistema = () => {
                     </div>
                   </CardContent>
                 </Card>
+              )}
+
+              {/* Modal de Adicionar Recurso */}
+              {modalRecurso && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                  <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-xl">
+                    <h3 className="text-lg font-bold text-gray-900 mb-2">Adicionar Recurso</h3>
+                    <p className="text-sm text-gray-500 mb-4">
+                      Plano: <span className="font-semibold text-gray-800">{modalRecurso.planoNome}</span>
+                    </p>
+                    <form onSubmit={handleSalvarNovoRecurso} className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Nome do Recurso</label>
+                        <input
+                          type="text"
+                          placeholder="Ex: Suporte VIP 24/7"
+                          value={novoRecursoTexto}
+                          onChange={(e) => setNovoRecursoTexto(e.target.value)}
+                          autoFocus
+                          required
+                          className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                        />
+                      </div>
+                      <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+                        <button
+                          type="button"
+                          onClick={() => setModalRecurso(null)}
+                          className="px-4 py-2 rounded-md border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50"
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          type="submit"
+                          className="px-4 py-2 rounded-md bg-blue-600 text-sm font-medium text-white hover:bg-blue-700"
+                        >
+                          Adicionar Recurso
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              )}
+
+              {/* Modal de Criar Plano */}
+              {mostrarModalPlano && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                  <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-xl">
+                    <h3 className="text-lg font-bold text-gray-900 mb-4">Criar Novo Plano</h3>
+                    <form onSubmit={handleCriarPlanoSubmit} className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Nome do Plano</label>
+                        <input
+                          type="text"
+                          placeholder="Ex: Enterprise"
+                          value={novoPlanoNome}
+                          onChange={(e) => setNovoPlanoNome(e.target.value)}
+                          required
+                          className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Preço Mensal</label>
+                        <input
+                          type="text"
+                          placeholder="Ex: R$399,90"
+                          value={novoPlanoPreco}
+                          onChange={(e) => setNovoPlanoPreco(e.target.value)}
+                          required
+                          className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Recursos (um por linha)</label>
+                        <textarea
+                          placeholder="Usuários Ilimitados&#10;Suporte VIP 24h&#10;Servidor Dedicado"
+                          value={novoPlanoRecursos}
+                          onChange={(e) => setNovoPlanoRecursos(e.target.value)}
+                          rows={4}
+                          className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2 pt-2">
+                        <Toggle checked={novoPlanoPopular} onChange={() => setNovoPlanoPopular(!novoPlanoPopular)} />
+                        <span className="text-sm text-gray-700 font-medium">Marcar como Mais Popular</span>
+                      </div>
+
+                      <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+                        <button
+                          type="button"
+                          onClick={() => setMostrarModalPlano(false)}
+                          className="px-4 py-2 rounded-md border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50"
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          type="submit"
+                          className="px-4 py-2 rounded-md bg-blue-600 text-sm font-medium text-white hover:bg-blue-700"
+                        >
+                          Criar Plano
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
               )}
 
               {/* ---------------- FINANCEIRO ---------------- */}

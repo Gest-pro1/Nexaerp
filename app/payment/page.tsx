@@ -10,7 +10,7 @@ function generateQRCode(text: string) {
   return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(text)}`;
 }
 
-const planFeatures = {
+const planFeatures: Record<string, string[]> = {
   Standart: [
     "1 Usuário",
     "Até 500 Notas/mês",
@@ -36,6 +36,15 @@ const planFeatures = {
     "Módulos Personalizados",
   ],
 };
+
+function getPlanFeatures(name: string): string[] {
+  if (planFeatures[name]) return planFeatures[name];
+  const normalized = name.toLowerCase();
+  if (normalized.includes("stand")) return planFeatures["Standart"];
+  if (normalized.includes("prof")) return planFeatures["Profissional"];
+  if (normalized.includes("prem")) return planFeatures["Premium +"];
+  return planFeatures["Profissional"];
+}
 
 type PaymentFormData = {
   cardName: string;
@@ -132,7 +141,7 @@ function PaymentContent() {
   const [isLoading, setIsLoading] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const features = planFeatures[planName as keyof typeof planFeatures] || planFeatures["Profissional"];
+  const features = getPlanFeatures(planName);
 
   const formatCardNumber = (v: string) => v.replace(/\D/g, "").slice(0, 16).replace(/(\d{4})(?=\d)/g, "$1 ");
   const formatExpiry = (v: string) => {
@@ -164,14 +173,13 @@ function PaymentContent() {
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!validate()) return;
-    // dispara o fluxo de processamento compartilhado
     await processPayment();
   };
 
   const processPayment = async () => {
     setIsLoading(true);
     await new Promise((r) => setTimeout(r, 2000));
-    router.push(`/payment/sucesso?plan=${planName}&frequency=${frequency}&company=${companyName}`);
+    router.push(`/payment/sucesso?plan=${encodeURIComponent(planName)}&frequency=${encodeURIComponent(frequency)}&company=${encodeURIComponent(companyName)}`);
   };
 
   if (isLoading) {
@@ -197,7 +205,6 @@ function PaymentContent() {
   const inputBase = "w-full min-w-0 h-12 px-4 py-3 border rounded-xl text-sm outline-none transition focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 bg-white text-gray-900 placeholder:text-gray-400";
   const inputClass = (field: keyof PaymentErrors) => `${inputBase} ${errors[field] ? "border-red-400 bg-red-50" : "border-gray-200"}`;
 
-  <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />;
   return (
     <div className="min-h-screen flex bg-gray-50">
 
@@ -262,10 +269,10 @@ function PaymentContent() {
           <button
             onClick={() => router.back()}
             className="inline-flex items-center gap-2 text-[#969696] font-bold text-lg mb-8 w-fit hover:text-blue-800 transition cursor-pointer">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" className="size-6">
-            
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="size-6">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
             </svg>
-              Voltar
+            Voltar
           </button>
 
           <h1 className="text-3xl font-extrabold text-gray-900 mb-1">Forma de Pagamento</h1>

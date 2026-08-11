@@ -2,10 +2,13 @@
 
 import React from "react"
 
-import { useState, ChangeEvent, FormEvent } from "react"
+import { useState, useEffect, ChangeEvent, FormEvent } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { validarCadastro, validarCPF, validarEmail, validarCNPJ, validarTelefone, validarNome } from "./config"
+
+import { useSearchParams } from "next/navigation"
+import { Suspense } from "react"
 
 const BRAZILIAN_STATES = [
   "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO",
@@ -42,14 +45,14 @@ const PLANS = [
     name: "Standart",
     monthlyPrice: 69.90,
     annualPrice: 671.04,
-    features: "1 Usuário · Até 50 Notas/Mês",
+    features: "1 Usuário · Até 500 Notas/Mês",
   },
   {
     id: "professional",
     name: "Profissional",
     monthlyPrice: 129.90,
     annualPrice: 1247.04,
-    features: "3 Usuário · Notas Ilimitadas",
+    features: "3 Usuários · Notas Ilimitadas",
     recommended: true,
   },
   {
@@ -57,12 +60,53 @@ const PLANS = [
     name: "Premium +",
     monthlyPrice: 249.90,
     annualPrice: 2399.04,
-    features: "10 Usuário · Multi-Lojas",
+    features: "Usuários Ilimitados · Multi-Lojas",
   },
 ]
 
-export default function CadastroPage() {
+function CadastroFormContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+
+  const [availablePlans, setAvailablePlans] = useState(PLANS)
+
+  const initialPlanParam = searchParams.get("plan")
+  const initialFreqParam = searchParams.get("frequency")
+
+  const defaultPlanId = availablePlans.some(p => p.id === initialPlanParam)
+    ? (initialPlanParam as string)
+    : "professional"
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    try {
+      const raw = localStorage.getItem("nexaerp-configuracoes")
+      if (!raw) return
+      const parsed = JSON.parse(raw)
+      if (Array.isArray(parsed.planos) && parsed.planos.length > 0) {
+        const mapped = parsed.planos.map((p: any) => {
+          const clean = (p.preco || "").replace("R$", "").replace(/\s/g, "").replace(",", ".")
+          const mPrice = parseFloat(clean) || 69.9
+          const aPrice = p.priceAno
+            ? parseFloat(p.priceAno.replace("R$", "").replace(/\s/g, "").replace(",", ".")) || mPrice * 12 * 0.8
+            : mPrice * 12 * 0.8
+
+          return {
+            id: p.id || p.nome.toLowerCase().replace(/\s+/g, "-"),
+            name: p.nome,
+            monthlyPrice: mPrice,
+            annualPrice: aPrice,
+            features: (p.recursos || []).slice(0, 2).join(" · "),
+            recommended: !!(p.popular || (parsed.destaque && parsed.destaque[p.id])),
+          }
+        })
+        setAvailablePlans(mapped)
+      }
+    } catch (e) {
+      console.error("Erro ao carregar planos salvos no cadastro:", e)
+    }
+  }, [])
+
   const [razaoSocial, setRazaoSocial] = useState("")
   const [razaoSocialError, setRazaoSocialError] = useState("")
   const [cnpj, setCnpj] = useState("")
@@ -72,8 +116,8 @@ export default function CadastroPage() {
   const [selectedState, setSelectedState] = useState("")
   const [selectedCity, setSelectedCity] = useState("")
   const [selectedBusinessType, setSelectedBusinessType] = useState("lojas")
-  const [selectedPlan, setSelectedPlan] = useState("professional")
-  const [isAnnual, setIsAnnual] = useState(false)
+  const [selectedPlan, setSelectedPlan] = useState(defaultPlanId)
+  const [isAnnual, setIsAnnual] = useState(initialFreqParam === "Ano")
   const [cep, setCep] = useState("")
   const [cepError, setCepError] = useState("")
   const [nomeCompleto, setNomeCompleto] = useState("")
@@ -208,13 +252,16 @@ export default function CadastroPage() {
     const solicitacoes = JSON.parse(localStorage.getItem('solicitacoes') || '[]')
     solicitacoes.push(novaSolicitacao)
     localStorage.setItem('solicitacoes', JSON.stringify(solicitacoes))
+
+    // Salvar cadastroDados para a página de sucesso
+    localStorage.setItem('cadastroDados', JSON.stringify({ razaoSocial, email }))
     window.dispatchEvent(new CustomEvent('novaSolicitacao', { detail: novaSolicitacao }))
 
-    const planSelected = PLANS.find(p => p.id === selectedPlan)
+    const planSelected = availablePlans.find(p => p.id === selectedPlan)
     const planName = planSelected?.name || 'Profissional'
     const price = isAnnual ? planSelected?.annualPrice : planSelected?.monthlyPrice
     const frequency = isAnnual ? 'Ano' : 'Mês'
-    const formattedPrice = `R$${price?.toLocaleString('pt-BR')}`
+    const formattedPrice = `R$${(price ?? 0).toFixed(2).replace('.', ',')}`
 
     const paymentUrl = `/payment?plan=${encodeURIComponent(planName)}&frequency=${frequency}&price=${encodeURIComponent(formattedPrice)}&company=${encodeURIComponent(razaoSocial)}&email=${encodeURIComponent(email)}`
     router.push(paymentUrl)
@@ -551,7 +598,7 @@ export default function CadastroPage() {
               </div>
 
               <div className="space-y-3">
-                {PLANS.map((plan) => {
+                {availablePlans.map((plan) => {
                   const isSelected = selectedPlan === plan.id
                   const price = isAnnual ? plan.annualPrice : plan.monthlyPrice
                   return (
@@ -616,5 +663,13 @@ export default function CadastroPage() {
         </div>
       </div>
     </main>
+  )
+}
+
+export default function CadastroPage() {
+  return (
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center text-gray-500">Carregando...</div>}>
+      <CadastroFormContent />
+    </Suspense>
   )
 }

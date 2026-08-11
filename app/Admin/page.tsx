@@ -271,23 +271,30 @@ export default function AdminPage() {
     if (!modalData) return;
 
     setEmpresas((prev) =>
-      prev.map((emp) =>
-        emp.id === modalData.empresaId
-          ? {
-              ...emp,
-              nome: editForm.nome.trim() || emp.nome,
-              cnpj: editForm.cnpj.trim() || emp.cnpj,
-              plano: editForm.plano.trim() || emp.plano,
-              cidade: editForm.cidade.trim(),
-              uf: editForm.uf,
-              responsavel: editForm.responsavel.trim() || emp.responsavel,
-              email: editForm.email.trim() || emp.email,
-              senha: editForm.senha.trim(),
-              telefone: editForm.telefone.trim(),
-              status: editForm.status,
-            }
-          : emp
-      )
+      prev.map((emp) => {
+        if (emp.id !== modalData.empresaId) return emp;
+
+        const novoPlano = editForm.plano.trim() || emp.plano;
+        let novoValor = emp.valor;
+        if (novoPlano === "Standart") novoValor = "R$ 69,90";
+        else if (novoPlano === "Profissional") novoValor = "R$ 129,90";
+        else if (novoPlano === "Premium +") novoValor = "R$ 249,90";
+
+        return {
+          ...emp,
+          nome: editForm.nome.trim() || emp.nome,
+          cnpj: editForm.cnpj.trim() || emp.cnpj,
+          plano: novoPlano,
+          valor: novoValor,
+          cidade: editForm.cidade.trim(),
+          uf: editForm.uf,
+          responsavel: editForm.responsavel.trim() || emp.responsavel,
+          email: editForm.email.trim() || emp.email,
+          senha: editForm.senha.trim(),
+          telefone: editForm.telefone.trim(),
+          status: editForm.status,
+        };
+      })
     );
 
     setModalType(null);
@@ -834,10 +841,9 @@ export default function AdminPage() {
                           onChange={(e) => setEditForm((prev) => ({ ...prev, plano: e.target.value }))}
                           className="w-full rounded-lg border border-gray-300 p-3 text-black focus:outline-none focus:ring-2 focus:ring-blue-600"
                         >
-                          <option value="Profissional">Profissional</option>
-                          <option value="Básico">Básico</option>
-                          <option value="Premium">Premium</option>
-                          <option value="Standart">Standart</option>
+                          <option value="Standart">Standart (R$ 69,90/mês)</option>
+                          <option value="Profissional">Profissional (R$ 129,90/mês)</option>
+                          <option value="Premium +">Premium + (R$ 249,90/mês)</option>
                         </select>
                       </div>
                     </div>
