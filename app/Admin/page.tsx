@@ -329,7 +329,14 @@ export default function AdminPage() {
   const startIndex = (currentPage - 1) * itemsPerPage;
   const empresasPaginadas = empresasFiltradas.slice(startIndex, startIndex + itemsPerPage);
 
-  const totalPagesFinanceiro = Math.max(1, Math.ceil(empresas.length / itemsPerPage));
+  // Filtrar financeiro baseado na pesquisa
+  const empresasFinanceiroFiltradas = empresas.filter(
+    (emp) =>
+      emp.nome.toLowerCase().includes(searchTermFinanceiro.toLowerCase()) ||
+      emp.cnpj.toLowerCase().includes(searchTermFinanceiro.toLowerCase()) ||
+      emp.email.toLowerCase().includes(searchTermFinanceiro.toLowerCase())
+  );
+  const totalPagesFinanceiro = Math.max(1, Math.ceil(empresasFinanceiroFiltradas.length / itemsPerPage));
 
   const getInitials = (nome: string) => {
     return nome
@@ -665,13 +672,7 @@ export default function AdminPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {empresas
-                        .filter(
-                          (emp) =>
-                            emp.nome.toLowerCase().includes(searchTermFinanceiro.toLowerCase()) ||
-                            emp.cnpj.toLowerCase().includes(searchTermFinanceiro.toLowerCase()) ||
-                            emp.email.toLowerCase().includes(searchTermFinanceiro.toLowerCase())
-                        )
+                      {empresasFinanceiroFiltradas
                         .slice((currentPageFinanceiro - 1) * itemsPerPage, currentPageFinanceiro * itemsPerPage)
                         .map((empresa) => {
                           const statusColor = getStatusColor(empresa.status);

@@ -6,6 +6,8 @@
     "build": "next build",
     "dev": "next dev",
     "start": "next start",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
     "format": "prettier --write .",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
@@ -14,7 +16,6 @@
     "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
   },
   "dependencies": {
-    "20": "^1.0.0",
     "@base-ui/react": "^1.6.0",
     "@headlessui/react": "^2.2.9",
     "@heroicons/react": "^2.2.0",
@@ -36,6 +37,8 @@
   "devDependencies": {
     "@next/eslint-plugin-next": "^16.1.1",
     "@tailwindcss/postcss": "^4.1.18",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.2",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^20",
     "@types/react": "^19.2.17",
@@ -50,9 +53,11 @@
     "eslint-plugin-prettier": "^5.5.4",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.0.1",
+    "jsdom": "^30.0.1",
     "prettier": "^3.7.4",
     "tailwindcss": "^4.1.18",
     "typescript": "^5",
+    "vitest": "^4.1.10",
     "wrangler": "^4.98.0"
   }
 }

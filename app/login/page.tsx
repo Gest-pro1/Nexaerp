@@ -8,9 +8,36 @@ import { useRouter } from "next/navigation";
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [keepConnected, setKeepConnected] = useState(false);
   const router = useRouter();
 
-  
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+
+    if (!email.trim()) {
+      setError("Por favor, insira o seu e-mail.");
+      return;
+    }
+    if (!password) {
+      setError("Por favor, insira a sua senha.");
+      return;
+    }
+
+    setIsLoading(true);
+    setTimeout(() => {
+      if (typeof window !== "undefined") {
+        localStorage.setItem(
+          "userSession",
+          JSON.stringify({ email, keepConnected, loggedAt: new Date().toISOString() })
+        );
+      }
+      setIsLoading(false);
+      router.push("/Admin");
+    }, 600);
+  };
 
   return (
     <>
@@ -94,10 +121,6 @@ export default function LoginPage() {
   {/* WRAPPER INTERNO */}
   <div className="w-full flex flex-col items-center justify-center gap-4">
 
-    {/* LOGO */}
-{/* LOGO */}
-
-
 {/* TÍTULO  e LOGO*/}
 
 <section className="flex flex-col items-center mb-4 -mt-15 gap-2">
@@ -122,11 +145,16 @@ export default function LoginPage() {
 </section>
 
     {/* FORM */}
-    <form className="w-full flex flex-col gap-4 sm:mt-3 mb-2 p-3">
+    <form className="w-full flex flex-col gap-4 sm:mt-3 mb-2 p-3" onSubmit={handleSubmit}>
+      {error && (
+        <div className="p-3 text-xs sm:text-sm text-red-700 bg-red-50 rounded-lg border border-red-200">
+          {error}
+        </div>
+      )}
 
       {/* EMAIL */}
       <div> 
-        <label className="block text-xs font-medium text-gray-900 mb-1.5">
+        <label htmlFor="email" className="block text-xs font-medium text-gray-900 mb-1.5">
           E-mail
         </label>
         <div className="relative">
@@ -174,7 +202,7 @@ export default function LoginPage() {
 
       {/* SENHA */}
       <div>
-        <label className="block text-xs font-medium text-gray-900 mb-1.5">
+        <label htmlFor="password" className="block text-xs font-medium text-gray-900 mb-1.5">
           Senha
         </label>
         <div className="relative">
@@ -223,9 +251,11 @@ export default function LoginPage() {
       <div className="flex items-center justify-between text-xs sm:text-sm">
         <label className="flex items-center gap-2 text-gray-600 font-light cursor-pointer">
           <input
-          id="checkbox"
+            id="checkbox"
             type="checkbox"
-            className="w-4 h-4 rounded border-gray-300 text-indigo-600"
+            checked={keepConnected}
+            onChange={(e) => setKeepConnected(e.target.checked)}
+            className="w-4 h-4 rounded border-gray-300 text-indigo-600 cursor-pointer"
           />
           Manter conectado
         </label>
@@ -239,8 +269,9 @@ export default function LoginPage() {
 
       {/* BOTÃO */}
       <button 
-      id="botao"
+        id="botao"
         type="submit"
+        disabled={isLoading}
         className={`
           w-full
           h-9 sm:h-10
@@ -252,10 +283,11 @@ export default function LoginPage() {
           hover:bg-indigo-500
           transition
           mt-2
-          
+          cursor-pointer
+          ${isLoading ? "opacity-70 cursor-not-allowed" : ""}
         `}
       >
-        Entrar no Sistema
+        {isLoading ? "Entrando..." : "Entrar no Sistema"}
       </button>
     {/* CADASTRO */}
     <p className="text-center text-xs text-gray-500 font-medium">

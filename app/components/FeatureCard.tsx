@@ -48,7 +48,7 @@ export default function FeatureCard({ card, onSaibaMais }: FeatureCardProps) {
           e.preventDefault()
           onSaibaMais(card)
         }}
-        className="mt-6 text-[#00218F] font-bevietnam font-mediun hover:underline"
+        className="mt-6 text-[#00218F] font-bevietnam font-medium hover:underline"
       >
         Saiba Mais
       </a>

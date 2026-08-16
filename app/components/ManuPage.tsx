@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
 import { useState } from "react";
@@ -91,7 +92,7 @@ export default function AdminLayout({ children, notificacoes = 0 }: AdminLayoutP
               const isCurrent = pathname === item.href;
               return (
                 <li key={item.name}>
-                  <a
+                  <Link
                     href={item.href}
                     onClick={() => setIsMenuOpen(false)}
                     className={classNames(
@@ -103,7 +104,7 @@ export default function AdminLayout({ children, notificacoes = 0 }: AdminLayoutP
                   >
                     <item.icon className="h-5 w-5 shrink-0" />
                     <span className="truncate">{item.name}</span>
-                  </a>
+                  </Link>
                 </li>
               );
             })}
@@ -115,7 +116,7 @@ export default function AdminLayout({ children, notificacoes = 0 }: AdminLayoutP
             {configuration.map((item) => {
               const isCurrent = pathname === item.href;
               return (
-                <a
+                <Link
                   key={item.name}
                   href={item.href}
                   onClick={() => setIsMenuOpen(false)}
@@ -128,7 +129,7 @@ export default function AdminLayout({ children, notificacoes = 0 }: AdminLayoutP
                 >
                   <item.icon className="h-5 w-5 shrink-0" />
                   <span className="truncate">{item.name}</span>
-                </a>
+                </Link>
               );
             })}
           </div>

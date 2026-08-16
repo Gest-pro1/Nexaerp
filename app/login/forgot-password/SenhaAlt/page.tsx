@@ -85,11 +85,13 @@ export default function SenhaAltPage() {
 
 </section>
  <div className="mt-1 pt-6 border-t border-gray-200 justify-center flex items-center gap-3">
-    <p className="text-sm text-gray-500 font-medium">
-      Problemas para acessar?
-    </p>
-    <a href="/cadastro" className="text-lg font-semibold text-[#1E40AF] hover:text-blue-700 transition">
-     Contate o suporte
+    <a
+      href="https://wa.me/5583999999999"
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-sm font-semibold text-[#1E40AF] hover:text-blue-700 transition"
+    >
+      Contate o suporte
     </a>
             
           </div>

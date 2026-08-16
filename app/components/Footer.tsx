@@ -18,7 +18,7 @@ export default function Footer() {
   };
 
   return (
-    <footer className="overflow-hidden font-benvietnam font-medium">
+    <footer className="overflow-hidden font-bevietnam font-medium">
 
       {/* ================== SEÇÃO SEGMENTOS ================== */}
       <section className="bg-[#111827] py-14 px-4 sm:px-6 lg:px-8">
@@ -97,7 +97,10 @@ export default function Footer() {
                   ))}
                 </ul>
 
-                <button className="mt-auto w-full rounded-lg border border-white/30 py-2 text-sm font-medium transition hover:bg-white hover:text-[#0E1B2A]">
+                <button
+                  onClick={() => handleScroll("precos")}
+                  className="mt-auto w-full rounded-lg border border-white/30 py-2 text-sm font-medium transition hover:bg-white hover:text-[#0E1B2A] cursor-pointer"
+                >
                   Ver Detalhes
                 </button>
               </div>

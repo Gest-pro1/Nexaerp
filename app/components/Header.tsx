@@ -183,10 +183,16 @@ export default function Header() {
         </p>
 
         <div className="mt-6 flex flex-col md:flex-row gap-6 justify-center">
-          <button className="bg-white text-purple-600 px-6 py-3 rounded-lg text-sm md:text-base font-medium">
+          <button
+            onClick={() => router.push("/register")}
+            className="bg-white text-purple-600 px-6 py-3 rounded-lg text-sm md:text-base font-medium cursor-pointer hover:bg-gray-100 transition"
+          >
             Começar Grátis
           </button>
-          <button className="border border-white/60 text-white px-12 py-3 rounded-lg text-sm md:text-base">
+          <button
+            onClick={() => handleScroll("recursos")}
+            className="border border-white/60 text-white px-12 py-3 rounded-lg text-sm md:text-base cursor-pointer hover:bg-white/10 transition"
+          >
             Ver Demo
           </button>
         </div>
