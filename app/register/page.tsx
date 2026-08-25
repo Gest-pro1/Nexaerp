@@ -6,6 +6,7 @@ import { useState, useEffect, ChangeEvent, FormEvent } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { validarCadastro, validarCPF, validarEmail, validarCNPJ, validarTelefone, validarNome } from "./config"
+import { api } from '@/lib/api'
 
 import { useSearchParams } from "next/navigation"
 import { Suspense } from "react"
@@ -64,6 +65,17 @@ const PLANS = [
   },
 ]
 
+// Tipagem da resposta da API ViaCEP
+interface ViaCepResponse {
+  erro?: boolean
+  cep?: string
+  logradouro?: string
+  complemento?: string
+  bairro?: string
+  localidade?: string
+  uf?: string
+}
+
 function CadastroFormContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -77,55 +89,40 @@ function CadastroFormContent() {
     ? (initialPlanParam as string)
     : "professional"
 
-  useEffect(() => {
-    if (typeof window === "undefined") return
-    try {
-      const raw = localStorage.getItem("nexaerp-configuracoes")
-      if (!raw) return
-      const parsed = JSON.parse(raw)
-      if (Array.isArray(parsed.planos) && parsed.planos.length > 0) {
-        const mapped = parsed.planos.map((p: any) => {
-          const clean = (p.preco || "").replace("R$", "").replace(/\s/g, "").replace(",", ".")
-          const mPrice = parseFloat(clean) || 69.9
-          const aPrice = p.priceAno
-            ? parseFloat(p.priceAno.replace("R$", "").replace(/\s/g, "").replace(",", ".")) || mPrice * 12 * 0.8
-            : mPrice * 12 * 0.8
-
-          return {
-            id: p.id || p.nome.toLowerCase().replace(/\s+/g, "-"),
-            name: p.nome,
-            monthlyPrice: mPrice,
-            annualPrice: aPrice,
-            features: (p.recursos || []).slice(0, 2).join(" · "),
-            recommended: !!(p.popular || (parsed.destaque && parsed.destaque[p.id])),
-          }
-        })
-        setAvailablePlans(mapped)
-      }
-    } catch (e) {
-      console.error("Erro ao carregar planos salvos no cadastro:", e)
-    }
-  }, [])
-
+  // ── Dados da Empresa ──
   const [razaoSocial, setRazaoSocial] = useState("")
   const [razaoSocialError, setRazaoSocialError] = useState("")
   const [cnpj, setCnpj] = useState("")
   const [cnpjError, setCnpjError] = useState("")
   const [telefone, setTelefone] = useState("")
   const [telefoneError, setTelefoneError] = useState("")
-  const [selectedState, setSelectedState] = useState("")
-  const [selectedCity, setSelectedCity] = useState("")
-  const [selectedBusinessType, setSelectedBusinessType] = useState("lojas")
-  const [selectedPlan, setSelectedPlan] = useState(defaultPlanId)
-  const [isAnnual, setIsAnnual] = useState(initialFreqParam === "Ano")
   const [cep, setCep] = useState("")
   const [cepError, setCepError] = useState("")
+  const [cepLoading, setCepLoading] = useState(false)
+  const [rua, setRua] = useState("")
+  const [ruaError, setRuaError] = useState("")
+  const [numero, setNumero] = useState("")
+  const [numeroError, setNumeroError] = useState("")
+  const [complemento, setComplemento] = useState("")
+  const [bairro, setBairro] = useState("")
+  const [bairroError, setBairroError] = useState("")
+  const [selectedState, setSelectedState] = useState("")
+  const [selectedCity, setSelectedCity] = useState("")
+
+  // ── Dados do Responsável ──
   const [nomeCompleto, setNomeCompleto] = useState("")
   const [nomeCompletoError, setNomeCompletoError] = useState("")
   const [cpf, setCpf] = useState("")
   const [cpfError, setCpfError] = useState("")
   const [email, setEmail] = useState("")
   const [emailError, setEmailError] = useState("")
+  const [senha, setSenha] = useState("")
+  const [confirmarSenha, setConfirmarSenha] = useState("")
+
+  // ── Tipo de negócio / plano ──
+  const [selectedBusinessType, setSelectedBusinessType] = useState("lojas")
+  const [selectedPlan, setSelectedPlan] = useState(defaultPlanId)
+  const [isAnnual, setIsAnnual] = useState(initialFreqParam === "Ano")
 
   const handleRazaoSocialBlur = (e: ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value
@@ -154,6 +151,36 @@ function CadastroFormContent() {
       setTelefoneError("Telefone inválido. Use formato: (00) 00000-0000")
     } else {
       setTelefoneError("")
+    }
+  }
+
+  const handleRuaBlur = (e: ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value
+    setRua(value)
+    if (value && value.trim().length < 3) {
+      setRuaError("Rua deve ter pelo menos 3 caracteres.")
+    } else {
+      setRuaError("")
+    }
+  }
+
+  const handleNumeroBlur = (e: ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value
+    setNumero(value)
+    if (!value || !value.trim()) {
+      setNumeroError("Número é obrigatório.")
+    } else {
+      setNumeroError("")
+    }
+  }
+
+  const handleBairroBlur = (e: ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value
+    setBairro(value)
+    if (value && value.trim().length < 2) {
+      setBairroError("Bairro deve ter pelo menos 2 caracteres.")
+    } else {
+      setBairroError("")
     }
   }
 
@@ -187,33 +214,65 @@ function CadastroFormContent() {
     }
   }
 
+  // Máscara simples de CEP: 00000-000
+  const formatCep = (value: string) => {
+    const digits = value.replace(/\D/g, "").slice(0, 8)
+    if (digits.length <= 5) return digits
+    return `${digits.slice(0, 5)}-${digits.slice(5)}`
+  }
+
+  // Consulta a API ViaCEP e preenche Rua, Bairro, Cidade e UF automaticamente
   const fetchCepData = async (cepValue: string): Promise<void> => {
-    const cleanCep = cepValue.replace(/\D/g, '')
-    if (cleanCep.length === 8) {
-      try {
-        const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`)
-        const data = await response.json() as { erro?: boolean; uf?: string; localidade?: string }
-        if (!data.erro) {
-          setSelectedState(data.uf || "")
-          setSelectedCity(data.localidade || "")
-          setCepError("")
-        } else {
-          setCepError("CEP não encontrado.")
-        }
-      } catch (error) {
-        setCepError("Erro ao consultar CEP.")
-      }
-    } else if (cleanCep.length > 0) {
-      setCepError("CEP deve ter 8 dígitos.")
-    } else {
+    const cleanCep = cepValue.replace(/\D/g, "")
+
+    if (cleanCep.length === 0) {
       setCepError("")
+      return
+    }
+
+    if (cleanCep.length !== 8) {
+      setCepError("CEP deve ter 8 dígitos.")
+      return
+    }
+
+    setCepLoading(true)
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`)
+      const data = (await response.json()) as ViaCepResponse
+
+      if (data.erro) {
+        setCepError("CEP não encontrado.")
+        return
+      }
+
+      setSelectedState(data.uf || "")
+      setSelectedCity(data.localidade || "")
+      setRua(data.logradouro || "")
+      setBairro(data.bairro || "")
+      setRuaError("")
+      setBairroError("")
+      setCepError("")
+    } catch (error) {
+      setCepError("Erro ao consultar CEP. Tente novamente.")
+    } finally {
+      setCepLoading(false)
     }
   }
 
   const handleCepChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value
-    setCep(value)
-    fetchCepData(value)
+    const formatted = formatCep(e.target.value)
+    setCep(formatted)
+
+    const digits = formatted.replace(/\D/g, "")
+    if (digits.length === 8) {
+      fetchCepData(formatted)
+    } else if (digits.length === 0) {
+      setCepError("")
+    }
+  }
+
+  const handleCepBlur = (e: ChangeEvent<HTMLInputElement>) => {
+    fetchCepData(e.target.value)
   }
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
@@ -236,35 +295,53 @@ function CadastroFormContent() {
       return
     }
 
-    const novaSolicitacao = {
-      nomeEmpresa: razaoSocial,
-      cnpj,
-      email,
-      nomeRepresentante: nomeCompleto,
-      telefone,
-      tipoNegocio: selectedBusinessType,
-      plano: selectedPlan,
-      tipoPlano: isAnnual ? "Anual" : "Mensal",
-      descricao: `Novo cadastro: ${razaoSocial} - ${selectedBusinessType}`,
-      dataSubmissao: new Date().toLocaleString('pt-BR')
+    if (senha.length < 6) {
+      alert("A senha deve ter pelo menos 6 caracteres.");
+      return;
+    }
+    
+    if (senha !== confirmarSenha) {
+      alert("As senhas não coincidem.");
+      return;
     }
 
-    const solicitacoes = JSON.parse(localStorage.getItem('solicitacoes') || '[]')
-    solicitacoes.push(novaSolicitacao)
-    localStorage.setItem('solicitacoes', JSON.stringify(solicitacoes))
+    const callApi = async () => {
+      try {
+        const planos = await api.planos.list();
+        const planSelected = availablePlans.find(p => p.id === selectedPlan);
+        const planName = planSelected?.name || 'Profissional';
+        const matchedPlano = planos.find((p: any) => p.nome === planName);
+        
+        const result = await api.auth.register({
+          razaoSocial: razaoSocial,
+          cnpj,
+          email,
+          senha,
+          telefone,
+          cep,
+          rua,
+          numero,
+          complemento,
+          bairro,
+          uf: selectedState,
+          cidade: selectedCity,
+          responsavelNome: nomeCompleto,
+          responsavelCpf: cpf,
+          tipoNegocio: selectedBusinessType,
+          planoId: matchedPlano?.id,
+          tipoPlano: isAnnual ? 'Anual' : 'Mensal',
+        });
+        
+        const price = isAnnual ? planSelected?.annualPrice : planSelected?.monthlyPrice;
+        const frequency = isAnnual ? 'Ano' : 'Mês';
+        const formattedPrice = `R$${(price ?? 0).toFixed(2).replace('.', ',')}`;
 
-    // Salvar cadastroDados para a página de sucesso
-    localStorage.setItem('cadastroDados', JSON.stringify({ razaoSocial, email }))
-    window.dispatchEvent(new CustomEvent('novaSolicitacao', { detail: novaSolicitacao }))
-
-    const planSelected = availablePlans.find(p => p.id === selectedPlan)
-    const planName = planSelected?.name || 'Profissional'
-    const price = isAnnual ? planSelected?.annualPrice : planSelected?.monthlyPrice
-    const frequency = isAnnual ? 'Ano' : 'Mês'
-    const formattedPrice = `R$${(price ?? 0).toFixed(2).replace('.', ',')}`
-
-    const paymentUrl = `/payment?plan=${encodeURIComponent(planName)}&frequency=${frequency}&price=${encodeURIComponent(formattedPrice)}&company=${encodeURIComponent(razaoSocial)}&email=${encodeURIComponent(email)}`
-    router.push(paymentUrl)
+        router.push(`/payment?empresaId=${result.empresaId}&plan=${encodeURIComponent(planName)}&frequency=${frequency}&price=${encodeURIComponent(formattedPrice)}&company=${encodeURIComponent(razaoSocial)}&email=${encodeURIComponent(email)}`);
+      } catch (err: any) {
+        alert('Erro ao cadastrar: ' + err.message);
+      }
+    };
+    callApi();
   }
 
   return (
@@ -332,6 +409,7 @@ function CadastroFormContent() {
               </div>
 
               <div className="space-y-4">
+                {/* Razão Social */}
                 <div>
                   <label className="mb-1.5 block text-sm text-gray-500 font-light">
                     Razão Social/Nome Fantasia <span className="text-red-500">*</span>
@@ -348,7 +426,8 @@ function CadastroFormContent() {
                   {razaoSocialError && <p className="mt-1 text-sm text-red-500">{razaoSocialError}</p>}
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-2">
+                {/* CNPJ / Telefone / CEP */}
+                <div className="grid gap-4 md:grid-cols-3">
                   <div>
                     <label className="mb-1.5 block text-sm text-gray-500 font-light">
                       CNPJ <span className="text-red-500">*</span>
@@ -364,6 +443,7 @@ function CadastroFormContent() {
                     />
                     {cnpjError && <p className="mt-1 text-sm text-red-500">{cnpjError}</p>}
                   </div>
+
                   <div>
                     <label className="mb-1.5 block text-sm text-gray-500 font-light">
                       Telefone/WhatsApp <span className="text-red-500">*</span>
@@ -384,23 +464,99 @@ function CadastroFormContent() {
                     </div>
                     {telefoneError && <p className="mt-1 text-sm text-red-500">{telefoneError}</p>}
                   </div>
+
+                  <div>
+                    <label className="mb-1.5 block text-sm text-gray-500 font-light">
+                      CEP <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        placeholder="00000-000"
+                        value={cep}
+                        onChange={handleCepChange}
+                        onBlur={handleCepBlur}
+                        maxLength={9}
+                        inputMode="numeric"
+                        required
+                        className="w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-[#1f3fbf] focus:outline-none focus:ring-2 focus:ring-[#1f3fbf]/20"
+                      />
+                      {cepLoading && (
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">
+                          Buscando...
+                        </span>
+                      )}
+                    </div>
+                    {cepError && <p className="mt-1 text-sm text-red-500">{cepError}</p>}
+                  </div>
                 </div>
 
+                {/* Rua */}
                 <div>
                   <label className="mb-1.5 block text-sm text-gray-500 font-light">
-                    CEP <span className="text-red-500">*</span>
+                    Rua <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
-                    placeholder="00000-000"
-                    value={cep}
-                    onChange={handleCepChange}
+                    placeholder="Ex: Manoel Correia"
+                    value={rua}
+                    onChange={(e) => setRua(e.target.value)}
+                    onBlur={handleRuaBlur}
                     required
                     className="w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-[#1f3fbf] focus:outline-none focus:ring-2 focus:ring-[#1f3fbf]/20"
                   />
-                  {cepError && <p className="mt-1 text-sm text-red-500">{cepError}</p>}
+                  {ruaError && <p className="mt-1 text-sm text-red-500">{ruaError}</p>}
                 </div>
 
+                {/* Número / Complemento / Bairro */}
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div>
+                    <label className="mb-1.5 block text-sm text-gray-500 font-light">
+                      Número <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ex: 123"
+                      value={numero}
+                      onChange={(e) => setNumero(e.target.value)}
+                      onBlur={handleNumeroBlur}
+                      required
+                      className="w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-[#1f3fbf] focus:outline-none focus:ring-2 focus:ring-[#1f3fbf]/20"
+                    />
+                    {numeroError && <p className="mt-1 text-sm text-red-500">{numeroError}</p>}
+                  </div>
+
+                  <div>
+                    <label className="mb-1.5 block text-sm text-gray-500 font-light">
+                      Complemento
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ex: 1 andar"
+                      value={complemento}
+                      onChange={(e) => setComplemento(e.target.value)}
+                      className="w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-[#1f3fbf] focus:outline-none focus:ring-2 focus:ring-[#1f3fbf]/20"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1.5 block text-sm text-gray-500 font-light">
+                      Bairro <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ex: Nova Esperança"
+                      value={bairro}
+                      onChange={(e) => setBairro(e.target.value)}
+                      onBlur={handleBairroBlur}
+                      required
+                      className="w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-[#1f3fbf] focus:outline-none focus:ring-2 focus:ring-[#1f3fbf]/20"
+                    />
+                    {bairroError && <p className="mt-1 text-sm text-red-500">{bairroError}</p>}
+                  </div>
+                </div>
+
+                {/* UF / Cidade */}
                 <div className="grid gap-4 md:grid-cols-2">
                   <div>
                     <label className="mb-1.5 block text-sm text-gray-500 font-light">
@@ -410,7 +566,6 @@ function CadastroFormContent() {
                       value={selectedState}
                       onChange={(e) => {
                         setSelectedState(e.target.value)
-                        setSelectedCity("")
                       }}
                       required
                       className="w-full appearance-none rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 focus:border-[#1f3fbf] focus:outline-none focus:ring-2 focus:ring-[#1f3fbf]/20"
@@ -432,7 +587,7 @@ function CadastroFormContent() {
                       </svg>
                       <input
                         type="text"
-                        placeholder="Ex: São Paulo"
+                        placeholder="Selecionar cidade"
                         value={selectedCity}
                         onChange={(e) => setSelectedCity(e.target.value)}
                         required
@@ -500,6 +655,32 @@ function CadastroFormContent() {
                       className="w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-[#1f3fbf] focus:outline-none focus:ring-2 focus:ring-[#1f3fbf]/20"
                     />
                     {emailError && <p className="mt-1 text-sm text-red-500">{emailError}</p>}
+                  </div>
+                  <div>
+                    <label className="mb-1.5 block text-sm text-gray-500 font-light">
+                      Senha <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="password"
+                      placeholder="Digite uma senha"
+                      value={senha}
+                      onChange={(e) => setSenha(e.target.value)}
+                      required
+                      className="w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-[#1f3fbf] focus:outline-none focus:ring-2 focus:ring-[#1f3fbf]/20"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1.5 block text-sm text-gray-500 font-light">
+                      Confirmar Senha <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="password"
+                      placeholder="Confirme a senha"
+                      value={confirmarSenha}
+                      onChange={(e) => setConfirmarSenha(e.target.value)}
+                      required
+                      className="w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-[#1f3fbf] focus:outline-none focus:ring-2 focus:ring-[#1f3fbf]/20"
+                    />
                   </div>
                 </div>
               </div>

@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import AdminLayout from "../../components/ManuPage";
 import {
@@ -37,6 +37,13 @@ import {
   ExclamationTriangleIcon,
   CalendarIcon,
 } from "@heroicons/react/24/outline";
+import {
+  ADMIN_DATA_UPDATED_EVENT,
+  formatCurrency,
+  parseCurrency,
+  readEmpresas,
+  type EmpresaAdmin,
+} from "../../../lib/admin-data";
 
 // Badge de período, estilo "dropdown" (Select/Popover trigger do shadcn/ui)
 const PeriodBadge = ({ children }: { children: React.ReactNode }) => (
@@ -75,73 +82,63 @@ const planosConfig = {
 
 const Estatisticas = () => {
   const router = useRouter();
+  const [empresas, setEmpresas] = useState<EmpresaAdmin[]>(readEmpresas);
+
+  useEffect(() => {
+    const handleDataUpdate = () => setEmpresas(readEmpresas());
+    window.addEventListener(ADMIN_DATA_UPDATED_EVENT, handleDataUpdate);
+    return () => window.removeEventListener(ADMIN_DATA_UPDATED_EVENT, handleDataUpdate);
+  }, []);
+
+  const empresasAtivas = empresas.filter((empresa) => empresa.status === "ativa");
+  const empresasBloqueadas = empresas.filter((empresa) => empresa.status === "bloqueado");
+  const empresasPendentes = empresas.filter((empresa) => empresa.status === "pendente");
+  const mrr = empresasAtivas.reduce((total, empresa) => total + parseCurrency(empresa.valor), 0);
+  const ticketMedio = empresasAtivas.length ? mrr / empresasAtivas.length : 0;
+  const planosData = [
+    { name: "Standart", value: empresas.filter((empresa) => empresa.plano === "Standart").length, fill: "#9333EA" },
+    { name: "Profissional", value: empresas.filter((empresa) => empresa.plano === "Profissional").length, fill: "#3B82F6" },
+    { name: "Premium +", value: empresas.filter((empresa) => empresa.plano === "Premium +").length, fill: "#06B6D4" },
+  ];
 
   // Dados para o gráfico de crescimento de assinantes
-  const crescimentoData = [
-    { mes: "Jan", assinantes: 600 },
-    { mes: "Fev", assinantes: 550 },
-    { mes: "Mar", assinantes: 750 },
-    { mes: "Abr", assinantes: 700 },
-    { mes: "Mai", assinantes: 820 },
-    { mes: "Jun", assinantes: 850 },
-    { mes: "Jul", assinantes: 868 },
-  ];
+  const crescimentoData = [{ mes: "Atual", assinantes: empresas.length }];
 
   // Dados para o gráfico de movimentação de MMR
-  const mmrData = [
-    { dia: "01", vendas: 4000, cancelamentos: 2400 },
-    { dia: "02", vendas: 3000, cancelamentos: 1398 },
-    { dia: "03", vendas: 2000, cancelamentos: 9800 },
-    { dia: "04", vendas: 2780, cancelamentos: 3908 },
-    { dia: "05", vendas: 1890, cancelamentos: 4800 },
-    { dia: "06", vendas: 2390, cancelamentos: 3800 },
-    { dia: "07", vendas: 3490, cancelamentos: 4300 },
-    { dia: "08", vendas: 2000, cancelamentos: 1800 },
-    { dia: "09", vendas: 2780, cancelamentos: 3908 },
-    { dia: "10", vendas: 1890, cancelamentos: 4800 },
-    { dia: "11", vendas: 2390, cancelamentos: 3800 },
-    { dia: "12", vendas: 3490, cancelamentos: 4300 },
-  ];
-
-  // Dados para o gráfico radial de clientes por plano
-  const planosData = [
-    { name: "Standart", value: 30, fill: "#9333EA" },
-    { name: "Profissional", value: 50, fill: "#3B82F6" },
-    { name: "Premium +", value: 20, fill: "#06B6D4" },
-  ];
+  const mmrData = [{ dia: "Atual", vendas: mrr, cancelamentos: empresasBloqueadas.length }];
 
   // Cards de KPIs
   const kpiCards = [
     {
       titulo: "MRR (Receita Mensal)",
-      valor: "R$12.234,56",
+      valor: formatCurrency(mrr),
       icon: CurrencyDollarIcon,
       bgColor: "bg-orange-500",
-      percentual: "+10.5% vs mês anterior",
-      trend: "up",
+      percentual: "Empresas ativas",
+      trend: "neutral",
     },
     {
       titulo: "Assinantes Ativos",
-      valor: "850",
+      valor: String(empresasAtivas.length),
       icon: UsersIcon,
       bgColor: "bg-fuchsia-600",
-      percentual: "-5.8% vs mês anterior",
-      trend: "down",
+      percentual: "Licenças ativas",
+      trend: "neutral",
     },
     {
       titulo: "Ticket Médio",
-      valor: "R$99.90",
+      valor: formatCurrency(ticketMedio),
       icon: ArrowTrendingUpIcon,
       bgColor: "bg-indigo-500",
-      percentual: "+12.7% vs mês anterior",
+      percentual: "Média por licença ativa",
       trend: "up",
     },
     {
       titulo: "Solicitações Pendentes",
-      valor: "3",
+      valor: String(empresasPendentes.length),
       icon: ExclamationTriangleIcon,
       bgColor: "bg-cyan-500",
-      percentual: "Pendentes de aprovação",
+      percentual: `${empresasBloqueadas.length} bloqueadas`,
       trend: "neutral",
     },
   ];
@@ -221,7 +218,7 @@ const Estatisticas = () => {
               </CardHeader>
               <CardContent>
                 <div className="mb-4">
-                  <p className="text-3xl font-bold text-gray-900">868</p>
+                  <p className="text-3xl font-bold text-gray-900">{empresas.length}</p>
                   <p className="text-sm text-gray-500">Total cadastrado</p>
                 </div>
                 <ChartContainer config={crescimentoConfig} className="h-[280px] w-full">
@@ -276,7 +273,7 @@ const Estatisticas = () => {
                     </RadialBarChart>
                   </ChartContainer>
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <span className="text-2xl font-bold text-gray-900">850</span>
+                    <span className="text-2xl font-bold text-gray-900">{empresas.length}</span>
                   </div>
                 </div>
                 <div className="mt-4 space-y-2">
@@ -286,7 +283,9 @@ const Estatisticas = () => {
                         <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: plano.fill }}></div>
                         <span className="text-sm text-gray-700">{plano.name}</span>
                       </div>
-                      <span className="text-sm font-semibold text-gray-900">{plano.value}% ↗</span>
+                      <span className="text-sm font-semibold text-gray-900">
+                        {empresas.length ? Math.round((plano.value / empresas.length) * 100) : 0}%
+                      </span>
                     </div>
                   ))}
                 </div>

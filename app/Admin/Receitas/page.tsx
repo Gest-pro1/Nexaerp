@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import AdminLayout from "../../components/ManuPage";
 import {
   Area,
@@ -31,6 +31,13 @@ import {
   CalendarIcon,
   EllipsisHorizontalIcon,
 } from "@heroicons/react/24/outline";
+import {
+  ADMIN_DATA_UPDATED_EVENT,
+  formatCurrency,
+  parseCurrency,
+  readEmpresas,
+  type EmpresaAdmin,
+} from "../../../lib/admin-data";
 
 // Badge de período, estilo "dropdown" (Select/Popover trigger do shadcn/ui)
 const PeriodBadge = ({ children }: { children: React.ReactNode }) => (
@@ -84,47 +91,54 @@ const evolucaoConfig = {
 } satisfies ChartConfig;
 
 const Receita = () => {
-  // Dados para o gráfico de evolução receita x custos (dia do mês)
+  const [empresas, setEmpresas] = useState<EmpresaAdmin[]>(readEmpresas);
+
+  useEffect(() => {
+    const handleDataUpdate = () => setEmpresas(readEmpresas());
+    window.addEventListener(ADMIN_DATA_UPDATED_EVENT, handleDataUpdate);
+    return () => window.removeEventListener(ADMIN_DATA_UPDATED_EVENT, handleDataUpdate);
+  }, []);
+
+  const ativas = empresas.filter((empresa) => empresa.status === "ativa");
+  const pendentes = empresas.filter((empresa) => empresa.status === "pendente");
+  const bloqueadas = empresas.filter((empresa) => empresa.status === "bloqueado");
+  const receitaConfirmada = ativas.reduce((total, empresa) => total + parseCurrency(empresa.valor), 0);
+  const aReceber = pendentes.reduce((total, empresa) => total + parseCurrency(empresa.valor), 0);
+  const inadimplencia = bloqueadas.reduce((total, empresa) => total + parseCurrency(empresa.valor), 0);
+  const projecaoTotal = receitaConfirmada + aReceber;
+
   const evolucaoData = [
-    { dia: 1, receita: 9000000, custos: 6500000 },
-    { dia: 4, receita: 12500000, custos: 6200000 },
-    { dia: 7, receita: 15800000, custos: 6800000 },
-    { dia: 10, receita: 14200000, custos: 6400000 },
-    { dia: 13, receita: 18550680, custos: 6900000 },
-    { dia: 16, receita: 22000000, custos: 6600000 },
-    { dia: 19, receita: 33500000, custos: 7100000 },
-    { dia: 22, receita: 24000000, custos: 6800000 },
-    { dia: 25, receita: 27500000, custos: 7200000 },
-    { dia: 28, receita: 20000000, custos: 6900000 },
-    { dia: 30, receita: 22500000, custos: 7000000 },
+    { dia: 1, receita: receitaConfirmada, custos: inadimplencia },
+    { dia: 15, receita: projecaoTotal, custos: inadimplencia },
+    { dia: 30, receita: projecaoTotal, custos: inadimplencia },
   ];
 
   // Cards de KPIs
   const kpiCards = [
     {
       titulo: "Receita Confirmada",
-      valor: "R$7.684,41",
+      valor: formatCurrency(receitaConfirmada),
       icon: CheckCircleIcon,
       bgColor: "bg-orange-500",
       percentual: "Pagamentos realizados este mês",
     },
     {
       titulo: "A Receber",
-      valor: "R$5.654,52",
+      valor: formatCurrency(aReceber),
       icon: ClockIcon,
       bgColor: "bg-fuchsia-600",
       percentual: "Boletos/Faturas emitidos",
     },
     {
       titulo: "Inadimplência",
-      valor: "R$129.98",
+      valor: formatCurrency(inadimplencia),
       icon: ExclamationCircleIcon,
       bgColor: "bg-indigo-500",
       percentual: "Vencidos há mais de 5 dias",
     },
     {
       titulo: "Projeção Total",
-      valor: "R$ 12.984,65",
+      valor: formatCurrency(projecaoTotal),
       icon: CreditCardIcon,
       bgColor: "bg-cyan-500",
       percentual: "Potencial total do mês",
@@ -137,32 +151,32 @@ const Receita = () => {
       titulo: "Meta de MMR",
       variacao: "+12% vs mês anterior",
       descricao: "84% da meta atingida",
-      valor: "R$12.500",
-      progresso: 84,
+      valor: formatCurrency(projecaoTotal),
+      progresso: projecaoTotal ? Math.min(100, Math.round((receitaConfirmada / projecaoTotal) * 100)) : 0,
       cor: "#4338ca",
     },
     {
       titulo: "Entradas",
       variacao: "+8% vs mês anterior",
       descricao: "Assinaturas + Taxas",
-      valor: "R$10.984,65",
-      progresso: 70,
+      valor: formatCurrency(receitaConfirmada),
+      progresso: projecaoTotal ? Math.min(100, Math.round((receitaConfirmada / projecaoTotal) * 100)) : 0,
       cor: "#22c55e",
     },
     {
       titulo: "Custos",
       variacao: "-2% vs mês anterior",
       descricao: "Servidores + Api",
-      valor: "R$450,00",
-      progresso: 15,
+      valor: formatCurrency(inadimplencia),
+      progresso: projecaoTotal ? Math.min(100, Math.round((inadimplencia / projecaoTotal) * 100)) : 0,
       cor: "#ef4444",
     },
     {
       titulo: "Lucro Líquido",
       variacao: "+5% vs last month",
       descricao: "Margem: 40%",
-      valor: "R$550,00",
-      progresso: 55,
+      valor: formatCurrency(receitaConfirmada - inadimplencia),
+      progresso: projecaoTotal ? Math.min(100, Math.round(((receitaConfirmada - inadimplencia) / projecaoTotal) * 100)) : 0,
       cor: "#3b82f6",
     },
   ];
@@ -176,13 +190,15 @@ const Receita = () => {
     vencimento: string;
     valor: string;
     status: "Pago" | "Atrasado" | "Aguardando";
-  }[] = [
-    { empresa: "Mercado Bom Preço", letra: "M", cor: "#f97316", plano: "Premium +", vencimento: "Nov 30, 2025", valor: "R$249.00", status: "Atrasado" },
-    { empresa: "Queixo Burguer", letra: "Q", cor: "#eab308", plano: "Premium +", vencimento: "Dez 10, 2025", valor: "R$249.00", status: "Pago" },
-    { empresa: "Bony Costa Barbearia", letra: "B", cor: "#111827", plano: "Standart", vencimento: "Dez 10, 2025", valor: "R$69.90", status: "Pago" },
-    { empresa: "Cestão", letra: "C", cor: "#0ea5e9", plano: "Profissional", vencimento: "Dez 20, 2025", valor: "R$129.90", status: "Aguardando" },
-    { empresa: "Padaria Vitória", letra: "P", cor: "#dc2626", plano: "Profissional", vencimento: "Jul 25, 2025", valor: "R$129.90", status: "Pago" },
-  ];
+  }[] = empresas.map((empresa) => ({
+    empresa: empresa.nome,
+    letra: empresa.nome.charAt(0).toUpperCase(),
+    cor: empresa.cor || "#2563eb",
+    plano: empresa.plano,
+    vencimento: empresa.dataCobranca,
+    valor: formatCurrency(parseCurrency(empresa.valor)),
+    status: empresa.status === "bloqueado" ? "Atrasado" : empresa.status === "pendente" ? "Aguardando" : "Pago",
+  }));
 
   return (
     <AdminLayout>

@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { logout } from '@/lib/auth';
 import { useEffect, type ReactNode } from "react";
 import { useState } from "react";
 import {
@@ -40,6 +41,7 @@ interface AdminLayoutProps {
 export default function AdminLayout({ children, notificacoes = 0 }: AdminLayoutProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
 
   // Trava o scroll do body quando o menu mobile está aberto
   useEffect(() => {
@@ -115,11 +117,20 @@ export default function AdminLayout({ children, notificacoes = 0 }: AdminLayoutP
 
             {configuration.map((item) => {
               const isCurrent = pathname === item.href;
+              const handleClick = (e: React.MouseEvent) => {
+                if (item.name === "Sair") {
+                  e.preventDefault();
+                  logout();
+                  router.push('/login');
+                } else {
+                  setIsMenuOpen(false);
+                }
+              };
               return (
                 <Link
                   key={item.name}
                   href={item.href}
-                  onClick={() => setIsMenuOpen(false)}
+                  onClick={handleClick}
                   className={classNames(
                     isCurrent
                       ? "bg-indigo-700 text-white font-bold"

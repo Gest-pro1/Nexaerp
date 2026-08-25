@@ -2,6 +2,7 @@
 
 import { useState, type ChangeEvent, type FormEvent } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { api } from '@/lib/api';
 import { Suspense } from "react";
 
 const PIX_CODE = "00020126580014BR.GOV.BCB.PIX0136550e4f40-6d28-4f92-a5a7-2e7c2d5f8c3f52040000";
@@ -134,6 +135,7 @@ function PaymentContent() {
   const frequency = searchParams.get("frequency") || "Mês";
   const price = searchParams.get("price") || "R$129,90";
   const companyName = searchParams.get("company") || "Sua Empresa";
+  const empresaId = searchParams.get("empresaId") || "";
 
   const [paymentMethod, setPaymentMethod] = useState("credit");
   const [formData, setFormData] = useState<PaymentFormData>({ cardName: "", cardNumber: "", expiryDate: "", cvv: "" });
@@ -177,9 +179,23 @@ function PaymentContent() {
   };
 
   const processPayment = async () => {
-    setIsLoading(true);
-    await new Promise((r) => setTimeout(r, 2000));
-    router.push(`/payment/sucesso?plan=${encodeURIComponent(planName)}&frequency=${encodeURIComponent(frequency)}&company=${encodeURIComponent(companyName)}`);
+    try {
+      setIsLoading(true);
+      await api.pagamentos.create({
+        empresaId,
+        metodo: paymentMethod,
+        ...(paymentMethod !== 'pix' ? {
+          cardName: formData.cardName,
+          cardNumber: formData.cardNumber.replace(/\s/g, ''),
+          expiryDate: formData.expiryDate,
+          cvv: formData.cvv,
+        } : {}),
+      });
+      router.push(`/payment/sucesso?plan=${encodeURIComponent(planName)}&frequency=${encodeURIComponent(frequency)}&company=${encodeURIComponent(companyName)}`);
+    } catch (err: any) {
+      setIsLoading(false);
+      alert('Erro no pagamento: ' + err.message);
+    }
   };
 
   if (isLoading) {

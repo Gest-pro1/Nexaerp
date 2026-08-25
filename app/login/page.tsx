@@ -3,6 +3,8 @@
 import React, { useState, ChangeEvent } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { api } from '@/lib/api';
+import { saveAuth } from '@/lib/auth';
 
 
 export default function LoginPage() {
@@ -13,7 +15,7 @@ export default function LoginPage() {
   const [keepConnected, setKeepConnected] = useState(false);
   const router = useRouter();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
@@ -26,17 +28,16 @@ export default function LoginPage() {
       return;
     }
 
-    setIsLoading(true);
-    setTimeout(() => {
-      if (typeof window !== "undefined") {
-        localStorage.setItem(
-          "userSession",
-          JSON.stringify({ email, keepConnected, loggedAt: new Date().toISOString() })
-        );
-      }
+    try {
+      setIsLoading(true);
+      const result = await api.auth.login(email, password);
+      saveAuth(result.access_token, result.user);
+      router.push('/Admin');
+    } catch (err: any) {
+      setError(err.message || 'Email ou senha inválidos');
+    } finally {
       setIsLoading(false);
-      router.push("/Admin");
-    }, 600);
+    }
   };
 
   return (

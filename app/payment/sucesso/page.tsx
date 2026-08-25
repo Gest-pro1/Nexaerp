@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
+import { useSearchParams } from "next/navigation"
 
 interface CadastroData {
   razaoSocial?: string;
@@ -10,23 +11,18 @@ interface CadastroData {
 
 export default function SucessoPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [cadastroData, setCadastroData] = useState<CadastroData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [currentStep, setCurrentStep] = useState(1)
 
   useEffect(() => {
-    // Recuperar dados do localStorage
-    const dados = localStorage.getItem("cadastroDados")
-    if (dados) {
-      try {
-        const dadosParsed = JSON.parse(dados)
-        setCadastroData(dadosParsed)
-      } catch (error) {
-        console.error("Erro ao recuperar dados:", error)
-      }
-    }
+    setCadastroData({
+      razaoSocial: searchParams.get("company") || undefined,
+      email: searchParams.get("email") || undefined,
+    })
     setIsLoading(false)
-  }, [])
+  }, [searchParams])
 
   // Simular progresso das etapas
   useEffect(() => {

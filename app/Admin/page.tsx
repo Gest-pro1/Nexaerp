@@ -2,6 +2,12 @@
 import { useState, useEffect } from "react";
 
 import AdminLayout from "../components/ManuPage";
+import {
+  parseCurrency,
+  type EmpresaAdmin,
+} from "../../lib/admin-data";
+import { api } from '@/lib/api';
+import { isAuthenticated, logout } from '@/lib/auth';
 
 import {
   BuildingOffice2Icon,
@@ -16,102 +22,11 @@ import {
 } from "@heroicons/react/24/outline";
 
 const infoCards = [
-  { name: "Empresas e Acessos", icon: BuildingOffice2Icon, value: "0" },
-  { name: "Financeiro e Cobranças", icon: CurrencyDollarIcon, value: "R$ 00.000,00" },
+  { name: "Empresas e Acessos", icon: BuildingOffice2Icon },
+  { name: "Financeiro e Cobranças", icon: CurrencyDollarIcon },
 ];
 
-type Empresa = {
-  id: number;
-  nome: string;
-  cnpj: string;
-  plano: string;
-  responsavel: string;
-  email: string;
-  status: "ativa" | "inativa" | "bloqueado" | "pendente";
-  dataCobranca: string;
-  valor: string;
-  cor: string;
-  cidade?: string;
-  uf?: string;
-  senha?: string;
-  telefone?: string;
-};
-
-// Dados de exemplo para teste
-const empresasExemplo: Empresa[] = [
-  {
-    id: 1,
-    nome: "Bony Custo Barbearia",
-    cnpj: "15.548.254/0001-65",
-    plano: "Profissional",
-    responsavel: "Bony Costa",
-    email: "bony.custo@gmail.com",
-    status: "ativa",
-    dataCobranca: "20/12/2025",
-    valor: "R$ 129,90",
-    cor: "bg-black",
-  },
-  {
-    id: 2,
-    nome: "Amobily Ponificadora",
-    cnpj: "26.254.254/0001-86",
-    plano: "Premium +",
-    responsavel: "Josimar Alves",
-    email: "amobily.ponificadora@gmail.com",
-    status: "ativa",
-    dataCobranca: "20/12/2025",
-    valor: "R$ 249,90",
-    cor: "bg-red-700",
-  },
-  {
-    id: 3,
-    nome: "AG Frios",
-    cnpj: "11.478.954/0001-01",
-    plano: "Standart",
-    responsavel: "Carlos José",
-    email: "carlos@gmail.com",
-    status: "bloqueado",
-    dataCobranca: "25/12/2025",
-    valor: "R$ 69,90",
-    cor: "bg-blue-600",
-  },
-  {
-    id: 4,
-    nome: "Ingó Forma",
-    cnpj: "99.507.944/0001-67",
-    plano: "Profissional",
-    responsavel: "Maria Lúcia",
-    email: "maria@gmail.com",
-    status: "pendente",
-    dataCobranca: "28/12/2025",
-    valor: "R$ 129,90",
-    cor: "bg-blue-900",
-  },
-  {
-    id: 5,
-    nome: "Grupo Gestão",
-    cnpj: "97.501.651/0000-55",
-    plano: "Profissional",
-    responsavel: "Antônio Nunes",
-    email: "antonio@gmail.com",
-    status: "ativa",
-    dataCobranca: "30/12/2025",
-    valor: "R$ 129,90",
-    cor: "bg-purple-600",
-  },
-  {
-    id: 6,
-    nome: "Mercadinho do Kinho",
-    cnpj: "97.786.954/0000-01",
-    plano: "Profissional",
-    responsavel: "José da Silva",
-    email: "jose@gmail.com",
-    status: "ativa",
-    dataCobranca: "20/12/2025",
-    valor: "R$ 129,90",
-    cor: "bg-green-600",
-  },
-];
+type Empresa = EmpresaAdmin;
 
 type ModalType = null | "mensagem" | "editar" | "deletar" | "criar";
 
@@ -135,30 +50,50 @@ type EditFormState = {
   valor: string;
 };
 
-const STORAGE_KEY = "nexaerp-empresas";
-
 export default function AdminPage() {
   const [selectedCard, setSelectedCard] = useState(0);
   const [notificacoes, setNotificacoes] = useState(0);
   const [modalType, setModalType] = useState<ModalType>(null);
   const [modalData, setModalData] = useState<ModalData | null>(null);
 
-  // Lê o que foi salvo no localStorage (se existir) já na primeira renderização
-  const [empresas, setEmpresas] = useState<Empresa[]>(() => {
-    if (typeof window === "undefined") return empresasExemplo;
-    try {
-      const saved = window.localStorage.getItem(STORAGE_KEY);
-      return saved ? (JSON.parse(saved) as Empresa[]) : empresasExemplo;
-    } catch {
-      return empresasExemplo;
-    }
-  });
+  const [empresas, setEmpresas] = useState<Empresa[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [searchTermFinanceiro, setSearchTermFinanceiro] = useState("");
   const [statusFilter, setStatusFilter] = useState("todos");
   const [currentPage, setCurrentPage] = useState(1);
   const [currentPageFinanceiro, setCurrentPageFinanceiro] = useState(1);
+
+  useEffect(() => {
+    fetchEmpresas();
+  }, []);
+
+  const fetchEmpresas = async () => {
+    try {
+      setLoading(true);
+      const result = await api.empresas.list({ limit: 100 });
+      setEmpresas(result.data.map((e: any) => ({
+        id: e.id,
+        nome: e.razao_social,
+        cnpj: e.cnpj,
+        plano: e.planos?.nome || e.plano_id,
+        responsavel: e.responsavel_nome,
+        email: e.email,
+        status: e.status,
+        dataCobranca: e.data_cobranca ? new Date(e.data_cobranca).toLocaleDateString('pt-BR') : '',
+        valor: `R$ ${(e.planos?.preco_mensal || 0).toFixed(2).replace('.', ',')}`,
+        cor: ['bg-black', 'bg-red-700', 'bg-blue-600', 'bg-purple-600', 'bg-green-600', 'bg-indigo-600'][Math.floor(Math.random() * 6)],
+        cidade: e.cidade,
+        uf: e.uf,
+        telefone: e.telefone,
+      })));
+    } catch (err) {
+      console.error('Erro ao buscar empresas:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const defaultFormState: EditFormState = {
     nome: "",
@@ -184,16 +119,9 @@ export default function AdminPage() {
   const mrrEstimado = empresas
     .filter((e) => e.status === "ativa")
     .reduce((acc, emp) => {
-      const valorNumerico = parseFloat(emp.valor.replace("R$ ", "").replace(",", "."));
-      return acc + (isNaN(valorNumerico) ? 0 : valorNumerico);
+      return acc + parseCurrency(emp.valor);
     }, 0);
   const inadimplencia = empresas.filter((e) => e.status === "bloqueado").length;
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(empresas));
-    }
-  }, [empresas]);
 
   const handleEnviarMensagem = (id: number, nome: string) => {
     setModalData({ empresaId: id, empresaNome: nome });
@@ -205,39 +133,28 @@ export default function AdminPage() {
     setModalType("criar");
   };
 
-  const salvarCriacao = () => {
+  const salvarCriacao = async () => {
     if (!createForm.nome.trim() || !createForm.cnpj.trim() || !createForm.email.trim()) {
       alert("Por favor, preencha os campos obrigatórios: Razão Social/Nome Fantasia, CNPJ e E-mail.");
       return;
     }
-
-    const cores = ["bg-black", "bg-red-700", "bg-blue-600", "bg-purple-600", "bg-green-600", "bg-indigo-600"];
-    const corSorteada = cores[Math.floor(Math.random() * cores.length)];
-
-    let valorPlano = createForm.valor;
-    if (createForm.plano === "Standart") valorPlano = "R$ 69,90";
-    else if (createForm.plano === "Profissional") valorPlano = "R$ 129,90";
-    else if (createForm.plano === "Premium +") valorPlano = "R$ 249,90";
-
-    const novaEmpresa: Empresa = {
-      id: Date.now(),
-      nome: createForm.nome.trim(),
-      cnpj: createForm.cnpj.trim(),
-      plano: createForm.plano,
-      responsavel: createForm.responsavel.trim() || "Responsável",
-      email: createForm.email.trim(),
-      status: createForm.status,
-      dataCobranca: "30/12/2025",
-      valor: valorPlano,
-      cor: corSorteada,
-      cidade: createForm.cidade.trim(),
-      uf: createForm.uf,
-      senha: createForm.senha.trim(),
-      telefone: createForm.telefone.trim(),
-    };
-
-    setEmpresas((prev) => [novaEmpresa, ...prev]);
-    setModalType(null);
+    
+    try {
+      await api.auth.register({
+        razaoSocial: createForm.nome,
+        cnpj: createForm.cnpj,
+        email: createForm.email,
+        senha: createForm.senha || '123456',
+        telefone: createForm.telefone,
+        cidade: createForm.cidade,
+        uf: createForm.uf,
+        responsavelNome: createForm.responsavel,
+      });
+      fetchEmpresas();
+      setModalType(null);
+    } catch (err: any) {
+      alert('Erro ao criar empresa: ' + err.message);
+    }
   };
 
   const handleEditar = (id: number, nome: string) => {
@@ -267,45 +184,37 @@ export default function AdminPage() {
     setModalType("deletar");
   };
 
-  const salvarEdicao = () => {
+  const salvarEdicao = async () => {
     if (!modalData) return;
-
-    setEmpresas((prev) =>
-      prev.map((emp) => {
-        if (emp.id !== modalData.empresaId) return emp;
-
-        const novoPlano = editForm.plano.trim() || emp.plano;
-        let novoValor = emp.valor;
-        if (novoPlano === "Standart") novoValor = "R$ 69,90";
-        else if (novoPlano === "Profissional") novoValor = "R$ 129,90";
-        else if (novoPlano === "Premium +") novoValor = "R$ 249,90";
-
-        return {
-          ...emp,
-          nome: editForm.nome.trim() || emp.nome,
-          cnpj: editForm.cnpj.trim() || emp.cnpj,
-          plano: novoPlano,
-          valor: novoValor,
-          cidade: editForm.cidade.trim(),
-          uf: editForm.uf,
-          responsavel: editForm.responsavel.trim() || emp.responsavel,
-          email: editForm.email.trim() || emp.email,
-          senha: editForm.senha.trim(),
-          telefone: editForm.telefone.trim(),
-          status: editForm.status,
-        };
-      })
-    );
-
-    setModalType(null);
-    setModalData(null);
-  };
-
-  const confirmarDelecao = () => {
-    if (modalData) {
-      setEmpresas((prev) => prev.filter((emp) => emp.id !== modalData.empresaId));
+    try {
+      await api.empresas.update(String(modalData.empresaId), {
+        razaoSocial: editForm.nome,
+        cnpj: editForm.cnpj,
+        cidade: editForm.cidade,
+        uf: editForm.uf,
+        responsavelNome: editForm.responsavel,
+        email: editForm.email,
+        telefone: editForm.telefone,
+        status: editForm.status
+      });
+      fetchEmpresas();
       setModalType(null);
       setModalData(null);
+    } catch (err: any) {
+      alert('Erro ao editar: ' + err.message);
+    }
+  };
+
+  const confirmarDelecao = async () => {
+    if (modalData) {
+      try {
+        await api.empresas.delete(String(modalData.empresaId));
+        fetchEmpresas();
+        setModalType(null);
+        setModalData(null);
+      } catch (err: any) {
+        alert('Erro ao deletar: ' + err.message);
+      }
     }
   };
 

@@ -94,46 +94,6 @@ export default function Main() {
   const [displayTiers, setDisplayTiers] = useState<Tier[]>(tiers);
   const [selectedPlan, setSelectedPlan] = useState<Tier>(tiers[1]);
 
-  React.useEffect(() => {
-    const loadSavedPlans = () => {
-      if (typeof window === "undefined") return;
-      try {
-        const raw = localStorage.getItem("nexaerp-configuracoes");
-        if (!raw) return;
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed.planos) && parsed.planos.length > 0) {
-          const mapped: Tier[] = parsed.planos.map((p: any) => {
-            const isPop = !!(p.popular || (parsed.destaque && parsed.destaque[p.id]));
-            return {
-              name: p.nome,
-              id: p.id || p.nome.toLowerCase().replace(/\s+/g, "-"),
-              price: formatPriceObject(p.preco, p.priceAno),
-              description: p.description || (isPop ? "Para quem quer crescer." : "Para o seu negócio."),
-              features: p.recursos || [],
-              popular: isPop,
-            };
-          });
-
-          setDisplayTiers(mapped);
-          const highlighted = mapped.find((t) => t.popular) || mapped[0];
-          setSelectedPlan(highlighted);
-        }
-      } catch (e) {
-        console.error("Erro ao carregar planos:", e);
-      }
-    };
-
-    loadSavedPlans();
-
-    window.addEventListener("nexaerp-configuracoes-updated", loadSavedPlans);
-    window.addEventListener("storage", loadSavedPlans);
-
-    return () => {
-      window.removeEventListener("nexaerp-configuracoes-updated", loadSavedPlans);
-      window.removeEventListener("storage", loadSavedPlans);
-    };
-  }, []);
-
   const handleSelectPlan = (tier: Tier) => {
     router.push(`/register?plan=${tier.id}&frequency=${frequency.value}`);
   };

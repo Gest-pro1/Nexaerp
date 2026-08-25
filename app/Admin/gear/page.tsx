@@ -245,8 +245,6 @@ const gateways = [
 /* Componente principal                                              */
 /* ---------------------------------------------------------------- */
 
-const STORAGE_KEY_CONFIG = "nexaerp-configuracoes";
-
 type SegmentoState = Record<string, { disponivel: boolean; manutencao: boolean }>;
 type DestaqueState = Record<string, boolean>;
 type FinanceiroState = {
@@ -264,18 +262,7 @@ const ConfiguracoesSistema = () => {
   const [secaoAtiva, setSecaoAtiva] = useState<SecaoId>("geral");
   const [salvoSucesso, setSalvoSucesso] = useState(false);
 
-  // Função auxiliar para carregar do localStorage
-  const loadSavedConfig = () => {
-    if (typeof window === "undefined") return null;
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY_CONFIG);
-      return saved ? JSON.parse(saved) : null;
-    } catch {
-      return null;
-    }
-  };
-
-  const initialConfig = loadSavedConfig();
+  const initialConfig: any = null;
 
   // Geral
   const [email, setEmail] = useState<string>(initialConfig?.email ?? "suporte@gestpro.com.br");
@@ -442,24 +429,6 @@ const ConfiguracoesSistema = () => {
   const gatewaySelecionado = gateways.find((g) => g.id === gatewayAtivo)!;
 
   const salvarAlteracoes = () => {
-    const dataToSave = {
-      email,
-      manutencaoGlobal,
-      whatsappNotif,
-      segmentos,
-      planos,
-      destaque,
-      financeiro,
-      ativarLembretes,
-      sandbox,
-      gatewayKeys,
-    };
-
-    if (typeof window !== "undefined") {
-      localStorage.setItem(STORAGE_KEY_CONFIG, JSON.stringify(dataToSave));
-      window.dispatchEvent(new Event("nexaerp-configuracoes-updated"));
-    }
-
     setSalvoSucesso(true);
     setTimeout(() => {
       setSalvoSucesso(false);
