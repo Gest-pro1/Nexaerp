@@ -1,4 +1,12 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'nexaerp-backend-production.up.railway.app/api';
+const getApiBase = () => {
+  let url = process.env.NEXT_PUBLIC_API_URL || 'https://nexaerp-backend-production.up.railway.app/api';
+  if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    url = `https://${url}`;
+  }
+  return url.replace(/\/$/, '');
+};
+
+const API_BASE = getApiBase();
 
 async function fetchAPI<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const token = typeof window !== 'undefined' ? localStorage.getItem('nexaerp_token') : null;
