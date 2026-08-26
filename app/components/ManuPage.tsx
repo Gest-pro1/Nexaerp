@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { logout } from '@/lib/auth';
+import { getUser, logout } from '@/lib/auth';
 import { useEffect, type ReactNode } from "react";
 import { useState } from "react";
 import {
@@ -40,8 +40,13 @@ interface AdminLayoutProps {
 
 export default function AdminLayout({ children, notificacoes = 0 }: AdminLayoutProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [user, setUser] = useState<{ name?: string; nome?: string; email?: string } | null>(null);
   const pathname = usePathname();
   const router = useRouter();
+
+  useEffect(() => {
+    setUser(getUser());
+  }, []);
 
   // Trava o scroll do body quando o menu mobile está aberto
   useEffect(() => {
@@ -192,8 +197,10 @@ export default function AdminLayout({ children, notificacoes = 0 }: AdminLayoutP
 
             <div className="flex min-w-0 items-center gap-3">
               <div className="hidden min-w-0 text-right text-black sm:block">
-                <p className="truncate text-sm font-medium">Administrador</p>
-                <p className="truncate text-xs font-light opacity-80">alex.silva@gestpro.com.br</p>
+                <p className="truncate text-sm font-medium">
+                  {user?.name || user?.nome || user?.email || "Usuário"}
+                </p>
+                <p className="truncate text-xs font-light opacity-80">{user?.email || ""}</p>
               </div>
 
               <img
