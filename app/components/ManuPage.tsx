@@ -198,7 +198,7 @@ export default function AdminLayout({ children, notificacoes = 0 }: AdminLayoutP
             <div className="flex min-w-0 items-center gap-3">
               <div className="hidden min-w-0 text-right text-black sm:block">
                 <p className="truncate text-sm font-medium">
-                  {user?.name || user?.nome || user?.email || "Usuário"}
+                  ADIM
                 </p>
                 <p className="truncate text-xs font-light opacity-80">{user?.email || ""}</p>
               </div>
