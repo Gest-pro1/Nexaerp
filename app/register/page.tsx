@@ -116,8 +116,6 @@ function CadastroFormContent() {
   const [cpfError, setCpfError] = useState("")
   const [email, setEmail] = useState("")
   const [emailError, setEmailError] = useState("")
-  const [senha, setSenha] = useState("")
-  const [confirmarSenha, setConfirmarSenha] = useState("")
 
   // ── Tipo de negócio / plano ──
   const [selectedBusinessType, setSelectedBusinessType] = useState("lojas")
@@ -295,16 +293,6 @@ function CadastroFormContent() {
       return
     }
 
-    if (senha.length < 6) {
-      alert("A senha deve ter pelo menos 6 caracteres.");
-      return;
-    }
-    
-    if (senha !== confirmarSenha) {
-      alert("As senhas não coincidem.");
-      return;
-    }
-
     const callApi = async () => {
       try {
         const planos = await api.planos.list();
@@ -316,7 +304,6 @@ function CadastroFormContent() {
           razaoSocial: razaoSocial,
           cnpj,
           email,
-          senha,
           telefone,
           cep,
           rua,
@@ -656,31 +643,20 @@ function CadastroFormContent() {
                     />
                     {emailError && <p className="mt-1 text-sm text-red-500">{emailError}</p>}
                   </div>
-                  <div>
-                    <label className="mb-1.5 block text-sm text-gray-500 font-light">
-                      Senha <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="password"
-                      placeholder="Digite uma senha"
-                      value={senha}
-                      onChange={(e) => setSenha(e.target.value)}
-                      required
-                      className="w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-[#1f3fbf] focus:outline-none focus:ring-2 focus:ring-[#1f3fbf]/20"
-                    />
+                </div>
+
+                {/* Aviso Informativo de Primeiro Acesso */}
+                <div className="rounded-xl bg-blue-50 border border-blue-200/80 p-4 text-xs text-blue-900 flex items-start gap-3 mt-2">
+                  <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-100 text-[#1f3fbf]">
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
                   </div>
                   <div>
-                    <label className="mb-1.5 block text-sm text-gray-500 font-light">
-                      Confirmar Senha <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="password"
-                      placeholder="Confirme a senha"
-                      value={confirmarSenha}
-                      onChange={(e) => setConfirmarSenha(e.target.value)}
-                      required
-                      className="w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-[#1f3fbf] focus:outline-none focus:ring-2 focus:ring-[#1f3fbf]/20"
-                    />
+                    <p className="font-semibold text-blue-950 text-sm">Primeiro acesso automatizado</p>
+                    <p className="mt-0.5 text-blue-800 leading-relaxed font-normal">
+                      Não é necessário criar uma senha agora. Sua senha temporária de primeiro acesso será gerada automaticamente com segurança e enviada para o e-mail cadastrado assim que o pagamento for confirmado.
+                    </p>
                   </div>
                 </div>
               </div>
