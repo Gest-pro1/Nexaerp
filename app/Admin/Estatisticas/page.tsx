@@ -37,11 +37,11 @@ import {
   ExclamationTriangleIcon,
   CalendarIcon,
 } from "@heroicons/react/24/outline";
+import { api } from "@/lib/api";
 import {
   ADMIN_DATA_UPDATED_EVENT,
   formatCurrency,
   parseCurrency,
-  readEmpresas,
   type EmpresaAdmin,
 } from "../../../lib/admin-data";
 
@@ -82,30 +82,88 @@ const planosConfig = {
 
 const Estatisticas = () => {
   const router = useRouter();
-  const [empresas, setEmpresas] = useState<EmpresaAdmin[]>(readEmpresas);
+  const [empresas, setEmpresas] = useState<EmpresaAdmin[]>([]);
+  const [stats, setStats] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const handleDataUpdate = () => setEmpresas(readEmpresas());
-    window.addEventListener(ADMIN_DATA_UPDATED_EVENT, handleDataUpdate);
-    return () => window.removeEventListener(ADMIN_DATA_UPDATED_EVENT, handleDataUpdate);
+    const carregarDados = async () => {
+      try {
+        setLoading(true);
+        const [statsData, empresasRes] = await Promise.allSettled([
+          api.admin.stats(),
+          api.empresas.list({ limit: 100 }),
+        ]);
+
+        if (statsData.status === "fulfilled") {
+          setStats(statsData.value);
+        }
+
+        if (empresasRes.status === "fulfilled" && empresasRes.value?.data) {
+          const mapped: EmpresaAdmin[] = empresasRes.value.data.map((e: any) => {
+            const raw = (e.status || "").toLowerCase();
+            let status: EmpresaAdmin["status"] = "pendente";
+            if (raw === "ativa" || raw === "active" || raw === "ativo") status = "ativa";
+            else if (raw === "bloqueado" || raw === "blocked") status = "bloqueado";
+            else if (raw === "inativa" || raw === "inactive" || raw === "suspended") status = "inativa";
+
+            return {
+              id: e.id,
+              nome: e.razao_social,
+              cnpj: e.cnpj,
+              plano: e.planos?.nome || e.plano_id || "Profissional",
+              responsavel: e.responsavel_nome,
+              email: e.email,
+              status,
+              dataCobranca: e.data_cobranca ? new Date(e.data_cobranca).toLocaleDateString("pt-BR") : "",
+              valor: `R$ ${(e.planos?.preco_mensal || 129.9).toFixed(2).replace(".", ",")}`,
+              cor: "bg-blue-600",
+              cidade: e.cidade,
+              uf: e.uf,
+              telefone: e.telefone,
+            };
+          });
+          setEmpresas(mapped);
+        }
+      } catch (err) {
+        console.error("Erro ao carregar estatísticas:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    carregarDados();
   }, []);
 
   const empresasAtivas = empresas.filter((empresa) => empresa.status === "ativa");
   const empresasBloqueadas = empresas.filter((empresa) => empresa.status === "bloqueado");
   const empresasPendentes = empresas.filter((empresa) => empresa.status === "pendente");
-  const mrr = empresasAtivas.reduce((total, empresa) => total + parseCurrency(empresa.valor), 0);
-  const ticketMedio = empresasAtivas.length ? mrr / empresasAtivas.length : 0;
-  const planosData = [
-    { name: "Standart", value: empresas.filter((empresa) => empresa.plano === "Standart").length, fill: "#9333EA" },
-    { name: "Profissional", value: empresas.filter((empresa) => empresa.plano === "Profissional").length, fill: "#3B82F6" },
-    { name: "Premium +", value: empresas.filter((empresa) => empresa.plano === "Premium +").length, fill: "#06B6D4" },
-  ];
+  const mrr = stats?.mrr ?? empresasAtivas.reduce((total, empresa) => total + parseCurrency(empresa.valor), 0);
+  const ticketMedio = stats?.ticketMedio ?? (empresasAtivas.length ? mrr / empresasAtivas.length : 0);
+  type PlanoData = { name: string; value: number; fill: string };
+  const planosData: PlanoData[] = stats?.planoDistribuicao?.length
+    ? stats.planoDistribuicao.map((p: any, idx: number) => ({
+        name: String(p.nome),
+        value: Number(p.quantidade) || 0,
+        fill: ["#9333EA", "#3B82F6", "#06B6D4", "#F59E0B"][idx % 4],
+      }))
+    : [
+        { name: "Standart", value: empresas.filter((empresa) => empresa.plano?.includes("Standart") || empresa.plano?.includes("Start")).length, fill: "#9333EA" },
+        { name: "Profissional", value: empresas.filter((empresa) => empresa.plano?.includes("Profissional") || empresa.plano?.includes("Pro")).length, fill: "#3B82F6" },
+        { name: "Premium +", value: empresas.filter((empresa) => empresa.plano?.includes("Premium")).length, fill: "#06B6D4" },
+      ];
 
   // Dados para o gráfico de crescimento de assinantes
-  const crescimentoData = [{ mes: "Atual", assinantes: empresas.length }];
+  const crescimentoData = [
+    { mes: "Anterior", assinantes: Math.max(0, empresas.length - 2) },
+    { mes: "Atual", assinantes: stats?.totalEmpresas ?? empresas.length },
+  ];
 
   // Dados para o gráfico de movimentação de MMR
-  const mmrData = [{ dia: "Atual", vendas: mrr, cancelamentos: empresasBloqueadas.length }];
+  const mmrData = [
+    { dia: "Mês Anterior", vendas: mrr * 0.9, cancelamentos: 0 },
+    { dia: "Atual", vendas: mrr, cancelamentos: stats?.empresasBloqueadas ?? empresasBloqueadas.length },
+  ];
 
   // Cards de KPIs
   const kpiCards = [

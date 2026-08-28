@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import AdminLayout from "../../components/ManuPage";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -428,7 +428,77 @@ const ConfiguracoesSistema = () => {
 
   const gatewaySelecionado = gateways.find((g) => g.id === gatewayAtivo)!;
 
+  // Carregar dados salvos e planos da API na montagem
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("nexaerp_system_config");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.email) setEmail(parsed.email);
+        if (typeof parsed.manutencaoGlobal === "boolean") setManutencaoGlobal(parsed.manutencaoGlobal);
+        if (typeof parsed.whatsappNotif === "boolean") setWhatsappNotif(parsed.whatsappNotif);
+        if (parsed.segmentos) setSegmentos(parsed.segmentos);
+        if (parsed.planos && Array.isArray(parsed.planos) && parsed.planos.length > 0) setPlanos(parsed.planos);
+        if (parsed.destaque) setDestaque(parsed.destaque);
+        if (parsed.financeiro) setFinanceiro(parsed.financeiro);
+        if (typeof parsed.ativarLembretes === "boolean") setAtivarLembretes(parsed.ativarLembretes);
+        if (parsed.sandbox) setSandbox(parsed.sandbox);
+        if (parsed.gatewayKeys) setGatewayKeys(parsed.gatewayKeys);
+      }
+    } catch (e) {
+      console.warn("Erro ao carregar configurações salvas:", e);
+    }
+
+    // Buscar planos da API para sincronizar
+    import("@/lib/api").then(({ api }) => {
+      api.planos.list()
+        .then((apiPlanos) => {
+          if (apiPlanos && Array.isArray(apiPlanos) && apiPlanos.length > 0) {
+            const mapped: PlanoItem[] = apiPlanos.map((p: any) => ({
+              id: p.id,
+              nome: p.nome,
+              preco: `R$ ${(p.preco_mensal || 0).toFixed(2).replace(".", ",")}`,
+              popular: p.nome?.toLowerCase().includes("pro") || p.nome?.toLowerCase().includes("premium"),
+              recursos: typeof p.recursos === "string"
+                ? p.recursos.split(/[,•\n]/).map((r: string) => r.trim()).filter(Boolean)
+                : Array.isArray(p.recursos)
+                ? p.recursos
+                : ["Recursos Inclusos"],
+            }));
+            const saved = localStorage.getItem("nexaerp_system_config");
+            if (!saved) {
+              setPlanos(mapped);
+              setDestaque(Object.fromEntries(mapped.map((m) => [m.id, m.popular])));
+            }
+          }
+        })
+        .catch((err) => {
+          console.debug("Planos locais em uso:", err);
+        });
+    });
+  }, []);
+
   const salvarAlteracoes = () => {
+    const configToSave = {
+      email,
+      manutencaoGlobal,
+      whatsappNotif,
+      segmentos,
+      planos,
+      destaque,
+      financeiro,
+      ativarLembretes,
+      sandbox,
+      gatewayKeys,
+      updatedAt: new Date().toISOString(),
+    };
+
+    try {
+      localStorage.setItem("nexaerp_system_config", JSON.stringify(configToSave));
+    } catch (e) {
+      console.error("Erro ao salvar no storage local:", e);
+    }
+
     setSalvoSucesso(true);
     setTimeout(() => {
       setSalvoSucesso(false);

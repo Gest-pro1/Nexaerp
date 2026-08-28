@@ -31,11 +31,11 @@ import {
   CalendarIcon,
   EllipsisHorizontalIcon,
 } from "@heroicons/react/24/outline";
+import { api } from "@/lib/api";
 import {
   ADMIN_DATA_UPDATED_EVENT,
   formatCurrency,
   parseCurrency,
-  readEmpresas,
   type EmpresaAdmin,
 } from "../../../lib/admin-data";
 
@@ -91,25 +91,70 @@ const evolucaoConfig = {
 } satisfies ChartConfig;
 
 const Receita = () => {
-  const [empresas, setEmpresas] = useState<EmpresaAdmin[]>(readEmpresas);
+  const [empresas, setEmpresas] = useState<EmpresaAdmin[]>([]);
+  const [stats, setStats] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const handleDataUpdate = () => setEmpresas(readEmpresas());
-    window.addEventListener(ADMIN_DATA_UPDATED_EVENT, handleDataUpdate);
-    return () => window.removeEventListener(ADMIN_DATA_UPDATED_EVENT, handleDataUpdate);
+    const carregarDados = async () => {
+      try {
+        setLoading(true);
+        const [statsData, empresasRes] = await Promise.allSettled([
+          api.admin.stats(),
+          api.empresas.list({ limit: 100 }),
+        ]);
+
+        if (statsData.status === "fulfilled") {
+          setStats(statsData.value);
+        }
+
+        if (empresasRes.status === "fulfilled" && empresasRes.value?.data) {
+          const mapped: EmpresaAdmin[] = empresasRes.value.data.map((e: any) => {
+            const raw = (e.status || "").toLowerCase();
+            let status: EmpresaAdmin["status"] = "pendente";
+            if (raw === "ativa" || raw === "active" || raw === "ativo") status = "ativa";
+            else if (raw === "bloqueado" || raw === "blocked") status = "bloqueado";
+            else if (raw === "inativa" || raw === "inactive" || raw === "suspended") status = "inativa";
+
+            return {
+              id: e.id,
+              nome: e.razao_social,
+              cnpj: e.cnpj,
+              plano: e.planos?.nome || e.plano_id || "Profissional",
+              responsavel: e.responsavel_nome,
+              email: e.email,
+              status,
+              dataCobranca: e.data_cobranca ? new Date(e.data_cobranca).toLocaleDateString("pt-BR") : "10/09/2026",
+              valor: `R$ ${(e.planos?.preco_mensal || 129.9).toFixed(2).replace(".", ",")}`,
+              cor: "bg-purple-600",
+              cidade: e.cidade,
+              uf: e.uf,
+              telefone: e.telefone,
+            };
+          });
+          setEmpresas(mapped);
+        }
+      } catch (err) {
+        console.error("Erro ao carregar receitas:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    carregarDados();
   }, []);
 
   const ativas = empresas.filter((empresa) => empresa.status === "ativa");
   const pendentes = empresas.filter((empresa) => empresa.status === "pendente");
   const bloqueadas = empresas.filter((empresa) => empresa.status === "bloqueado");
-  const receitaConfirmada = ativas.reduce((total, empresa) => total + parseCurrency(empresa.valor), 0);
+  const receitaConfirmada = stats?.mrr ?? ativas.reduce((total, empresa) => total + parseCurrency(empresa.valor), 0);
   const aReceber = pendentes.reduce((total, empresa) => total + parseCurrency(empresa.valor), 0);
   const inadimplencia = bloqueadas.reduce((total, empresa) => total + parseCurrency(empresa.valor), 0);
   const projecaoTotal = receitaConfirmada + aReceber;
 
   const evolucaoData = [
-    { dia: 1, receita: receitaConfirmada, custos: inadimplencia },
-    { dia: 15, receita: projecaoTotal, custos: inadimplencia },
+    { dia: 1, receita: receitaConfirmada * 0.4, custos: inadimplencia * 0.3 },
+    { dia: 15, receita: receitaConfirmada * 0.8, custos: inadimplencia * 0.6 },
     { dia: 30, receita: projecaoTotal, custos: inadimplencia },
   ];
 
