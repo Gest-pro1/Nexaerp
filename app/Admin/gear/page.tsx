@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import AdminLayout from "../../components/ManuPage";
+import { api } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   GlobeAltIcon,
@@ -428,7 +429,7 @@ const ConfiguracoesSistema = () => {
 
   const gatewaySelecionado = gateways.find((g) => g.id === gatewayAtivo)!;
 
-  // Carregar dados salvos e planos da API na montagem
+  // Carregar dados salvos, planos e configurações do banco/API na montagem
   useEffect(() => {
     try {
       const saved = localStorage.getItem("nexaerp_system_config");
@@ -449,36 +450,48 @@ const ConfiguracoesSistema = () => {
       console.warn("Erro ao carregar configurações salvas:", e);
     }
 
+    // Sincronizar configurações e chaves de pagamento com o backend
+    api.admin.getConfiguracoes()
+      .then((configs) => {
+        if (configs?.gateway_pagamento) {
+          const gw = configs.gateway_pagamento;
+          if (gw.ativo) setGatewayAtivo(gw.ativo);
+          if (gw.sandbox) setSandbox((prev) => ({ ...prev, ...gw.sandbox }));
+          if (gw.gatewayKeys) setGatewayKeys((prev) => ({ ...prev, ...gw.gatewayKeys }));
+        }
+      })
+      .catch((err) => {
+        console.debug("Configurações remotas não disponíveis:", err);
+      });
+
     // Buscar planos da API para sincronizar
-    import("@/lib/api").then(({ api }) => {
-      api.planos.list()
-        .then((apiPlanos) => {
-          if (apiPlanos && Array.isArray(apiPlanos) && apiPlanos.length > 0) {
-            const mapped: PlanoItem[] = apiPlanos.map((p: any) => ({
-              id: p.id,
-              nome: p.nome,
-              preco: `R$ ${(p.preco_mensal || 0).toFixed(2).replace(".", ",")}`,
-              popular: p.nome?.toLowerCase().includes("pro") || p.nome?.toLowerCase().includes("premium"),
-              recursos: typeof p.recursos === "string"
-                ? p.recursos.split(/[,•\n]/).map((r: string) => r.trim()).filter(Boolean)
-                : Array.isArray(p.recursos)
-                ? p.recursos
-                : ["Recursos Inclusos"],
-            }));
-            const saved = localStorage.getItem("nexaerp_system_config");
-            if (!saved) {
-              setPlanos(mapped);
-              setDestaque(Object.fromEntries(mapped.map((m) => [m.id, m.popular])));
-            }
+    api.planos.list()
+      .then((apiPlanos) => {
+        if (apiPlanos && Array.isArray(apiPlanos) && apiPlanos.length > 0) {
+          const mapped: PlanoItem[] = apiPlanos.map((p: any) => ({
+            id: p.id,
+            nome: p.nome,
+            preco: `R$ ${(p.preco_mensal || 0).toFixed(2).replace(".", ",")}`,
+            popular: p.nome?.toLowerCase().includes("pro") || p.nome?.toLowerCase().includes("premium"),
+            recursos: typeof p.recursos === "string"
+              ? p.recursos.split(/[,•\n]/).map((r: string) => r.trim()).filter(Boolean)
+              : Array.isArray(p.recursos)
+              ? p.recursos
+              : ["Recursos Inclusos"],
+          }));
+          const saved = localStorage.getItem("nexaerp_system_config");
+          if (!saved) {
+            setPlanos(mapped);
+            setDestaque(Object.fromEntries(mapped.map((m) => [m.id, m.popular])));
           }
-        })
-        .catch((err) => {
-          console.debug("Planos locais em uso:", err);
-        });
-    });
+        }
+      })
+      .catch((err) => {
+        console.debug("Planos locais em uso:", err);
+      });
   }, []);
 
-  const salvarAlteracoes = () => {
+  const salvarAlteracoes = async () => {
     const configToSave = {
       email,
       manutencaoGlobal,
@@ -497,6 +510,18 @@ const ConfiguracoesSistema = () => {
       localStorage.setItem("nexaerp_system_config", JSON.stringify(configToSave));
     } catch (e) {
       console.error("Erro ao salvar no storage local:", e);
+    }
+
+    try {
+      await api.admin.salvarConfiguracoes({
+        gateway_pagamento: {
+          ativo: gatewayAtivo,
+          sandbox,
+          gatewayKeys,
+        },
+      });
+    } catch (err: any) {
+      console.warn("Aviso ao sincronizar configurações no banco:", err);
     }
 
     setSalvoSucesso(true);

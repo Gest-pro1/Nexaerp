@@ -81,5 +81,7 @@ export const api = {
   },
   admin: {
     stats: () => fetchAPI<any>('/admin/stats'),
+    getConfiguracoes: () => fetchAPI<any>('/admin/configuracoes'),
+    salvarConfiguracoes: (data: any) => fetchAPI<any>('/admin/configuracoes', { method: 'PUT', body: JSON.stringify(data) }),
   },
 };
