@@ -142,6 +142,9 @@ function PaymentContent() {
   const [errors, setErrors] = useState<PaymentErrors>({});
   const [isLoading, setIsLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [dynamicPixCode, setDynamicPixCode] = useState<string>(PIX_CODE);
+  const [dynamicQrImage, setDynamicQrImage] = useState<string>("");
+  const [pixGerado, setPixGerado] = useState<boolean>(false);
 
   const features = getPlanFeatures(planName);
 
@@ -181,7 +184,7 @@ function PaymentContent() {
   const processPayment = async () => {
     try {
       setIsLoading(true);
-      await api.pagamentos.create({
+      const res: any = await api.pagamentos.create({
         empresaId,
         metodo: paymentMethod,
         ...(paymentMethod !== 'pix' ? {
@@ -191,6 +194,15 @@ function PaymentContent() {
           cvv: formData.cvv,
         } : {}),
       });
+
+      if (paymentMethod === 'pix' && res?.pix) {
+        if (res.pix.copiaECola) setDynamicPixCode(res.pix.copiaECola);
+        if (res.pix.qrCodeBase64) setDynamicQrImage(res.pix.qrCodeBase64);
+        setPixGerado(true);
+        setIsLoading(false);
+        return;
+      }
+
       router.push(`/payment/sucesso?plan=${encodeURIComponent(planName)}&frequency=${encodeURIComponent(frequency)}&company=${encodeURIComponent(companyName)}`);
     } catch (err: any) {
       setIsLoading(false);
@@ -213,7 +225,7 @@ function PaymentContent() {
   }
 
   const copyPix = () => {
-    navigator.clipboard?.writeText(PIX_CODE);
+    navigator.clipboard?.writeText(dynamicPixCode);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -400,9 +412,9 @@ function PaymentContent() {
               <div className="border border-gray-200 rounded-2xl p-8 bg-white text-center">
                 <div className="inline-block bg-white p-2 rounded-xl shadow-sm ">
                   <img
-                    src={generateQRCode(PIX_CODE)}
+                    src={dynamicQrImage || generateQRCode(dynamicPixCode)}
                     alt="QR Code PIX"
-                    className="w-44 h-44 block"
+                    className="w-44 h-44 block object-contain"
                   />
                 </div>
                 <p className="font-bold text-gray-800 text-base mb-2">Escaneie o QR Code</p>
@@ -410,10 +422,10 @@ function PaymentContent() {
                   Aponte a câmera do seu banco para o código acima<br />para pagar via pix.
                 </p>
                 <div className="flex items-center gap-3 border border-gray-200 rounded-xl px-4 py-3 bg-gray-50">
-                  <span className="flex-1 text-xs font-mono text-gray-500 truncate">{PIX_CODE}</span>
+                  <span className="flex-1 text-xs font-mono text-gray-500 truncate">{dynamicPixCode}</span>
                   <button
                     onClick={copyPix}
-                    className="shrink-0 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition flex items-center gap-1"
+                    className="shrink-0 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition flex items-center gap-1 cursor-pointer"
                   >
                     📋 {copied ? "Copiado!" : "Copiar Chave"}
                   </button>
@@ -423,10 +435,10 @@ function PaymentContent() {
               <button
                 onClick={processPayment}
                 disabled={isLoading}
-                className="w-full py-4 rounded-xl text-white font-extrabold text-base flex items-center justify-center gap-2 bg-blue-700 hover:bg-blue-800 transition"
+                className="w-full py-4 rounded-xl text-white font-extrabold text-base flex items-center justify-center gap-2 bg-blue-700 hover:bg-blue-800 transition cursor-pointer"
                 style={{ background: isLoading ? "#93C5FD" : undefined, cursor: isLoading ? "not-allowed" : "pointer" }}
               >
-                {isLoading ? "Processando..." : "Confirmar Pagamento →"}
+                {isLoading ? "Processando..." : pixGerado ? "Já realizei o pagamento →" : "Gerar Cobrança PIX Oficial →"}
               </button>
             </div>
           )}

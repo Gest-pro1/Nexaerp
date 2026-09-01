@@ -426,6 +426,9 @@ const ConfiguracoesSistema = () => {
       stripe: { chave1: "", chave2: "" },
     }
   );
+  const [validacaoGateway, setValidacaoGateway] = useState<any>(null);
+  const [testandoGateway, setTestandoGateway] = useState<boolean>(false);
+  const [feedbackMensagem, setFeedbackMensagem] = useState<string>("");
 
   const gatewaySelecionado = gateways.find((g) => g.id === gatewayAtivo)!;
 
@@ -458,6 +461,7 @@ const ConfiguracoesSistema = () => {
           if (gw.ativo) setGatewayAtivo(gw.ativo);
           if (gw.sandbox) setSandbox((prev) => ({ ...prev, ...gw.sandbox }));
           if (gw.gatewayKeys) setGatewayKeys((prev) => ({ ...prev, ...gw.gatewayKeys }));
+          if (gw.mercadopagoValidation) setValidacaoGateway(gw.mercadopagoValidation);
         }
       })
       .catch((err) => {
@@ -491,6 +495,27 @@ const ConfiguracoesSistema = () => {
       });
   }, []);
 
+  const handleTestarGateway = async () => {
+    setTestandoGateway(true);
+    try {
+      const keys = gatewayKeys[gatewayAtivo] || {};
+      const res = await api.admin.testarGateway({
+        gateway: gatewayAtivo,
+        chave1: keys.chave1 || "",
+        chave2: keys.chave2 || "",
+      });
+
+      if (res?.resultado) {
+        setValidacaoGateway(res.resultado);
+      }
+      setFeedbackMensagem(res?.resultado?.mensagem || res?.message || "Teste concluído!");
+    } catch (err: any) {
+      setFeedbackMensagem(`Erro ao testar gateway: ${err.message}`);
+    } finally {
+      setTestandoGateway(false);
+    }
+  };
+
   const salvarAlteracoes = async () => {
     const configToSave = {
       email,
@@ -513,13 +538,20 @@ const ConfiguracoesSistema = () => {
     }
 
     try {
-      await api.admin.salvarConfiguracoes({
+      const res = await api.admin.salvarConfiguracoes({
         gateway_pagamento: {
           ativo: gatewayAtivo,
           sandbox,
           gatewayKeys,
         },
       });
+
+      if (res?.validation) {
+        setValidacaoGateway(res.validation);
+      }
+      if (res?.message) {
+        setFeedbackMensagem(res.message);
+      }
     } catch (err: any) {
       console.warn("Aviso ao sincronizar configurações no banco:", err);
     }
@@ -527,7 +559,7 @@ const ConfiguracoesSistema = () => {
     setSalvoSucesso(true);
     setTimeout(() => {
       setSalvoSucesso(false);
-    }, 3000);
+    }, 4000);
   };
 
   return (
@@ -1011,6 +1043,56 @@ const ConfiguracoesSistema = () => {
                         }
                       />
                     ))}
+
+                    {/* Status de Validação e Botão de Teste */}
+                    <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                            <span>Status de Validação:</span>
+                            {validacaoGateway?.valido ? (
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                Conectado e Validado
+                              </span>
+                            ) : validacaoGateway?.erro ? (
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                                Falha na Conexão
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                                Aguardando Teste
+                              </span>
+                            )}
+                          </p>
+                          {validacaoGateway?.conta && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              Conta: <strong>{validacaoGateway.conta.nickname}</strong> ({validacaoGateway.conta.email}) — ID: {validacaoGateway.conta.id}
+                            </p>
+                          )}
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={handleTestarGateway}
+                          disabled={testandoGateway}
+                          className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white text-xs font-semibold px-3.5 py-2 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
+                        >
+                          {testandoGateway ? "Testando..." : "⚡ Validar Credenciais"}
+                        </button>
+                      </div>
+
+                      {feedbackMensagem && (
+                        <p className={`text-xs p-2.5 rounded-lg ${
+                          validacaoGateway?.valido
+                            ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                            : "bg-blue-50 text-blue-700 border border-blue-200"
+                        }`}>
+                          {feedbackMensagem}
+                        </p>
+                      )}
+                    </div>
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1.5">
