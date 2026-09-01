@@ -81,6 +81,12 @@ function CadastroFormContent() {
   const searchParams = useSearchParams()
 
   const [availablePlans, setAvailablePlans] = useState(PLANS)
+  const [segmentosConfig, setSegmentosConfig] = useState<Record<string, { disponivel: boolean; manutencao: boolean }>>({
+    lojas: { disponivel: true, manutencao: false },
+    saloes: { disponivel: true, manutencao: false },
+    bares: { disponivel: true, manutencao: false },
+    mercados: { disponivel: true, manutencao: false },
+  });
 
   const initialPlanParam = searchParams.get("plan")
   const initialFreqParam = searchParams.get("frequency")
@@ -88,6 +94,40 @@ function CadastroFormContent() {
   const defaultPlanId = availablePlans.some(p => p.id === initialPlanParam)
     ? (initialPlanParam as string)
     : "professional"
+
+  useEffect(() => {
+    api.planos.list()
+      .then((apiPlanos) => {
+        if (apiPlanos && Array.isArray(apiPlanos) && apiPlanos.length > 0) {
+          const mapped = apiPlanos.map((p: any) => ({
+            id: p.id,
+            name: p.nome,
+            monthlyPrice: Number(p.preco_mensal) || 0,
+            annualPrice: Number(p.preco_anual) || (Number(p.preco_mensal) * 12 * 0.8),
+            features: typeof p.recursos === 'string'
+              ? p.recursos.split(/[,•\n]/).map((r: string) => r.trim()).filter(Boolean).join(' · ')
+              : Array.isArray(p.recursos)
+              ? p.recursos.join(' · ')
+              : 'Recursos inclusos',
+            recommended: Boolean(p.nome?.toLowerCase().includes('pro') || p.nome?.toLowerCase().includes('premium')),
+          }));
+          setAvailablePlans(mapped);
+          if (initialPlanParam) {
+            const found = mapped.find(m => m.id === initialPlanParam || m.name.toLowerCase() === initialPlanParam.toLowerCase());
+            if (found) setSelectedPlan(found.id);
+          }
+        }
+      })
+      .catch((err) => console.debug('Usando planos padrão no registro:', err));
+
+    api.admin.getConfiguracoes()
+      .then((configs) => {
+        if (configs?.segmentos) {
+          setSegmentosConfig(configs.segmentos);
+        }
+      })
+      .catch((err) => console.debug('Configurações de segmentos locais:', err));
+  }, [initialPlanParam]);
 
   // ── Dados da Empresa ──
   const [razaoSocial, setRazaoSocial] = useState("")
@@ -298,7 +338,8 @@ function CadastroFormContent() {
         const planos = await api.planos.list();
         const planSelected = availablePlans.find(p => p.id === selectedPlan);
         const planName = planSelected?.name || 'Profissional';
-        const matchedPlano = planos.find((p: any) => p.nome === planName);
+        const matchedPlano = planos.find((p: any) => p.id === selectedPlan || p.nome?.toLowerCase() === planName.toLowerCase());
+        const resolvedPlanoId = matchedPlano?.id || (planSelected?.id && planSelected.id.length === 36 ? planSelected.id : undefined);
         
         const result = await api.auth.register({
           razaoSocial: razaoSocial,
@@ -315,7 +356,7 @@ function CadastroFormContent() {
           responsavelNome: nomeCompleto,
           responsavelCpf: cpf,
           tipoNegocio: selectedBusinessType,
-          planoId: matchedPlano?.id,
+          planoId: resolvedPlanoId,
           tipoPlano: isAnnual ? 'Anual' : 'Mensal',
         });
         
@@ -676,19 +717,26 @@ function CadastroFormContent() {
               <div className="grid gap-4 md:grid-cols-2">
                 {BUSINESS_TYPES.map((type) => {
                   const isSelected = selectedBusinessType === type.id
+                  const segStatus = segmentosConfig[type.id] || { disponivel: true, manutencao: false }
+                  const isDisponivel = segStatus.disponivel !== false
+                  const isManutencao = Boolean(segStatus.manutencao)
+
                   return (
                     <button
                       key={type.id}
                       type="button"
-                      onClick={() => setSelectedBusinessType(type.id)}
+                      disabled={!isDisponivel}
+                      onClick={() => isDisponivel && setSelectedBusinessType(type.id)}
                       className={`flex items-start gap-3 rounded-xl border-2 p-4 text-left transition-all ${
-                        isSelected
-                          ? "border-[#1f3fbf] bg-[#1f3fbf]/5"
-                          : "border-gray-200 bg-white hover:border-[#1f3fbf]/50"
+                        !isDisponivel
+                          ? "border-gray-200 bg-gray-50 opacity-60 cursor-not-allowed"
+                          : isSelected
+                          ? "border-[#1f3fbf] bg-[#1f3fbf]/5 cursor-pointer"
+                          : "border-gray-200 bg-white hover:border-[#1f3fbf]/50 cursor-pointer"
                       }`}
                     >
                       <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
-                        isSelected ? "bg-[#1f3fbf] text-white" : "bg-gray-100 text-gray-500"
+                        !isDisponivel ? "bg-gray-200 text-gray-400" : isSelected ? "bg-[#1f3fbf] text-white" : "bg-gray-100 text-gray-500"
                       }`}>
                         {type.id === "lojas" && (
                           <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -711,10 +759,21 @@ function CadastroFormContent() {
                           </svg>
                         )}
                       </div>
-                      <div>
-                        <p className={`font-medium ${isSelected ? "text-[#1f3fbf]" : "text-gray-900"}`}>
-                          {type.title}
-                        </p>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className={`font-medium ${!isDisponivel ? "text-gray-400" : isSelected ? "text-[#1f3fbf]" : "text-gray-900"}`}>
+                            {type.title}
+                          </p>
+                          {!isDisponivel ? (
+                            <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-gray-200 text-gray-600">
+                              Indisponível
+                            </span>
+                          ) : isManutencao ? (
+                            <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-800">
+                              Em Manutenção
+                            </span>
+                          ) : null}
+                        </div>
                         <p className="mt-0.5 text-xs text-gray-500">
                           {type.description}
                         </p>

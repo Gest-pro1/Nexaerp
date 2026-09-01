@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ChangeEvent, type FormEvent } from "react";
+import { useState, useEffect, type ChangeEvent, type FormEvent } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { api } from '@/lib/api';
 import { Suspense } from "react";
@@ -145,8 +145,27 @@ function PaymentContent() {
   const [dynamicPixCode, setDynamicPixCode] = useState<string>(PIX_CODE);
   const [dynamicQrImage, setDynamicQrImage] = useState<string>("");
   const [pixGerado, setPixGerado] = useState<boolean>(false);
+  const [dynamicFeatures, setDynamicFeatures] = useState<string[]>([]);
 
-  const features = getPlanFeatures(planName);
+  useEffect(() => {
+    api.planos.list()
+      .then((apiPlanos) => {
+        if (apiPlanos && Array.isArray(apiPlanos)) {
+          const found = apiPlanos.find((p: any) => p.nome?.toLowerCase() === planName.toLowerCase() || p.id === planName);
+          if (found?.recursos) {
+            const list = typeof found.recursos === "string"
+              ? found.recursos.split(/[,•\n]/).map((r: string) => r.trim()).filter(Boolean)
+              : Array.isArray(found.recursos)
+              ? found.recursos
+              : [];
+            if (list.length > 0) setDynamicFeatures(list);
+          }
+        }
+      })
+      .catch((e) => console.debug("Aviso ao buscar recursos do plano:", e));
+  }, [planName]);
+
+  const features = dynamicFeatures.length > 0 ? dynamicFeatures : getPlanFeatures(planName);
 
   const formatCardNumber = (v: string) => v.replace(/\D/g, "").slice(0, 16).replace(/(\d{4})(?=\d)/g, "$1 ");
   const formatExpiry = (v: string) => {

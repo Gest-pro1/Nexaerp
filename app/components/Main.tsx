@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { RadioGroup } from '@headlessui/react';
 import { CheckCircleIcon, CheckIcon } from '@heroicons/react/20/solid';
+import { api } from '@/lib/api';
 
 /* ================= UTIL ================= */
 function classNames(...classes: (string | false | undefined)[]): string {
@@ -93,6 +94,39 @@ export default function Main() {
   const [frequency, setFrequency] = useState(frequencies[0]);
   const [displayTiers, setDisplayTiers] = useState<Tier[]>(tiers);
   const [selectedPlan, setSelectedPlan] = useState<Tier>(tiers[1]);
+
+  useEffect(() => {
+    api.planos.list()
+      .then((apiPlanos) => {
+        if (apiPlanos && Array.isArray(apiPlanos) && apiPlanos.length > 0) {
+          const mapped: Tier[] = apiPlanos.map((p: any) => {
+            const mensalVal = Number(p.preco_mensal) || 0;
+            const anualVal = Number(p.preco_anual) || (mensalVal * 12 * 0.8);
+            const features = typeof p.recursos === 'string'
+              ? p.recursos.split(/[,•\n]/).map((r: string) => r.trim()).filter(Boolean)
+              : Array.isArray(p.recursos)
+              ? p.recursos
+              : ['Suporte Especializado', 'Módulos Personalizados'];
+
+            return {
+              id: p.id,
+              name: p.nome,
+              price: {
+                Mês: `R$${mensalVal.toFixed(2).replace('.', ',')}`,
+                Ano: `R$ ${anualVal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+              },
+              description: p.descricao || (p.nome?.toLowerCase().includes('stand') ? 'Para começar agora.' : p.nome?.toLowerCase().includes('prem') ? 'Para gestão e consultoria.' : 'Para quem quer crescer.'),
+              features: features.length > 0 ? features : ['Recursos Inclusos'],
+              popular: Boolean(p.nome?.toLowerCase().includes('pro') || p.nome?.toLowerCase().includes('premium')),
+            };
+          });
+          setDisplayTiers(mapped);
+          const popularOrFirst = mapped.find((m) => m.popular) || mapped[0];
+          if (popularOrFirst) setSelectedPlan(popularOrFirst);
+        }
+      })
+      .catch((err) => console.debug('Usando planos padrão na landing page:', err));
+  }, []);
 
   const handleSelectPlan = (tier: Tier) => {
     router.push(`/register?plan=${tier.id}&frequency=${frequency.value}`);

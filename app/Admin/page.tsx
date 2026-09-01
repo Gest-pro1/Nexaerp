@@ -35,11 +35,45 @@ interface ModalData {
   empresaNome: string;
 }
 
+export const ESTADOS_BRASIL = [
+  { sigla: "AC", nome: "Acre (AC)" },
+  { sigla: "AL", nome: "Alagoas (AL)" },
+  { sigla: "AP", nome: "Amapá (AP)" },
+  { sigla: "AM", nome: "Amazonas (AM)" },
+  { sigla: "BA", nome: "Bahia (BA)" },
+  { sigla: "CE", nome: "Ceará (CE)" },
+  { sigla: "DF", nome: "Distrito Federal (DF)" },
+  { sigla: "ES", nome: "Espírito Santo (ES)" },
+  { sigla: "GO", nome: "Goiás (GO)" },
+  { sigla: "MA", nome: "Maranhão (MA)" },
+  { sigla: "MT", nome: "Mato Grosso (MT)" },
+  { sigla: "MS", nome: "Mato Grosso do Sul (MS)" },
+  { sigla: "MG", nome: "Minas Gerais (MG)" },
+  { sigla: "PA", nome: "Pará (PA)" },
+  { sigla: "PB", nome: "Paraíba (PB)" },
+  { sigla: "PR", nome: "Paraná (PR)" },
+  { sigla: "PE", nome: "Pernambuco (PE)" },
+  { sigla: "PI", nome: "Piauí (PI)" },
+  { sigla: "RJ", nome: "Rio de Janeiro (RJ)" },
+  { sigla: "RN", nome: "Rio Grande do Norte (RN)" },
+  { sigla: "RS", nome: "Rio Grande do Sul (RS)" },
+  { sigla: "RO", nome: "Rondônia (RO)" },
+  { sigla: "RR", nome: "Roraima (RR)" },
+  { sigla: "SC", nome: "Santa Catarina (SC)" },
+  { sigla: "SP", nome: "São Paulo (SP)" },
+  { sigla: "SE", nome: "Sergipe (SE)" },
+  { sigla: "TO", nome: "Tocantins (TO)" },
+];
+
 // Tipo próprio do formulário de edição e criação
 type EditFormState = {
   nome: string;
   cnpj: string;
   plano: string;
+  cep: string;
+  rua: string;
+  numero: string;
+  bairro: string;
   cidade: string;
   uf: string;
   responsavel: string;
@@ -58,6 +92,11 @@ export default function AdminPage() {
 
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [loading, setLoading] = useState(true);
+  const [planosDisponiveis, setPlanosDisponiveis] = useState<any[]>([
+    { id: 'standard', nome: 'Standart', preco_mensal: 69.90 },
+    { id: 'professional', nome: 'Profissional', preco_mensal: 129.90 },
+    { id: 'premium', nome: 'Premium +', preco_mensal: 249.90 },
+  ]);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [searchTermFinanceiro, setSearchTermFinanceiro] = useState("");
@@ -67,6 +106,13 @@ export default function AdminPage() {
 
   useEffect(() => {
     fetchEmpresas();
+    api.planos.list()
+      .then((apiPlanos) => {
+        if (apiPlanos && Array.isArray(apiPlanos) && apiPlanos.length > 0) {
+          setPlanosDisponiveis(apiPlanos);
+        }
+      })
+      .catch((err) => console.debug('Planos locais em uso:', err));
   }, []);
 
   const fetchEmpresas = async () => {
@@ -84,9 +130,13 @@ export default function AdminPage() {
         dataCobranca: e.data_cobranca ? new Date(e.data_cobranca).toLocaleDateString('pt-BR') : '',
         valor: `R$ ${(e.planos?.preco_mensal || 0).toFixed(2).replace('.', ',')}`,
         cor: ['bg-black', 'bg-red-700', 'bg-blue-600', 'bg-purple-600', 'bg-green-600', 'bg-indigo-600'][Math.floor(Math.random() * 6)],
-        cidade: e.cidade,
-        uf: e.uf,
-        telefone: e.telefone,
+        cep: e.cep || '',
+        rua: e.rua || '',
+        numero: e.numero || '',
+        bairro: e.bairro || '',
+        cidade: e.cidade || '',
+        uf: e.uf || 'PB',
+        telefone: e.telefone || '',
       })));
     } catch (err) {
       console.error('Erro ao buscar empresas:', err);
@@ -99,6 +149,10 @@ export default function AdminPage() {
     nome: "",
     cnpj: "",
     plano: "Profissional",
+    cep: "",
+    rua: "",
+    numero: "",
+    bairro: "",
     cidade: "",
     uf: "PB",
     responsavel: "",
@@ -112,6 +166,45 @@ export default function AdminPage() {
   const [editForm, setEditForm] = useState<EditFormState>(defaultFormState);
   const [createForm, setCreateForm] = useState<EditFormState>(defaultFormState);
   const itemsPerPage = 5;
+
+  const handleCepChange = async (value: string, isEdit: boolean) => {
+    const digits = value.replace(/\D/g, "").slice(0, 8);
+    const masked = digits.length > 5 ? `${digits.slice(0, 5)}-${digits.slice(5)}` : digits;
+
+    if (isEdit) {
+      setEditForm((prev) => ({ ...prev, cep: masked }));
+    } else {
+      setCreateForm((prev) => ({ ...prev, cep: masked }));
+    }
+
+    if (digits.length === 8) {
+      try {
+        const res = await fetch(`https://viacep.com.br/ws/${digits}/json/`);
+        const data = await res.json();
+        if (!data.erro) {
+          if (isEdit) {
+            setEditForm((prev) => ({
+              ...prev,
+              rua: data.logradouro || prev.rua,
+              bairro: data.bairro || prev.bairro,
+              cidade: data.localidade || prev.cidade,
+              uf: data.uf || prev.uf,
+            }));
+          } else {
+            setCreateForm((prev) => ({
+              ...prev,
+              rua: data.logradouro || prev.rua,
+              bairro: data.bairro || prev.bairro,
+              cidade: data.localidade || prev.cidade,
+              uf: data.uf || prev.uf,
+            }));
+          }
+        }
+      } catch (err) {
+        console.debug("Erro ao consultar ViaCEP:", err);
+      }
+    }
+  };
 
   // Cálculos para os cards de métricas
   const totalEmpresas = empresas.length;
@@ -139,6 +232,8 @@ export default function AdminPage() {
       return;
     }
     
+    const matchedPlano = planosDisponiveis.find((p) => p.nome === createForm.plano || p.id === createForm.plano);
+
     try {
       await api.auth.register({
         razaoSocial: createForm.nome,
@@ -146,9 +241,14 @@ export default function AdminPage() {
         email: createForm.email,
         senha: createForm.senha || '123456',
         telefone: createForm.telefone,
+        cep: createForm.cep,
+        rua: createForm.rua,
+        numero: createForm.numero,
+        bairro: createForm.bairro,
         cidade: createForm.cidade,
         uf: createForm.uf,
         responsavelNome: createForm.responsavel,
+        planoId: matchedPlano?.id,
       });
       fetchEmpresas();
       setModalType(null);
@@ -165,6 +265,10 @@ export default function AdminPage() {
       nome: empresa.nome,
       cnpj: empresa.cnpj,
       plano: empresa.plano,
+      cep: empresa.cep ?? "",
+      rua: empresa.rua ?? "",
+      numero: empresa.numero ?? "",
+      bairro: empresa.bairro ?? "",
       cidade: empresa.cidade ?? "",
       uf: empresa.uf ?? "PB",
       responsavel: empresa.responsavel,
@@ -186,16 +290,23 @@ export default function AdminPage() {
 
   const salvarEdicao = async () => {
     if (!modalData) return;
+    const matchedPlano = planosDisponiveis.find((p) => p.nome === editForm.plano || p.id === editForm.plano);
+
     try {
       await api.empresas.update(String(modalData.empresaId), {
         razaoSocial: editForm.nome,
         cnpj: editForm.cnpj,
+        cep: editForm.cep,
+        rua: editForm.rua,
+        numero: editForm.numero,
+        bairro: editForm.bairro,
         cidade: editForm.cidade,
         uf: editForm.uf,
         responsavelNome: editForm.responsavel,
         email: editForm.email,
         telefone: editForm.telefone,
-        status: editForm.status
+        status: editForm.status,
+        ...(matchedPlano ? { plano_id: matchedPlano.id } : {}),
       });
       fetchEmpresas();
       setModalType(null);
@@ -751,9 +862,11 @@ export default function AdminPage() {
                           onChange={(e) => setEditForm((prev) => ({ ...prev, plano: e.target.value }))}
                           className="w-full rounded-lg border border-gray-300 p-3 text-black focus:outline-none focus:ring-2 focus:ring-blue-600"
                         >
-                          <option value="Standart">Standart (R$ 69,90/mês)</option>
-                          <option value="Profissional">Profissional (R$ 129,90/mês)</option>
-                          <option value="Premium +">Premium + (R$ 249,90/mês)</option>
+                          {planosDisponiveis.map((p) => (
+                            <option key={p.id} value={p.nome}>
+                              {p.nome} (R$ {(Number(p.preco_mensal || 0)).toFixed(2).replace('.', ',')}/mês)
+                            </option>
+                          ))}
                         </select>
                       </div>
                     </div>
@@ -761,30 +874,80 @@ export default function AdminPage() {
                 </div>
 
                 <div>
-                  <h4 className="mb-4 text-lg font-semibold text-gray-800">Localização</h4>
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <div>
-                      <label className="mb-1 block text-sm font-medium text-gray-700">Cidade</label>
-                      <input
-                        type="text"
-                        value={editForm.cidade}
-                        onChange={(e) => setEditForm((prev) => ({ ...prev, cidade: e.target.value }))}
-                        placeholder="Ingoá"
-                        className="w-full rounded-lg border border-gray-300 p-3 text-black placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
-                      />
+                  <h4 className="mb-4 text-lg font-semibold text-gray-800">Localização & Endereço</h4>
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                      <div>
+                        <label className="mb-1 block text-sm font-medium text-gray-700">CEP (ViaCEP)</label>
+                        <input
+                          type="text"
+                          value={editForm.cep}
+                          onChange={(e) => handleCepChange(e.target.value, true)}
+                          placeholder="00000-000"
+                          maxLength={9}
+                          className="w-full rounded-lg border border-gray-300 p-3 text-black placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                        />
+                      </div>
+                      <div className="sm:col-span-2">
+                        <label className="mb-1 block text-sm font-medium text-gray-700">Rua / Logradouro</label>
+                        <input
+                          type="text"
+                          value={editForm.rua}
+                          onChange={(e) => setEditForm((prev) => ({ ...prev, rua: e.target.value }))}
+                          placeholder="Ex: Av. Paulista"
+                          className="w-full rounded-lg border border-gray-300 p-3 text-black placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <label className="mb-1 block text-sm font-medium text-gray-700">UF</label>
-                      <select
-                        value={editForm.uf}
-                        onChange={(e) => setEditForm((prev) => ({ ...prev, uf: e.target.value }))}
-                        className="w-full rounded-lg border border-gray-300 p-3 text-black focus:outline-none focus:ring-2 focus:ring-blue-600"
-                      >
-                        <option value="PB">PB</option>
-                        <option value="SP">SP</option>
-                        <option value="RJ">RJ</option>
-                        <option value="MG">MG</option>
-                      </select>
+
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                      <div>
+                        <label className="mb-1 block text-sm font-medium text-gray-700">Número</label>
+                        <input
+                          type="text"
+                          value={editForm.numero}
+                          onChange={(e) => setEditForm((prev) => ({ ...prev, numero: e.target.value }))}
+                          placeholder="123"
+                          className="w-full rounded-lg border border-gray-300 p-3 text-black placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                        />
+                      </div>
+                      <div className="sm:col-span-2">
+                        <label className="mb-1 block text-sm font-medium text-gray-700">Bairro</label>
+                        <input
+                          type="text"
+                          value={editForm.bairro}
+                          onChange={(e) => setEditForm((prev) => ({ ...prev, bairro: e.target.value }))}
+                          placeholder="Ex: Centro"
+                          className="w-full rounded-lg border border-gray-300 p-3 text-black placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <div>
+                        <label className="mb-1 block text-sm font-medium text-gray-700">Cidade</label>
+                        <input
+                          type="text"
+                          value={editForm.cidade}
+                          onChange={(e) => setEditForm((prev) => ({ ...prev, cidade: e.target.value }))}
+                          placeholder="Ex: João Pessoa"
+                          className="w-full rounded-lg border border-gray-300 p-3 text-black placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-sm font-medium text-gray-700">UF / Estado</label>
+                        <select
+                          value={editForm.uf}
+                          onChange={(e) => setEditForm((prev) => ({ ...prev, uf: e.target.value }))}
+                          className="w-full rounded-lg border border-gray-300 p-3 text-black focus:outline-none focus:ring-2 focus:ring-blue-600"
+                        >
+                          {ESTADOS_BRASIL.map((est) => (
+                            <option key={est.sigla} value={est.sigla}>
+                              {est.nome}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -919,9 +1082,11 @@ export default function AdminPage() {
                           onChange={(e) => setCreateForm((prev) => ({ ...prev, plano: e.target.value }))}
                           className="w-full rounded-lg border border-gray-300 p-3 text-black focus:outline-none focus:ring-2 focus:ring-blue-600"
                         >
-                          <option value="Standart">Standart (R$ 69,90/mês)</option>
-                          <option value="Profissional">Profissional (R$ 129,90/mês)</option>
-                          <option value="Premium +">Premium + (R$ 249,90/mês)</option>
+                          {planosDisponiveis.map((p) => (
+                            <option key={p.id} value={p.nome}>
+                              {p.nome} (R$ {(Number(p.preco_mensal || 0)).toFixed(2).replace('.', ',')}/mês)
+                            </option>
+                          ))}
                         </select>
                       </div>
                     </div>
@@ -929,33 +1094,80 @@ export default function AdminPage() {
                 </div>
 
                 <div>
-                  <h4 className="mb-3 text-base font-semibold text-gray-800">Localização</h4>
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <div>
-                      <label className="mb-1 block text-sm font-medium text-gray-700">Cidade</label>
-                      <input
-                        type="text"
-                        value={createForm.cidade}
-                        onChange={(e) => setCreateForm((prev) => ({ ...prev, cidade: e.target.value }))}
-                        placeholder="Ex: João Pessoa"
-                        className="w-full rounded-lg border border-gray-300 p-3 text-black placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
-                      />
+                  <h4 className="mb-3 text-base font-semibold text-gray-800">Localização & Endereço</h4>
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                      <div>
+                        <label className="mb-1 block text-sm font-medium text-gray-700">CEP (ViaCEP Auto)</label>
+                        <input
+                          type="text"
+                          value={createForm.cep}
+                          onChange={(e) => handleCepChange(e.target.value, false)}
+                          placeholder="00000-000"
+                          maxLength={9}
+                          className="w-full rounded-lg border border-gray-300 p-3 text-black placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                        />
+                      </div>
+                      <div className="sm:col-span-2">
+                        <label className="mb-1 block text-sm font-medium text-gray-700">Rua / Logradouro</label>
+                        <input
+                          type="text"
+                          value={createForm.rua}
+                          onChange={(e) => setCreateForm((prev) => ({ ...prev, rua: e.target.value }))}
+                          placeholder="Ex: Av. Epitácio Pessoa"
+                          className="w-full rounded-lg border border-gray-300 p-3 text-black placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <label className="mb-1 block text-sm font-medium text-gray-700">UF</label>
-                      <select
-                        value={createForm.uf}
-                        onChange={(e) => setCreateForm((prev) => ({ ...prev, uf: e.target.value }))}
-                        className="w-full rounded-lg border border-gray-300 p-3 text-black focus:outline-none focus:ring-2 focus:ring-blue-600"
-                      >
-                        <option value="PB">PB</option>
-                        <option value="SP">SP</option>
-                        <option value="RJ">RJ</option>
-                        <option value="MG">MG</option>
-                        <option value="PE">PE</option>
-                        <option value="BA">BA</option>
-                        <option value="CE">CE</option>
-                      </select>
+
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                      <div>
+                        <label className="mb-1 block text-sm font-medium text-gray-700">Número</label>
+                        <input
+                          type="text"
+                          value={createForm.numero}
+                          onChange={(e) => setCreateForm((prev) => ({ ...prev, numero: e.target.value }))}
+                          placeholder="100"
+                          className="w-full rounded-lg border border-gray-300 p-3 text-black placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                        />
+                      </div>
+                      <div className="sm:col-span-2">
+                        <label className="mb-1 block text-sm font-medium text-gray-700">Bairro</label>
+                        <input
+                          type="text"
+                          value={createForm.bairro}
+                          onChange={(e) => setCreateForm((prev) => ({ ...prev, bairro: e.target.value }))}
+                          placeholder="Ex: Tambaú"
+                          className="w-full rounded-lg border border-gray-300 p-3 text-black placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <div>
+                        <label className="mb-1 block text-sm font-medium text-gray-700">Cidade</label>
+                        <input
+                          type="text"
+                          value={createForm.cidade}
+                          onChange={(e) => setCreateForm((prev) => ({ ...prev, cidade: e.target.value }))}
+                          placeholder="Ex: João Pessoa"
+                          className="w-full rounded-lg border border-gray-300 p-3 text-black placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-sm font-medium text-gray-700">UF / Estado</label>
+                        <select
+                          value={createForm.uf}
+                          onChange={(e) => setCreateForm((prev) => ({ ...prev, uf: e.target.value }))}
+                          className="w-full rounded-lg border border-gray-300 p-3 text-black focus:outline-none focus:ring-2 focus:ring-blue-600"
+                        >
+                          {ESTADOS_BRASIL.map((est) => (
+                            <option key={est.sigla} value={est.sigla}>
+                              {est.nome}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
                   </div>
                 </div>

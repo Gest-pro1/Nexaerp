@@ -108,10 +108,10 @@ const NumberField = ({
         />
         {suffix && <span className="text-xs text-gray-400 pr-2">{suffix}</span>}
         <div className="flex flex-col border-l border-gray-200">
-          <button onClick={() => step(1)} className="px-1.5 hover:bg-gray-50">
+          <button type="button" onClick={() => step(1)} className="px-1.5 hover:bg-gray-50 cursor-pointer">
             <ChevronUpIcon className="w-3 h-3 text-gray-400" />
           </button>
-          <button onClick={() => step(-1)} className="px-1.5 hover:bg-gray-50 border-t border-gray-200">
+          <button type="button" onClick={() => step(-1)} className="px-1.5 hover:bg-gray-50 border-t border-gray-200 cursor-pointer">
             <ChevronDownIcon className="w-3 h-3 text-gray-400" />
           </button>
         </div>
@@ -303,7 +303,7 @@ const ConfiguracoesSistema = () => {
   const [modalRecurso, setModalRecurso] = useState<{ planoId: string; planoNome: string } | null>(null);
   const [novoRecursoTexto, setNovoRecursoTexto] = useState("");
 
-  const handleCriarPlanoSubmit = (e: React.FormEvent) => {
+  const handleCriarPlanoSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!novoPlanoNome.trim() || !novoPlanoPreco.trim()) {
       alert("Por favor, preencha o nome e o preço do plano.");
@@ -315,9 +315,25 @@ const ConfiguracoesSistema = () => {
       .map((r) => r.trim())
       .filter(Boolean);
 
-    const id = novoPlanoNome.toLowerCase().replace(/\s+/g, "-");
+    const cleanPrice = parseFloat(novoPlanoPreco.replace("R$", "").replace(/\s/g, "").replace(",", ".")) || 0;
+    let realId = novoPlanoNome.toLowerCase().replace(/\s+/g, "-") + "-" + Date.now();
+
+    try {
+      const created = await api.planos.create({
+        nome: novoPlanoNome.trim(),
+        precoMensal: cleanPrice,
+        recursos: recursosArray.join("\n"),
+        ativo: true,
+      });
+      if (created?.id) {
+        realId = created.id;
+      }
+    } catch (err: any) {
+      console.warn("Aviso ao persistir novo plano na API:", err);
+    }
+
     const novoPlanoObj: PlanoItem = {
-      id: id + "-" + Date.now(),
+      id: realId,
       nome: novoPlanoNome.trim(),
       preco: novoPlanoPreco.startsWith("R$") ? novoPlanoPreco.trim() : `R$ ${novoPlanoPreco.trim()}`,
       popular: novoPlanoPopular,
@@ -389,8 +405,13 @@ const ConfiguracoesSistema = () => {
     );
   };
 
-  const handleDeletarPlano = (planoId: string, planoNome: string) => {
+  const handleDeletarPlano = async (planoId: string, planoNome: string) => {
     if (confirm(`Deseja realmente excluir o plano "${planoNome}"?`)) {
+      try {
+        await api.planos.delete(planoId);
+      } catch (err: any) {
+        console.debug("Aviso ao remover plano no banco:", err);
+      }
       setPlanos((prev) => prev.filter((p) => p.id !== planoId));
       setDestaque((prev) => {
         const copy = { ...prev };
@@ -456,6 +477,26 @@ const ConfiguracoesSistema = () => {
     // Sincronizar configurações e chaves de pagamento com o backend
     api.admin.getConfiguracoes()
       .then((configs) => {
+        if (configs?.geral) {
+          if (configs.geral.email) setEmail(configs.geral.email);
+          if (typeof configs.geral.manutencaoGlobal === "boolean") setManutencaoGlobal(configs.geral.manutencaoGlobal);
+          if (typeof configs.geral.whatsappNotif === "boolean") setWhatsappNotif(configs.geral.whatsappNotif);
+        } else if (configs?.email) {
+          setEmail(configs.email);
+        }
+
+        if (configs?.financeiro) {
+          setFinanceiro((prev) => ({ ...prev, ...configs.financeiro }));
+        }
+
+        if (typeof configs?.ativarLembretes === "boolean") {
+          setAtivarLembretes(configs.ativarLembretes);
+        }
+
+        if (configs?.segmentos) {
+          setSegmentos((prev) => ({ ...prev, ...configs.segmentos }));
+        }
+
         if (configs?.gateway_pagamento) {
           const gw = configs.gateway_pagamento;
           if (gw.ativo) setGatewayAtivo(gw.ativo);
@@ -538,7 +579,21 @@ const ConfiguracoesSistema = () => {
     }
 
     try {
+      await api.planos.sync(planos);
+    } catch (err: any) {
+      console.warn("Aviso ao sincronizar planos no banco:", err);
+    }
+
+    try {
       const res = await api.admin.salvarConfiguracoes({
+        geral: {
+          email,
+          manutencaoGlobal,
+          whatsappNotif,
+        },
+        financeiro,
+        segmentos,
+        ativarLembretes,
         gateway_pagamento: {
           ativo: gatewayAtivo,
           sandbox,

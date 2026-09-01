@@ -66,7 +66,10 @@ export const api = {
   planos: {
     list: () => fetchAPI<any[]>('/planos'),
     get: (id: string) => fetchAPI<any>(`/planos/${id}`),
+    create: (data: any) => fetchAPI<any>('/planos', { method: 'POST', body: JSON.stringify(data) }),
     update: (id: string, data: any) => fetchAPI<any>(`/planos/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id: string) => fetchAPI<any>(`/planos/${id}`, { method: 'DELETE' }),
+    sync: (planos: any[]) => fetchAPI<any>('/planos/sync', { method: 'POST', body: JSON.stringify({ planos }) }),
   },
   pagamentos: {
     create: (data: { empresaId: string; metodo: string; cardName?: string; cardNumber?: string; expiryDate?: string; cvv?: string }) =>
