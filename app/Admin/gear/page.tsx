@@ -42,7 +42,7 @@ const Toggle = ({
 }) => (
   <button
     onClick={onChange}
-    className="w-11 h-6 rounded-full relative transition-colors flex-shrink-0"
+    className="w-11 h-6 rounded-full relative transition-colors shrink-0"
     style={{ backgroundColor: checked ? onColor : "#cbd5e1" }}
   >
     <span
@@ -266,7 +266,7 @@ const ConfiguracoesSistema = () => {
   const initialConfig: any = null;
 
   // Geral
-  const [email, setEmail] = useState<string>(initialConfig?.email ?? "suporte@gestpro.com.br");
+  const [email, setEmail] = useState<string>(initialConfig?.email ?? "suporte@nexaerp.com.br");
   const [manutencaoGlobal, setManutencaoGlobal] = useState<boolean>(initialConfig?.manutencaoGlobal ?? false);
   const [whatsappNotif, setWhatsappNotif] = useState<boolean>(initialConfig?.whatsappNotif ?? true);
 
@@ -660,14 +660,14 @@ const ConfiguracoesSistema = () => {
                       ativo ? "border-blue-400 ring-1 ring-blue-400 bg-blue-50/50" : "border-gray-200 hover:bg-gray-50"
                     }`}
                   >
-                    <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
+                    <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center shrink-0">
                       <Icon className="w-5 h-5 text-white" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-gray-900">{secao.titulo}</p>
                       <p className="text-xs text-gray-400">{secao.subtitulo}</p>
                     </div>
-                    <ChevronRightIcon className={`w-4 h-4 flex-shrink-0 ${ativo ? "text-blue-500" : "text-gray-300"}`} />
+                    <ChevronRightIcon className={`w-4 h-4 shrink-0 ${ativo ? "text-blue-500" : "text-gray-300"}`} />
                   </button>
                 );
               })}
@@ -748,7 +748,7 @@ const ConfiguracoesSistema = () => {
                           <div key={seg.id} className="flex items-center justify-between bg-gray-50 rounded-lg p-4">
                             <div className="flex items-center gap-3">
                               <div
-                                className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+                                className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
                                 style={{ backgroundColor: seg.cor }}
                               >
                                 <Icon className="w-5 h-5 text-white" />
@@ -829,7 +829,7 @@ const ConfiguracoesSistema = () => {
                             <ul className="space-y-2 flex-1">
                               {plano.recursos.map((r, i) => (
                                 <li key={i} className="flex items-center gap-2 text-sm text-gray-600">
-                                  <CheckIcon className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                                  <CheckIcon className="w-4 h-4 text-emerald-500 shrink-0" />
                                   {r}
                                 </li>
                               ))}
@@ -1169,7 +1169,7 @@ const ConfiguracoesSistema = () => {
                             }
                           }}
                           title="Copiar URL"
-                          className="w-9 h-9 flex-shrink-0 rounded-md border border-gray-200 flex items-center justify-center hover:bg-gray-50 cursor-pointer"
+                          className="w-9 h-9 shrink-0 rounded-md border border-gray-200 flex items-center justify-center hover:bg-gray-50 cursor-pointer"
                         >
                           <LinkIcon className="w-4 h-4 text-gray-500" />
                         </button>

@@ -71,7 +71,7 @@ const ProgressBar = ({ value, color }: { value: number; color: string }) => (
 // Avatar circular simples para as empresas da tabela
 const CompanyAvatar = ({ letter, color }: { letter: string; color: string }) => (
   <div
-    className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+    className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0"
     style={{ backgroundColor: color }}
   >
     {letter}

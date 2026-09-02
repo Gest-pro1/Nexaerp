@@ -3,23 +3,36 @@ import React, { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";    
 import Image from "next/image";
 import { validateEmail, handleSubmit as validateAndLog } from "./config";
+import { api } from "@/lib/api";
 
 export default function ForgotPasswordPage() {
    const [email, setEmail] = useState("");
+   const [isLoading, setIsLoading] = useState(false);
+   const [error, setError] = useState("");
    const router = useRouter();
 
    // Função para lidar com o envio do formulário
-   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
      event.preventDefault();
+     setError("");
      
      if (!validateEmail(email)) {
-       alert("Email inválido! Por favor, insira um email válido.");
+       setError("Email inválido! Por favor, insira um email válido.");
        return;
      }
      
-     validateAndLog(email);
-     // Redireciona para a tela de sucesso de email enviado
-     router.push(`/login/forgot-password/SenhaAlt?name=${encodeURIComponent(email)}`);
+     try {
+       setIsLoading(true);
+       await api.auth.forgotPassword(email);
+       validateAndLog(email);
+       router.push(`/login/forgot-password/SenhaAlt?name=${encodeURIComponent(email)}`);
+     } catch (err: any) {
+       console.debug("Aviso forgot-password:", err);
+       validateAndLog(email);
+       router.push(`/login/forgot-password/SenhaAlt?name=${encodeURIComponent(email)}`);
+     } finally {
+       setIsLoading(false);
+     }
    };
 
    // Verifica se o email é válido
@@ -78,6 +91,11 @@ return(
 
     {/* FORM */}
     <form className="w-full flex flex-col gap-4 sm:mt-3 mb-2 p-3" onSubmit={handleSubmit}>
+      {error && (
+        <div className="p-3.5 text-xs text-red-800 rounded-lg bg-red-50 border border-red-200" role="alert">
+          {error}
+        </div>
+      )}
 
       {/* EMAIL */}
       <div> 
@@ -86,11 +104,12 @@ return(
         </label>
         <div className="relative">
           <input
-        id="email2"
+            id="email2"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Digite seu e-mail"
+            required
             className="
               bg-[#F1F3F6]
               w-full
@@ -104,7 +123,6 @@ return(
               focus:ring-indigo-500
               transition
               font-light
-             
             "
           />
           <span className="absolute right-1 top-1/2 -translate-y-1/2 bg-indigo-600 p-2 sm:p-2.5 rounded text-white">
@@ -127,9 +145,9 @@ return(
       </div>
           {/* BOTÃO */}
       <button
-      id="botao-forgot"
+        id="botao-forgot"
         type="submit"
-        disabled={!isEmailValid}
+        disabled={!isEmailValid || isLoading}
         className={`
           w-full
           h-9 sm:h-10
@@ -139,13 +157,13 @@ return(
           rounded-lg
           transition
           mt-2
-          ${isEmailValid 
-            ? 'bg-indigo-600 hover:bg-indigo-500 cursor-pointer' 
-            : 'bg-gray-400 cursor-not-allowed opacity-60'
+          ${(!isEmailValid || isLoading)
+            ? 'bg-gray-400 cursor-not-allowed opacity-60'
+            : 'bg-indigo-600 hover:bg-indigo-500 cursor-pointer shadow-md'
           }
         `}
       >
-        Enviar Instruções
+        {isLoading ? "Enviando Instruções..." : "Enviar Instruções"}
       </button>
     {/* CADASTRO */}
     <p className="text-center text-xs text-gray-500 font-light">

@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { validarCadastro, validarCPF, validarEmail, validarCNPJ, validarTelefone, validarNome } from "./config"
 import { api } from '@/lib/api'
+import { setUserModule } from '@/lib/auth'
 
 import { useSearchParams } from "next/navigation"
 import { Suspense } from "react"
@@ -360,11 +361,13 @@ function CadastroFormContent() {
           tipoPlano: isAnnual ? 'Anual' : 'Mensal',
         });
         
+        setUserModule(selectedBusinessType);
+        
         const price = isAnnual ? planSelected?.annualPrice : planSelected?.monthlyPrice;
         const frequency = isAnnual ? 'Ano' : 'Mês';
         const formattedPrice = `R$${(price ?? 0).toFixed(2).replace('.', ',')}`;
 
-        router.push(`/payment?empresaId=${result.empresaId}&plan=${encodeURIComponent(planName)}&frequency=${frequency}&price=${encodeURIComponent(formattedPrice)}&company=${encodeURIComponent(razaoSocial)}&email=${encodeURIComponent(email)}`);
+        router.push(`/payment?empresaId=${result.empresaId}&modulo=${encodeURIComponent(selectedBusinessType)}&plan=${encodeURIComponent(planName)}&frequency=${frequency}&price=${encodeURIComponent(formattedPrice)}&company=${encodeURIComponent(razaoSocial)}&email=${encodeURIComponent(email)}`);
       } catch (err: any) {
         alert('Erro ao cadastrar: ' + err.message);
       }

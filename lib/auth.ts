@@ -43,3 +43,38 @@ export function getRole(): string | null {
   const user = getUser();
   return user?.role || null;
 }
+
+export function normalizeModuleId(id?: string | null): string {
+  if (!id) return '';
+  const lower = String(id).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+  if (lower.includes('barbearia') || lower.includes('salao') || lower.includes('saloes') || lower.includes('estetica')) return 'saloes-barbearias';
+  if (lower.includes('loja') || lower.includes('varejo')) return 'lojas-varejo';
+  if (lower.includes('bar') || lower.includes('restaurante') || lower.includes('comida') || lower.includes('gastronomia')) return 'bares-restaurantes';
+  if (lower.includes('mercado') || lower.includes('padaria') || lower.includes('mercearia') || lower.includes('supermercado')) return 'mercados-padarias';
+  return lower;
+}
+
+export function getUserModule(): string | null {
+  if (typeof window === 'undefined') return null;
+  const user = getUser();
+  const raw =
+    user?.tipo_negocio ||
+    user?.tipoNegocio ||
+    user?.modulo ||
+    user?.segmento ||
+    user?.empresa?.tipo_negocio ||
+    user?.empresa?.modulo ||
+    localStorage.getItem('nexaerp_user_module') ||
+    null;
+  return raw ? normalizeModuleId(raw) : null;
+}
+
+export function setUserModule(module: string): void {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem('nexaerp_user_module', normalizeModuleId(module));
+}
+
+export function getUserStatus(): string | null {
+  const user = getUser();
+  return user?.status || user?.empresa?.status || 'ativa';
+}

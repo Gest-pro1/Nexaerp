@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
+import { api } from "@/lib/api"
 
 interface CadastroData {
   razaoSocial?: string;
@@ -17,11 +18,31 @@ export default function SucessoContent() {
   const [currentStep, setCurrentStep] = useState(1)
 
   useEffect(() => {
+    const companyName = searchParams.get("company");
+    const userEmail = searchParams.get("email");
+    const empresaId = searchParams.get("empresaId");
+
     setCadastroData({
-      razaoSocial: searchParams.get("company") || undefined,
-      email: searchParams.get("email") || undefined,
-    })
-    setIsLoading(false)
+      razaoSocial: companyName || undefined,
+      email: userEmail || undefined,
+    });
+    setIsLoading(false);
+
+    if (empresaId) {
+      api.empresas.get(empresaId)
+        .then((emp) => {
+          if (emp) {
+            setCadastroData({
+              razaoSocial: emp.razao_social || companyName || undefined,
+              email: emp.email || userEmail || undefined,
+            });
+            if (emp.status === "ativa") {
+              setCurrentStep(3);
+            }
+          }
+        })
+        .catch(() => {});
+    }
   }, [searchParams])
 
   // Simular progresso das etapas
@@ -161,14 +182,26 @@ export default function SucessoContent() {
             </div>
           </div>
  
-          {/* Botão */}
-          <button
-            type="button"
-            onClick={() => router.push("/")}
-            className="w-full rounded-lg sm:rounded-xl bg-[#1f3fbf] py-2.5 sm:py-3 md:py-3.5 text-xs sm:text-sm font-semibold text-white transition-colors hover:bg-[#1a35a3]"
-          >
-            Voltar para o Início
-          </button>
+          {/* Botões de Ação */}
+          <div className="flex flex-col gap-2.5">
+            <button
+              type="button"
+              onClick={() => {
+                const mod = searchParams.get("modulo");
+                router.push(mod ? `/login?modulo=${encodeURIComponent(mod)}` : "/login");
+              }}
+              className="w-full rounded-lg sm:rounded-xl bg-[#1f3fbf] py-2.5 sm:py-3 md:py-3.5 text-xs sm:text-sm font-semibold text-white transition-colors hover:bg-[#1a35a3] cursor-pointer shadow-md"
+            >
+              Fazer Login e Acessar Módulo
+            </button>
+            <button
+              type="button"
+              onClick={() => router.push("/")}
+              className="w-full rounded-lg sm:rounded-xl border border-gray-200 bg-white py-2 sm:py-2.5 text-xs sm:text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 cursor-pointer"
+            >
+              Voltar para o Início
+            </button>
+          </div>
  
         </div>
       </div>

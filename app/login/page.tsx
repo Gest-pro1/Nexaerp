@@ -4,7 +4,7 @@ import React, { useState, ChangeEvent } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { api } from '@/lib/api';
-import { saveAuth } from '@/lib/auth';
+import { saveAuth, setUserModule } from '@/lib/auth';
 
 
 export default function LoginPage() {
@@ -31,8 +31,41 @@ export default function LoginPage() {
     try {
       setIsLoading(true);
       const result = await api.auth.login(email, password);
-      saveAuth(result.access_token, result.user);
-      router.push('/Admin');
+      if (result?.access_token) {
+        saveAuth(result.access_token, result.user);
+      }
+
+      const userModule =
+        result?.user?.tipo_negocio ||
+        (result?.user as any)?.tipoNegocio ||
+        (result?.user as any)?.modulo ||
+        (result?.user as any)?.segmento ||
+        (result?.user as any)?.empresa?.tipo_negocio;
+
+      if (userModule) {
+        setUserModule(userModule);
+      }
+
+      const isPrimeiroAcesso =
+        result?.primeiroAcessoObrigatorio === true ||
+        result?.force_password_change === true ||
+        result?.password_status === 'TEMPORARY' ||
+        result?.user?.first_access_required === true ||
+        result?.user?.primeiroAcessoObrigatorio === true;
+
+      if (isPrimeiroAcesso) {
+        router.push(
+          `/login/reset-password?primeiroAcesso=true&email=${encodeURIComponent(email)}&modulo=${encodeURIComponent(userModule || '')}`
+        );
+        return;
+      }
+
+      const role = (result?.user?.role || '').toLowerCase();
+      if (role === 'admin' || role === 'superadmin') {
+        router.push('/Admin');
+      } else {
+        router.push('/menu-modulos');
+      }
     } catch (err: any) {
       setError(err.message || 'Email ou senha inválidos');
     } finally {

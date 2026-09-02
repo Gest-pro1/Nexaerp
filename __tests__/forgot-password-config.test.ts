@@ -14,12 +14,12 @@ describe('app/login/forgot-password/config - Validações de Recuperação de Se
   });
 
   it('validateEmail deve retornar true apenas para emails válidos', () => {
-    expect(validateEmail('admin@gestpro.com.br')).toBe(true);
-    expect(validateEmail('sem-arroba.com')).toBe(false);
+    expect(validateEmail('admin@nexaerp.com.br')).toBe(true);
+    expect(validateEmail('invalid-email')).toBe(false);
   });
 
-  it('isButtonEnabled deve habilitar apenas quando o email for válido', () => {
-    expect(isButtonEnabled('admin@gestpro.com.br')).toBe(true);
+  it('enables button only for valid email', () => {
+    expect(isButtonEnabled('admin@nexaerp.com.br')).toBe(true);
     expect(isButtonEnabled('invalido')).toBe(false);
   });
 

@@ -136,6 +136,7 @@ function PaymentContent() {
   const price = searchParams.get("price") || "R$129,90";
   const companyName = searchParams.get("company") || "Sua Empresa";
   const empresaId = searchParams.get("empresaId") || "";
+  const modulo = searchParams.get("modulo") || "";
 
   const [paymentMethod, setPaymentMethod] = useState("credit");
   const [formData, setFormData] = useState<PaymentFormData>({ cardName: "", cardNumber: "", expiryDate: "", cvv: "" });
@@ -222,7 +223,7 @@ function PaymentContent() {
         return;
       }
 
-      router.push(`/payment/sucesso?plan=${encodeURIComponent(planName)}&frequency=${encodeURIComponent(frequency)}&company=${encodeURIComponent(companyName)}`);
+      router.push(`/payment/sucesso?plan=${encodeURIComponent(planName)}&frequency=${encodeURIComponent(frequency)}&company=${encodeURIComponent(companyName)}${modulo ? `&modulo=${encodeURIComponent(modulo)}` : ''}`);
     } catch (err: any) {
       setIsLoading(false);
       alert('Erro no pagamento: ' + err.message);

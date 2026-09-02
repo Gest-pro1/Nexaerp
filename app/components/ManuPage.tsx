@@ -74,7 +74,7 @@ export default function AdminLayout({ children, notificacoes = 0 }: AdminLayoutP
       {/* Sidebar */}
       <aside
         className={classNames(
-          "fixed inset-y-0 left-0 z-40 flex w-64 max-w-[80vw] flex-shrink-0 flex-col overflow-y-auto bg-blue-800 px-4 text-white transition-transform duration-300 ease-in-out sm:px-6",
+          "fixed inset-y-0 left-0 z-40 flex w-64 max-w-[80vw] shrink-0 flex-col overflow-y-auto bg-blue-800 px-4 text-white transition-transform duration-300 ease-in-out sm:px-6",
           "lg:sticky lg:top-0 lg:h-screen lg:max-w-none lg:translate-x-0",
           isMenuOpen ? "translate-x-0" : "-translate-x-full"
         )}

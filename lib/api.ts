@@ -37,7 +37,28 @@ async function fetchAPI<T>(endpoint: string, options: RequestInit = {}): Promise
 export const api = {
   auth: {
     login: (email: string, senha: string) =>
-      fetchAPI<{ access_token: string; user: { id: string; email: string; role: string; empresa_id: string } }>('/auth/login', { method: 'POST', body: JSON.stringify({ email, senha }) }),
+      fetchAPI<{
+        access_token: string;
+        primeiroAcessoObrigatorio?: boolean;
+        force_password_change?: boolean;
+        password_status?: string;
+        message?: string;
+        user: {
+          id: string;
+          email: string;
+          role: string;
+          empresa_id: string;
+          tipo_negocio?: string;
+          modulo?: string;
+          status?: string;
+          empresa?: any;
+          first_access_required?: boolean;
+          primeiroAcessoObrigatorio?: boolean;
+          [key: string]: any;
+        };
+      }>('/auth/login', { method: 'POST', body: JSON.stringify({ email, senha }) }),
+    primeiroAcesso: (data: { email: string; senhaAtual: string; novaSenha: string; confirmarNovaSenha: string }) =>
+      fetchAPI<{ success: boolean; message: string; access_token: string; user: any }>('/auth/primeiro-acesso', { method: 'POST', body: JSON.stringify(data) }),
     register: (data: any) =>
       fetchAPI<{ success: boolean; empresaId: string }>('/auth/register', { method: 'POST', body: JSON.stringify(data) }),
     forgotPassword: (email: string) =>
