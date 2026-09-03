@@ -27,7 +27,13 @@ async function fetchAPI<T>(endpoint: string, options: RequestInit = {}): Promise
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: 'Erro de conexão' }));
-    throw new Error(error.message || `Erro ${response.status}`);
+    const errorMsg = Array.isArray(error?.message)
+      ? error.message.join(', ')
+      : (error?.message || `Erro ${response.status}`);
+    const err: any = new Error(errorMsg);
+    err.status = response.status;
+    err.data = error;
+    throw err;
   }
 
   return response.json();
