@@ -167,8 +167,8 @@ const segmentosIniciais = [
 
 const planosIniciais = [
   {
-    id: "standart",
-    nome: "Standart",
+    id: "209b0843-fa3f-4269-8fe2-a47b5057c8b6",
+    nome: "Standard",
     preco: "R$69,90",
     popular: false,
     recursos: [
@@ -181,7 +181,7 @@ const planosIniciais = [
     ],
   },
   {
-    id: "profissional",
+    id: "9be15b09-fb15-451d-a3ca-21117efc587d",
     nome: "Profissional",
     preco: "R$129,90",
     popular: true,
@@ -196,7 +196,7 @@ const planosIniciais = [
     ],
   },
   {
-    id: "premium",
+    id: "afee8974-fd7a-487c-891f-266cc0599c6b",
     nome: "Premium +",
     preco: "R$249,90",
     popular: false,
@@ -217,28 +217,28 @@ const gateways = [
     id: "asaas",
     label: "Asaas",
     campos: [
-      { chave: "chave1", label: "API Key", placeholder: "sk_test_..." },
-      { chave: "chave2", label: "Wallet ID", placeholder: "Endereço da carteira" },
+      { chave: "chave1", label: "API Key", placeholder: "$aact_hmlg_..." },
+      { chave: "chave2", label: "Wallet ID", placeholder: "UUID da Carteira Asaas" },
     ],
-    webhook: "https://api.gestpro.com/webhooks/asaas",
+    webhook: "/api/pagamentos/webhook/asaas",
   },
   {
     id: "mercadopago",
     label: "Mercado Pago",
     campos: [
-      { chave: "chave1", label: "Access Token", placeholder: "APP_USR-..." },
-      { chave: "chave2", label: "Public Key", placeholder: "APP_USR-..." },
+      { chave: "chave1", label: "Public Key", placeholder: "TEST-... ou APP_USR-..." },
+      { chave: "chave2", label: "Access Token", placeholder: "APP_USR-... ou TEST-..." },
     ],
-    webhook: "https://api.gestpro.com/webhooks/mp",
+    webhook: "/api/pagamentos/webhook/mercadopago",
   },
   {
     id: "stripe",
     label: "Stripe",
     campos: [
-      { chave: "chave1", label: "Secret Key", placeholder: "sk_test_..." },
-      { chave: "chave2", label: "Publishable Key", placeholder: "pk_test_..." },
+      { chave: "chave1", label: "Publishable Key", placeholder: "pk_test_... ou pk_live_..." },
+      { chave: "chave2", label: "Secret Key", placeholder: "sk_test_... ou sk_live_..." },
     ],
-    webhook: "https://api.gestpro.com/webhooks/stripe",
+    webhook: "/api/pagamentos/webhook/stripe",
   },
 ] as const;
 
@@ -262,6 +262,7 @@ type SandboxState = Record<string, boolean>;
 const ConfiguracoesSistema = () => {
   const [secaoAtiva, setSecaoAtiva] = useState<SecaoId>("geral");
   const [salvoSucesso, setSalvoSucesso] = useState(false);
+  const [erroSalvar, setErroSalvar] = useState<string | null>(null);
 
   const initialConfig: any = null;
 
@@ -524,11 +525,8 @@ const ConfiguracoesSistema = () => {
               ? p.recursos
               : ["Recursos Inclusos"],
           }));
-          const saved = localStorage.getItem("nexaerp_system_config");
-          if (!saved) {
-            setPlanos(mapped);
-            setDestaque(Object.fromEntries(mapped.map((m) => [m.id, m.popular])));
-          }
+          setPlanos(mapped);
+          setDestaque(Object.fromEntries(mapped.map((m) => [m.id, m.popular])));
         }
       })
       .catch((err) => {
@@ -544,6 +542,7 @@ const ConfiguracoesSistema = () => {
         gateway: gatewayAtivo,
         chave1: keys.chave1 || "",
         chave2: keys.chave2 || "",
+        sandbox: sandbox[gatewayAtivo] !== false,
       });
 
       if (res?.resultado) {
@@ -558,6 +557,9 @@ const ConfiguracoesSistema = () => {
   };
 
   const salvarAlteracoes = async () => {
+    setErroSalvar(null);
+    const errosOcorridos: string[] = [];
+
     const configToSave = {
       email,
       manutencaoGlobal,
@@ -573,15 +575,10 @@ const ConfiguracoesSistema = () => {
     };
 
     try {
-      localStorage.setItem("nexaerp_system_config", JSON.stringify(configToSave));
-    } catch (e) {
-      console.error("Erro ao salvar no storage local:", e);
-    }
-
-    try {
       await api.planos.sync(planos);
     } catch (err: any) {
-      console.warn("Aviso ao sincronizar planos no banco:", err);
+      console.error("Erro ao sincronizar planos no banco:", err);
+      errosOcorridos.push(`Planos: ${err.message || "Falha ao sincronizar planos"}`);
     }
 
     try {
@@ -608,7 +605,20 @@ const ConfiguracoesSistema = () => {
         setFeedbackMensagem(res.message);
       }
     } catch (err: any) {
-      console.warn("Aviso ao sincronizar configurações no banco:", err);
+      console.error("Erro ao sincronizar configurações no banco:", err);
+      errosOcorridos.push(`Configurações: ${err.message || "Falha ao salvar configurações"}`);
+    }
+
+    if (errosOcorridos.length > 0) {
+      setErroSalvar(errosOcorridos.join(" | "));
+      setSalvoSucesso(false);
+      return;
+    }
+
+    try {
+      localStorage.setItem("nexaerp_system_config", JSON.stringify(configToSave));
+    } catch (e) {
+      console.error("Erro ao salvar no storage local:", e);
     }
 
     setSalvoSucesso(true);
@@ -628,6 +638,22 @@ const ConfiguracoesSistema = () => {
                 <CheckIcon className="w-5 h-5 font-bold" />
                 <span className="font-semibold text-sm">Configurações salvas com sucesso!</span>
               </div>
+            </div>
+          )}
+
+          {/* Alerta de erro ao salvar */}
+          {erroSalvar && (
+            <div className="mb-6 flex items-center justify-between rounded-lg bg-red-600 p-4 text-white shadow-lg transition-all">
+              <div className="flex items-center gap-2">
+                <span className="font-bold">❌</span>
+                <span className="font-semibold text-sm">{erroSalvar}</span>
+              </div>
+              <button
+                onClick={() => setErroSalvar(null)}
+                className="text-white/80 hover:text-white text-xs font-bold px-2 py-1 bg-red-700 rounded"
+              >
+                Fechar
+              </button>
             </div>
           )}
 
@@ -743,7 +769,7 @@ const ConfiguracoesSistema = () => {
                     <div className="space-y-3">
                       {segmentosIniciais.map((seg) => {
                         const Icon = seg.icon;
-                        const estado = segmentos[seg.id];
+                        const estado = segmentos?.[seg.id] ?? { disponivel: true, manutencao: false };
                         return (
                           <div key={seg.id} className="flex items-center justify-between bg-gray-50 rounded-lg p-4">
                             <div className="flex items-center gap-3">
@@ -764,7 +790,10 @@ const ConfiguracoesSistema = () => {
                                 onChange={() =>
                                   setSegmentos((prev) => ({
                                     ...prev,
-                                    [seg.id]: { ...prev[seg.id], disponivel: !prev[seg.id].disponivel },
+                                    [seg.id]: {
+                                      disponivel: !(prev?.[seg.id]?.disponivel ?? true),
+                                      manutencao: prev?.[seg.id]?.manutencao ?? false,
+                                    },
                                   }))
                                 }
                               />
@@ -773,7 +802,10 @@ const ConfiguracoesSistema = () => {
                                 onChange={() =>
                                   setSegmentos((prev) => ({
                                     ...prev,
-                                    [seg.id]: { ...prev[seg.id], manutencao: !prev[seg.id].manutencao },
+                                    [seg.id]: {
+                                      disponivel: prev?.[seg.id]?.disponivel ?? true,
+                                      manutencao: !(prev?.[seg.id]?.manutencao ?? false),
+                                    },
                                   }))
                                 }
                                 onColor="#312e81"

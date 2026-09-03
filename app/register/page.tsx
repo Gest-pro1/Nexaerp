@@ -121,7 +121,7 @@ function CadastroFormContent() {
       })
       .catch((err) => console.debug('Usando planos padrão no registro:', err));
 
-    api.admin.getConfiguracoes()
+    api.admin.getPublicConfig()
       .then((configs) => {
         if (configs?.segmentos) {
           setSegmentosConfig(configs.segmentos);

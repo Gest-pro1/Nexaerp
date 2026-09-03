@@ -121,7 +121,8 @@ export const api = {
     stats: () => fetchAPI<any>('/admin/stats'),
     getConfiguracoes: () => fetchAPI<any>('/admin/configuracoes'),
     salvarConfiguracoes: (data: any) => fetchAPI<any>('/admin/configuracoes', { method: 'PUT', body: JSON.stringify(data) }),
-    testarGateway: (data: { gateway: string; chave1?: string; chave2?: string; publicKey?: string; accessToken?: string }) =>
+    testarGateway: (data: { gateway: string; chave1?: string; chave2?: string; publicKey?: string; accessToken?: string; sandbox?: boolean }) =>
       fetchAPI<any>('/admin/gateway/validar', { method: 'POST', body: JSON.stringify(data) }),
+    getPublicConfig: () => fetchAPI<any>('/configuracoes/public'),
   },
 };
