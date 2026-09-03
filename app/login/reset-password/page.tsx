@@ -19,10 +19,26 @@ interface ForcaSenhaState {
 export function ResetPasswordContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const token = searchParams.get('token') || '';
     const isPrimeiroAcesso = searchParams.get('primeiroAcesso') === 'true' || searchParams.get('firstAccess') === 'true';
     const emailFromQuery = searchParams.get('email') || '';
     const moduloFromQuery = searchParams.get('modulo') || '';
+
+    // Ler token tanto do query parameter (?token=) quanto do fragmento de hash (#access_token=)
+    const tokenFromQuery = searchParams.get('token') || searchParams.get('access_token') || '';
+    const [token, setToken] = useState(tokenFromQuery);
+
+    React.useEffect(() => {
+      if (!token && typeof window !== 'undefined') {
+        const hash = window.location.hash.replace(/^#/, '');
+        if (hash) {
+          const hashParams = new URLSearchParams(hash);
+          const hashToken = hashParams.get('token') || hashParams.get('access_token');
+          if (hashToken) {
+            setToken(hashToken);
+          }
+        }
+      }
+    }, [token]);
 
     const [userEmail, setUserEmail] = useState(emailFromQuery);
     const [currentPassword, setCurrentPassword] = useState("");
@@ -73,6 +89,11 @@ export function ResetPasswordContent() {
 
       if (isPrimeiroAcesso && !currentPassword) {
         setSubmitError("Por favor, informe a senha atual ou temporária recebida.");
+        return;
+      }
+
+      if (!isPrimeiroAcesso && !token) {
+        setSubmitError("Token de recuperação não encontrado. Por favor, utilize o link recebido por e-mail para redefinir sua senha.");
         return;
       }
 
@@ -208,6 +229,15 @@ return(
 
       {/* FORM */}
       <form className="w-full flex flex-col gap-3.5 sm:mt-3 mb-2 p-3" onSubmit={handleSubmit}>
+        {!isPrimeiroAcesso && !token && (
+          <div className="p-3 mb-2 text-xs text-amber-800 rounded-lg bg-amber-50 border border-amber-200" role="alert">
+            Nenhum token de recuperação encontrado na URL. Para redefinir sua senha, utilize o link recebido por e-mail ou{" "}
+            <a href="/login/forgot-password" className="font-semibold underline text-amber-900">
+              solicite um novo link aqui
+            </a>.
+          </div>
+        )}
+
         {submitError && (
           <div className="p-3.5 mb-2 text-xs text-red-800 rounded-lg bg-red-50 border border-red-200" role="alert">
             {submitError.split('\n').map((line, i) => <div key={i}>{line}</div>)}
@@ -382,7 +412,8 @@ return(
           !confirmPassword ||
           !!confirmPasswordError ||
           password !== confirmPassword ||
-          (isPrimeiroAcesso && !currentPassword)
+          (isPrimeiroAcesso && !currentPassword) ||
+          (!isPrimeiroAcesso && !token)
         }
         className={`
           w-full

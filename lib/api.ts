@@ -99,8 +99,16 @@ export const api = {
     sync: (planos: any[]) => fetchAPI<any>('/planos/sync', { method: 'POST', body: JSON.stringify({ planos }) }),
   },
   pagamentos: {
-    create: (data: { empresaId: string; metodo: string; cardName?: string; cardNumber?: string; expiryDate?: string; cvv?: string }) =>
-      fetchAPI<{ success: boolean; message: string }>('/pagamentos', { method: 'POST', body: JSON.stringify(data) }),
+    getCheckoutInfo: (empresaId: string) => fetchAPI<any>(`/pagamentos/checkout/${empresaId}`),
+    create: (
+      data: { empresaId: string; metodo: string; cardName?: string; cardNumber?: string; expiryDate?: string; cvv?: string },
+      idempotencyKey?: string,
+    ) =>
+      fetchAPI<{ success: boolean; message: string; pix?: any; status?: string; isApproved?: boolean }>('/pagamentos', {
+        method: 'POST',
+        headers: idempotencyKey ? { 'x-idempotency-key': idempotencyKey } : undefined,
+        body: JSON.stringify(data),
+      }),
     list: (params?: { page?: number; limit?: number; status?: string }) => {
       const query = new URLSearchParams();
       if (params?.page) query.set('page', String(params.page));

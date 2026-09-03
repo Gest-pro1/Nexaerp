@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, type ChangeEvent, type FormEvent } from "react";
+import { useState, useEffect, useRef, type ChangeEvent, type FormEvent } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { api } from '@/lib/api';
 import { Suspense } from "react";
@@ -131,12 +131,22 @@ function PaymentContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const planName = searchParams.get("plan") || "Profissional";
-  const frequency = searchParams.get("frequency") || "Mês";
-  const price = searchParams.get("price") || "R$129,90";
-  const companyName = searchParams.get("company") || "Sua Empresa";
   const empresaId = searchParams.get("empresaId") || "";
   const modulo = searchParams.get("modulo") || "";
+
+  // Estados populados via fonte confiável do backend (eliminando fallbacks fakes de cobrança)
+  const [checkoutLoading, setCheckoutLoading] = useState(true);
+  const [planName, setPlanName] = useState<string>("");
+  const [frequency, setFrequency] = useState<string>("Mês");
+  const [price, setPrice] = useState<string>("");
+  const [companyName, setCompanyName] = useState<string>("");
+  const [features, setFeatures] = useState<string[]>([]);
+
+  // Chave de idempotência estável por sessão de checkout
+  const idempotencyKeyRef = useRef<string>("");
+  if (!idempotencyKeyRef.current) {
+    idempotencyKeyRef.current = `chk_${empresaId || "guest"}_${typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : Date.now()}`;
+  }
 
   const [paymentMethod, setPaymentMethod] = useState("credit");
   const [formData, setFormData] = useState<PaymentFormData>({ cardName: "", cardNumber: "", expiryDate: "", cvv: "" });
@@ -146,27 +156,63 @@ function PaymentContent() {
   const [dynamicPixCode, setDynamicPixCode] = useState<string>(PIX_CODE);
   const [dynamicQrImage, setDynamicQrImage] = useState<string>("");
   const [pixGerado, setPixGerado] = useState<boolean>(false);
-  const [dynamicFeatures, setDynamicFeatures] = useState<string[]>([]);
 
   useEffect(() => {
-    api.planos.list()
-      .then((apiPlanos) => {
-        if (apiPlanos && Array.isArray(apiPlanos)) {
-          const found = apiPlanos.find((p: any) => p.nome?.toLowerCase() === planName.toLowerCase() || p.id === planName);
-          if (found?.recursos) {
-            const list = typeof found.recursos === "string"
-              ? found.recursos.split(/[,•\n]/).map((r: string) => r.trim()).filter(Boolean)
-              : Array.isArray(found.recursos)
-              ? found.recursos
-              : [];
-            if (list.length > 0) setDynamicFeatures(list);
-          }
-        }
-      })
-      .catch((e) => console.debug("Aviso ao buscar recursos do plano:", e));
-  }, [planName]);
+    // 1. Guard imediato: se empresaId não vier na URL, redireciona imediatamente para o cadastro
+    if (!empresaId || !empresaId.trim()) {
+      router.replace("/register");
+      return;
+    }
 
-  const features = dynamicFeatures.length > 0 ? dynamicFeatures : getPlanFeatures(planName);
+    let isMounted = true;
+    setCheckoutLoading(true);
+
+    // 2. Consulta fonte confiável no backend para carregar plano, valor e dados da empresa
+    api.pagamentos
+      .getCheckoutInfo(empresaId)
+      .then((info: any) => {
+        if (!isMounted) return;
+
+        // Se a empresa já estiver com pagamento confirmado / ativa
+        if (info.jaPago || info.status === "ativa" || info.status === "ACTIVE") {
+          alert("Esta empresa já possui pagamento confirmado e assinatura ativa!");
+          router.replace(
+            `/payment/sucesso?plan=${encodeURIComponent(info.plano?.nome || "Plano")}&company=${encodeURIComponent(info.razaoSocial || "")}`
+          );
+          return;
+        }
+
+        // Se a conta estiver suspensa ou bloqueada
+        if (info.bloqueada) {
+          alert(info.message || "Esta conta encontra-se suspensa ou bloqueada. Entre em contato com o suporte do NexaERP.");
+          router.replace("/");
+          return;
+        }
+
+        setCompanyName(info.razaoSocial || "Empresa");
+        setPlanName(info.plano?.nome || "Plano NexaERP");
+        setFrequency(info.plano?.tipoPlano === "Anual" ? "Ano" : "Mês");
+        setPrice(info.plano?.valorFormatado || "R$ 0,00");
+
+        if (info.plano?.recursos && Array.isArray(info.plano.recursos) && info.plano.recursos.length > 0) {
+          setFeatures(info.plano.recursos);
+        } else {
+          setFeatures(getPlanFeatures(info.plano?.nome || ""));
+        }
+
+        setCheckoutLoading(false);
+      })
+      .catch((err: any) => {
+        if (!isMounted) return;
+        console.error("Erro ao carregar dados do checkout:", err);
+        alert(err.message || "Cadastro não localizado para pagamento. Redirecionando...");
+        router.replace("/register");
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [empresaId, router]);
 
   const formatCardNumber = (v: string) => v.replace(/\D/g, "").slice(0, 16).replace(/(\d{4})(?=\d)/g, "$1 ");
   const formatExpiry = (v: string) => {
@@ -204,16 +250,19 @@ function PaymentContent() {
   const processPayment = async () => {
     try {
       setIsLoading(true);
-      const res: any = await api.pagamentos.create({
-        empresaId,
-        metodo: paymentMethod,
-        ...(paymentMethod !== 'pix' ? {
-          cardName: formData.cardName,
-          cardNumber: formData.cardNumber.replace(/\s/g, ''),
-          expiryDate: formData.expiryDate,
-          cvv: formData.cvv,
-        } : {}),
-      });
+      const res: any = await api.pagamentos.create(
+        {
+          empresaId,
+          metodo: paymentMethod,
+          ...(paymentMethod !== 'pix' ? {
+            cardName: formData.cardName,
+            cardNumber: formData.cardNumber.replace(/\s/g, ''),
+            expiryDate: formData.expiryDate,
+            cvv: formData.cvv,
+          } : {}),
+        },
+        idempotencyKeyRef.current,
+      );
 
       if (paymentMethod === 'pix' && res?.pix) {
         if (res.pix.copiaECola) setDynamicPixCode(res.pix.copiaECola);
@@ -223,12 +272,33 @@ function PaymentContent() {
         return;
       }
 
+      if (res?.success === false) {
+        setIsLoading(false);
+        alert(res?.message || 'Pagamento não autorizado.');
+        return;
+      }
+
       router.push(`/payment/sucesso?plan=${encodeURIComponent(planName)}&frequency=${encodeURIComponent(frequency)}&company=${encodeURIComponent(companyName)}${modulo ? `&modulo=${encodeURIComponent(modulo)}` : ''}`);
     } catch (err: any) {
       setIsLoading(false);
       alert('Erro no pagamento: ' + err.message);
     }
   };
+
+  if (!empresaId) {
+    return null;
+  }
+
+  if (checkoutLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600 font-semibold">Validando dados da assinatura...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
