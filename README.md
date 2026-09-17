@@ -1,10 +1,10 @@
-Gest Pro CRM
+NEXA ERP
 
-🚀 Gest Pro CRM é um sistema de Gestão de Relacionamento com o Cliente desenvolvido para organizar, centralizar e otimizar todo o ciclo comercial da sua empresa — do primeiro contato ao pós-venda.
+🚀 NEXA ERP é um sistema de Gestão de Relacionamento com o Cliente desenvolvido para organizar, centralizar e otimizar todo o ciclo comercial da sua empresa — do primeiro contato ao pós-venda.
 
-📌 Sobre o Gest Pro CRM
+📌 Sobre o NEXA ERP 
 
-O Gest Pro CRM é um sistema desenvolvido especialmente para negócios locais, como restaurantes, lojas, barbearias, pizzarias, lanchonetes e pequenos comércios que precisam organizar clientes, vendas e atendimentos de forma simples e eficiente.
+O NEXA ERP é um sistema desenvolvido especialmente para negócios locais, como restaurantes, lojas, barbearias, pizzarias, lanchonetes e pequenos comércios que precisam organizar clientes, vendas e atendimentos de forma simples e eficiente.
 
 A plataforma ajuda o empreendedor a ter controle total do relacionamento com o cliente, melhorar o atendimento, aumentar a recorrência e impulsionar as vendas sem complicação.
 
@@ -78,7 +78,7 @@ Logs de atividades
 
 Conformidade com princípios da LGPD
 
-🤝 Para quem é o Gest Pro CRM?
+🤝 Para quem é o NEXA ERP ?
 
 Pequenos empresários
 
