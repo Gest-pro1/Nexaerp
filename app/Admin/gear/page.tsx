@@ -24,6 +24,7 @@ import {
   BuildingStorefrontIcon,
   SparklesIcon,
   BookmarkSquareIcon,
+  PencilSquareIcon,
 } from "@heroicons/react/24/outline";
 
 /* ---------------------------------------------------------------- */
@@ -300,6 +301,13 @@ const ConfiguracoesSistema = () => {
   const [novoPlanoPopular, setNovoPlanoPopular] = useState(false);
   const [novoPlanoRecursos, setNovoPlanoRecursos] = useState("");
 
+  // Modal de editar plano
+  const [modalEditarPlano, setModalEditarPlano] = useState<PlanoItem | null>(null);
+  const [editPlanoNome, setEditPlanoNome] = useState("");
+  const [editPlanoPreco, setEditPlanoPreco] = useState("");
+  const [editPlanoPopular, setEditPlanoPopular] = useState(false);
+  const [editPlanoRecursos, setEditPlanoRecursos] = useState("");
+
   // Modal de adicionar recurso
   const [modalRecurso, setModalRecurso] = useState<{ planoId: string; planoNome: string } | null>(null);
   const [novoRecursoTexto, setNovoRecursoTexto] = useState("");
@@ -317,7 +325,7 @@ const ConfiguracoesSistema = () => {
       .filter(Boolean);
 
     const cleanPrice = parseFloat(novoPlanoPreco.replace("R$", "").replace(/\s/g, "").replace(",", ".")) || 0;
-    let realId = novoPlanoNome.toLowerCase().replace(/\s+/g, "-") + "-" + Date.now();
+    let realId = "";
 
     try {
       const created = await api.planos.create({
@@ -330,11 +338,13 @@ const ConfiguracoesSistema = () => {
         realId = created.id;
       }
     } catch (err: any) {
-      console.warn("Aviso ao persistir novo plano na API:", err);
+      console.error("Erro ao criar plano na API:", err);
+      alert("Erro ao criar plano no banco: " + (err.message || "Verifique se está logado como administrador."));
+      return;
     }
 
     const novoPlanoObj: PlanoItem = {
-      id: realId,
+      id: realId || (novoPlanoNome.toLowerCase().replace(/\s+/g, "-") + "-" + Date.now()),
       nome: novoPlanoNome.trim(),
       preco: novoPlanoPreco.startsWith("R$") ? novoPlanoPreco.trim() : `R$ ${novoPlanoPreco.trim()}`,
       popular: novoPlanoPopular,
@@ -361,6 +371,63 @@ const ConfiguracoesSistema = () => {
     setNovoPlanoPopular(false);
     setNovoPlanoRecursos("");
     setMostrarModalPlano(false);
+  };
+
+  const handleAbrirModalEditarPlano = (plano: PlanoItem) => {
+    setModalEditarPlano(plano);
+    setEditPlanoNome(plano.nome);
+    setEditPlanoPreco(plano.preco);
+    setEditPlanoPopular(plano.popular);
+    setEditPlanoRecursos(plano.recursos.join("\n"));
+  };
+
+  const handleSalvarEditarPlano = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!modalEditarPlano || !editPlanoNome.trim() || !editPlanoPreco.trim()) return;
+
+    const recursosArray = editPlanoRecursos
+      .split("\n")
+      .map((r) => r.trim())
+      .filter(Boolean);
+
+    const cleanPrice = parseFloat(editPlanoPreco.replace("R$", "").replace(/\s/g, "").replace(",", ".")) || 0;
+    const precoFormatado = editPlanoPreco.startsWith("R$") ? editPlanoPreco.trim() : `R$ ${editPlanoPreco.trim()}`;
+
+    try {
+      await api.planos.update(modalEditarPlano.id, {
+        nome: editPlanoNome.trim(),
+        precoMensal: cleanPrice,
+        recursos: recursosArray.join("\n"),
+      });
+    } catch (err: any) {
+      console.warn("Aviso ao atualizar plano na API:", err);
+    }
+
+    setPlanos((prev) =>
+      prev.map((p) => {
+        if (p.id === modalEditarPlano.id) {
+          return {
+            ...p,
+            nome: editPlanoNome.trim(),
+            preco: precoFormatado,
+            popular: editPlanoPopular,
+            recursos: recursosArray.length > 0 ? recursosArray : p.recursos,
+          };
+        }
+        return editPlanoPopular ? { ...p, popular: false } : p;
+      })
+    );
+
+    if (editPlanoPopular) {
+      setDestaque((prev) => {
+        const next: DestaqueState = {};
+        Object.keys(prev).forEach((k) => (next[k] = false));
+        next[modalEditarPlano.id] = true;
+        return next;
+      });
+    }
+
+    setModalEditarPlano(null);
   };
 
   const handleAbrirModalRecurso = (planoId: string, planoNome: string) => {
@@ -411,14 +478,23 @@ const ConfiguracoesSistema = () => {
       try {
         await api.planos.delete(planoId);
       } catch (err: any) {
-        console.debug("Aviso ao remover plano no banco:", err);
+        console.error("Aviso ao remover plano no banco:", err);
+        alert("Aviso: " + (err.message || "Erro ao remover plano"));
       }
-      setPlanos((prev) => prev.filter((p) => p.id !== planoId));
+      const planosRestantes = planos.filter((p) => p.id !== planoId);
+      setPlanos(planosRestantes);
       setDestaque((prev) => {
         const copy = { ...prev };
         delete copy[planoId];
         return copy;
       });
+
+      // Sincroniza imediatamente os planos restantes para desativar no banco
+      try {
+        await api.planos.sync(planosRestantes);
+      } catch (e) {
+        console.debug("Aviso na sincronização pós exclusão:", e);
+      }
     }
   };
 
@@ -881,13 +957,22 @@ const ConfiguracoesSistema = () => {
                                 />
                                 <span className="text-[11px] font-semibold text-gray-500 tracking-wide">DESTAQUE</span>
                               </div>
-                              <button
-                                onClick={() => handleDeletarPlano(plano.id, plano.nome)}
-                                className="text-gray-300 hover:text-red-500 cursor-pointer"
-                                title="Excluir Plano"
-                              >
-                                <TrashIcon className="w-4 h-4" />
-                              </button>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => handleAbrirModalEditarPlano(plano)}
+                                  className="text-gray-400 hover:text-blue-600 cursor-pointer p-1 transition-colors"
+                                  title="Editar Plano"
+                                >
+                                  <PencilSquareIcon className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeletarPlano(plano.id, plano.nome)}
+                                  className="text-gray-300 hover:text-red-500 cursor-pointer p-1 transition-colors"
+                                  title="Excluir Plano"
+                                >
+                                  <TrashIcon className="w-4 h-4" />
+                                </button>
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -994,6 +1079,67 @@ const ConfiguracoesSistema = () => {
                           className="px-4 py-2 rounded-md bg-blue-600 text-sm font-medium text-white hover:bg-blue-700"
                         >
                           Criar Plano
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              )}
+
+              {/* Modal de Editar Plano */}
+              {modalEditarPlano && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                  <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-xl">
+                    <h3 className="text-lg font-bold text-gray-900 mb-4">Editar Plano</h3>
+                    <form onSubmit={handleSalvarEditarPlano} className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Nome do Plano</label>
+                        <input
+                          type="text"
+                          value={editPlanoNome}
+                          onChange={(e) => setEditPlanoNome(e.target.value)}
+                          required
+                          className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Preço Mensal</label>
+                        <input
+                          type="text"
+                          placeholder="Ex: R$ 129,90"
+                          value={editPlanoPreco}
+                          onChange={(e) => setEditPlanoPreco(e.target.value)}
+                          required
+                          className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Recursos (um por linha)</label>
+                        <textarea
+                          value={editPlanoRecursos}
+                          onChange={(e) => setEditPlanoRecursos(e.target.value)}
+                          rows={4}
+                          className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2 pt-2">
+                        <Toggle checked={editPlanoPopular} onChange={() => setEditPlanoPopular(!editPlanoPopular)} />
+                        <span className="text-sm text-gray-700 font-medium">Marcar como Mais Popular</span>
+                      </div>
+
+                      <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+                        <button
+                          type="button"
+                          onClick={() => setModalEditarPlano(null)}
+                          className="px-4 py-2 rounded-md border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50"
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          type="submit"
+                          className="px-4 py-2 rounded-md bg-blue-600 text-sm font-medium text-white hover:bg-blue-700"
+                        >
+                          Salvar Alterações
                         </button>
                       </div>
                     </form>

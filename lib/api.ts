@@ -91,11 +91,11 @@ export const api = {
     updateStatus: (id: string, status: string) => fetchAPI<any>(`/empresas/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
   },
   planos: {
-    list: () => fetchAPI<any[]>('/planos'),
-    get: (id: string) => fetchAPI<any>(`/planos/${id}`),
+    list: () => fetchAPI<any[]>('/planos', { cache: 'no-store' }),
+    get: (id: string) => fetchAPI<any>(`/planos/${encodeURIComponent(id)}`, { cache: 'no-store' }),
     create: (data: any) => fetchAPI<any>('/planos', { method: 'POST', body: JSON.stringify(data) }),
-    update: (id: string, data: any) => fetchAPI<any>(`/planos/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-    delete: (id: string) => fetchAPI<any>(`/planos/${id}`, { method: 'DELETE' }),
+    update: (id: string, data: any) => fetchAPI<any>(`/planos/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id: string) => fetchAPI<any>(`/planos/${encodeURIComponent(id)}`, { method: 'DELETE' }),
     sync: (planos: any[]) => fetchAPI<any>('/planos/sync', { method: 'POST', body: JSON.stringify({ planos }) }),
   },
   pagamentos: {
