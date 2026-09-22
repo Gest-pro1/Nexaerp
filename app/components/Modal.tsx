@@ -24,7 +24,7 @@ export default function Modal({ open, content, onClose }: ModalProps) {
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
 
       <div className="relative w-full max-w-[534px] h-[530px] bg-white rounded-[40px] shadow-2xl z-10 flex flex-col overflow-hidden">
-        <button onClick={onClose} className="absolute top-6 right-6 text-black hover:text-gray-600 text-2xl">✕</button>
+        <button onClick={onClose} className="absolute top-6 right-6 text-black hover:text-gray-600 text-2xl cursor-pointer">✕</button>
 
         <div className="px-10 pt-10">
           <div className="w-16 h-16 rounded-full flex items-center justify-center mb-6">

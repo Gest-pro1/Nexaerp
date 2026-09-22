@@ -55,10 +55,10 @@ export default function Header() {
     top-[-20%]
     left-[-30%]
     h-full
-    w-[500px]
-    md:w-[800px]
+    w-125
+    md:w-200
     rounded-full
-    bg-gradient-to-r
+    bg-linear-to-r
     from-white/10
     via-white/5
     md:from-white/40
@@ -77,10 +77,10 @@ export default function Header() {
     top-[-20%]
     right-[-30%]
     h-full
-    w-[500px]
-    md:w-[800px]
+    w-125
+    md:w-200
     rounded-full
-    bg-gradient-to-l
+    bg-linear-to-l
     from-white/10
     via-white/5
     md:from-white/40
@@ -122,12 +122,12 @@ export default function Header() {
             <div className="hidden md:flex gap-4">
               <button 
               onClick={()=>router.push("/login")}
-              className=" cursor-pointer h-[46px] px-[45px] rounded-lg border border-white/60 text-white hover:bg-white/10 transition">
+              className=" cursor-pointer h-11.5 px-11.25 rounded-lg border border-white/60 text-white hover:bg-white/10 transition">
                 Entrar
               </button>
               <button
               onClick={()=> router.push("/register")}
-              className=" cursor-pointer  h-[50px] px-[52px] rounded-lg bg-white text-purple-600 hover:bg-gray-100 transition">
+              className=" cursor-pointer  h-12.5 px-13 rounded-lg bg-white text-purple-600 hover:bg-gray-100 transition">
                 Criar Conta
               </button>
             </div>
@@ -187,7 +187,7 @@ export default function Header() {
             onClick={() => router.push("/register")}
             className="bg-white text-purple-600 px-6 py-3 rounded-lg text-sm md:text-base font-medium cursor-pointer hover:bg-gray-100 transition"
           >
-            Começar Grátis
+            Começar Agora
           </button>
           <button
             onClick={() => handleScroll("recursos")}

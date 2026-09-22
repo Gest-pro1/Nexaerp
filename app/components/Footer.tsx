@@ -35,7 +35,7 @@ export default function Footer() {
           </h1>
 
           <p className="text-white/90 text-base sm:text-lg max-w-3xl mx-auto">
-            O GestPro se adapta às necessidades específicas da sua empresa.
+            O Nexa ERP se adapta às necessidades específicas da sua empresa.
             Escolha o módulo ideal no momento do cadastro.
           </p>
         </div>
@@ -73,7 +73,7 @@ export default function Footer() {
               key={index}
               className="group rounded-2xl bg-[#0E1B2A] border border-white/10 overflow-hidden shadow-lg flex flex-col"
             >
-              <div className="relative h-[180px] overflow-hidden">
+              <div className="relative h-45 overflow-hidden">
                 <img
                   src={card.img}
                   alt={card.title}
@@ -118,13 +118,13 @@ export default function Footer() {
             <div className="flex flex-col items-start">
   <Image
     src="/nova-logo.svg"
-    alt="GestPro"
-    width={170}
+    alt="Nexa ERP"
+    width={180}
     height={40}
-    className="-ml-7 mb-3"
+    className="-ml-4"
   />
 
-  <p className="max-w-xs text-sm text-white/70 leading-relaxed">
+  <p className="max-w-xs text-sm text-white/70 leading-relaxed -mt-7">
     A plataforma definitiva para gestão de comércios,
     restaurantes e serviços.
   </p>
@@ -135,10 +135,10 @@ export default function Footer() {
               <h2 className="font-semibold mb-4">Navegação</h2>
               <ul className="space-y-3 text-sm text-white/80">
                 {menu.map((item) => (
-                  <li key={item.id}>
+                  <li  key={item.id}>
                     <button
                       onClick={() => handleScroll(item.id)}
-                      className="hover:text-white transition text-left"
+                      className="hover:text-white transition text-left cursor-pointer"
                     >
                       {item.label}
                     </button>
@@ -153,7 +153,7 @@ export default function Footer() {
               <ul className="space-y-3 text-sm text-white/80">
                 <li>
                   <span className="block font-medium text-white">Email</span>
-                  nexaerp@nexaerp.com.br
+                  suporte@nexaerp.com.br
                 </li>
                 <li>
                   <span className="block font-medium text-white">WhatsApp</span>
@@ -170,16 +170,24 @@ export default function Footer() {
               </p>
 
               <div className="flex items-center gap-4">
-                <FaInstagram size={20} />
-                <FaFacebookF size={20} />
-                <FaLinkedinIn size={20} />
-                <FaYoutube size={20} />
+               <a href="https://www.instagram.com/basesys.tecnologia/" target="_blank" rel="noopener noreferrer">
+                  <FaInstagram size={20}  /> 
+                </a>
+                <a href="" target="_blank" rel="noopener noreferrer">
+                  <FaFacebookF size={20} />
+                </a>
+                <a href="" target="_blank" rel="noopener noreferrer">
+                  <FaLinkedinIn size={20} />
+                </a>
+                <a href="" target="_blank" rel="noopener noreferrer">
+                  <FaYoutube size={20} />
+                </a>
               </div>
             </div>
           </div>
 
           <div className="border-t border-white/20 mt-12 pt-6 text-center text-sm text-white/60">
-            ©2025 GestPro. Todos os direitos reservados
+            ©2026 NEXA ERP. Todos os direitos reservados
           </div>
         </div>
       </section>
