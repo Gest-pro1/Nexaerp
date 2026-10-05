@@ -1,5 +1,5 @@
 const getApiBase = () => {
-  let url = process.env.NEXT_PUBLIC_API_URL || 'https://nexaerp-backend-production.up.railway.app/api';
+  let url = process.env.NEXT_PUBLIC_API_URL || 'https://api.nexaerp.com.br';
   if (!url.startsWith('http://') && !url.startsWith('https://')) {
     url = `https://${url}`;
   }
