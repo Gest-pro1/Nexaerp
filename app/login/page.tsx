@@ -31,8 +31,9 @@ export default function LoginPage() {
     try {
       setIsLoading(true);
       const result = await api.auth.login(email, password);
-      if (result?.access_token) {
-        saveAuth(result.access_token, result.user);
+      const token = result?.access_token || (result as any)?.token;
+      if (token) {
+        saveAuth(token, result.user);
       }
 
       const userModule =

@@ -336,26 +336,28 @@ function CadastroFormContent() {
 
     const callApi = async () => {
       try {
-        const planos = await api.planos.list();
+        const planos = await api.planos.list().catch(() => []);
         const planSelected = availablePlans.find(p => p.id === selectedPlan);
         const planName = planSelected?.name || 'Profissional';
-        const matchedPlano = planos.find((p: any) => p.id === selectedPlan || p.nome?.toLowerCase() === planName.toLowerCase());
+        const matchedPlano = Array.isArray(planos)
+          ? planos.find((p: any) => p.id === selectedPlan || p.nome?.toLowerCase() === planName.toLowerCase())
+          : undefined;
         const resolvedPlanoId = matchedPlano?.id || (planSelected?.id && planSelected.id.length === 36 ? planSelected.id : undefined);
         
         const result = await api.auth.register({
-          razaoSocial: razaoSocial,
-          cnpj,
-          email,
-          telefone,
-          cep,
-          rua,
-          numero,
-          complemento,
-          bairro,
-          uf: selectedState,
-          cidade: selectedCity,
-          responsavelNome: nomeCompleto,
-          responsavelCpf: cpf,
+          razaoSocial: razaoSocial.trim(),
+          cnpj: cnpj.trim(),
+          email: email.trim(),
+          telefone: telefone.trim(),
+          cep: cep.trim(),
+          rua: rua.trim(),
+          numero: numero.trim(),
+          complemento: complemento?.trim() || undefined,
+          bairro: bairro.trim(),
+          uf: selectedState.trim(),
+          cidade: selectedCity.trim(),
+          responsavelNome: nomeCompleto.trim(),
+          responsavelCpf: cpf.trim(),
           tipoNegocio: selectedBusinessType,
           planoId: resolvedPlanoId,
           tipoPlano: isAnnual ? 'Anual' : 'Mensal',
@@ -366,8 +368,9 @@ function CadastroFormContent() {
         const price = isAnnual ? planSelected?.annualPrice : planSelected?.monthlyPrice;
         const frequency = isAnnual ? 'Ano' : 'Mês';
         const formattedPrice = `R$${(price ?? 0).toFixed(2).replace('.', ',')}`;
+        const empresaId = result?.empresaId || (result as any)?.id || (result as any)?.empresa?.id || '';
 
-        router.push(`/payment?empresaId=${result.empresaId}&modulo=${encodeURIComponent(selectedBusinessType)}&plan=${encodeURIComponent(planName)}&frequency=${frequency}&price=${encodeURIComponent(formattedPrice)}&company=${encodeURIComponent(razaoSocial)}&email=${encodeURIComponent(email)}`);
+        router.push(`/payment?empresaId=${encodeURIComponent(empresaId)}&modulo=${encodeURIComponent(selectedBusinessType)}&plan=${encodeURIComponent(planName)}&frequency=${frequency}&price=${encodeURIComponent(formattedPrice)}&company=${encodeURIComponent(razaoSocial)}&email=${encodeURIComponent(email)}`);
       } catch (err: any) {
         alert('Erro ao cadastrar: ' + err.message);
       }

@@ -1,26 +1,60 @@
-const getApiBase = () => {
-  let url = process.env.NEXT_PUBLIC_API_URL || 'https://api.nexaerp.com.br';
+export const getApiBase = () => {
+  let url = (process.env.NEXT_PUBLIC_API_URL || 'https://api.nexaerp.com.br/api').trim();
   if (!url.startsWith('http://') && !url.startsWith('https://')) {
     url = `https://${url}`;
   }
-  return url.replace(/\/$/, '');
+  // Strip trailing slashes
+  url = url.replace(/\/+$/, '');
+  // Remove any trailing auth routes mistakenly included in the env variable
+  url = url.replace(/\/auth(\/.*)?$/, '');
+  // Guarantee the base URL ends with /api
+  if (!url.endsWith('/api')) {
+    url = `${url}/api`;
+  }
+  return url;
 };
 
-const API_BASE = getApiBase();
+export const API_BASE = getApiBase();
 
-async function fetchAPI<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('nexaerp_token') : null;
-  
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-    ...options.headers,
-  };
-  
-  if (token) {
-    (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
+export async function fetchAPI<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  let token: string | null = null;
+  if (typeof window !== 'undefined') {
+    token =
+      localStorage.getItem('nexaerp_token') ||
+      localStorage.getItem('token') ||
+      localStorage.getItem('access_token');
+    if (!token && typeof document !== 'undefined') {
+      const match = document.cookie.match(new RegExp('(^| )nexaerp_token=([^;]+)'));
+      if (match) token = decodeURIComponent(match[2]);
+    }
   }
 
-  const response = await fetch(`${API_BASE}${endpoint}`, {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(options.headers as Record<string, string>),
+  };
+
+  if (token && !headers['Authorization'] && !headers['authorization']) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  let fullUrl: string;
+  if (endpoint.startsWith('http://') || endpoint.startsWith('https://')) {
+    fullUrl = endpoint;
+  } else {
+    let cleanEndpoint = endpoint.trim();
+    if (cleanEndpoint.startsWith('/api/')) {
+      cleanEndpoint = cleanEndpoint.substring(4);
+    } else if (cleanEndpoint.startsWith('api/')) {
+      cleanEndpoint = cleanEndpoint.substring(3);
+    }
+    if (!cleanEndpoint.startsWith('/')) {
+      cleanEndpoint = `/${cleanEndpoint}`;
+    }
+    fullUrl = `${API_BASE}${cleanEndpoint}`;
+  }
+
+  const response = await fetch(fullUrl, {
     ...options,
     headers,
   });
@@ -29,7 +63,9 @@ async function fetchAPI<T>(endpoint: string, options: RequestInit = {}): Promise
     const error = await response.json().catch(() => ({ message: 'Erro de conexão' }));
     const errorMsg = Array.isArray(error?.message)
       ? error.message.join(', ')
-      : (error?.message || `Erro ${response.status}`);
+      : typeof error?.message === 'string'
+      ? error.message
+      : error?.error || `Erro ${response.status}`;
     const err: any = new Error(errorMsg);
     err.status = response.status;
     err.data = error;
@@ -42,9 +78,23 @@ async function fetchAPI<T>(endpoint: string, options: RequestInit = {}): Promise
 // Auth
 export const api = {
   auth: {
-    login: (email: string, senha: string) =>
-      fetchAPI<{
+    login: (
+      emailOrData: string | { email: string; senha?: string; password?: string },
+      maybeSenha?: string
+    ) => {
+      let email = '';
+      let senha = '';
+      if (typeof emailOrData === 'object' && emailOrData !== null) {
+        email = emailOrData.email || '';
+        senha = emailOrData.senha || emailOrData.password || '';
+      } else {
+        email = emailOrData || '';
+        senha = maybeSenha || '';
+      }
+
+      return fetchAPI<{
         access_token: string;
+        token?: string;
         primeiroAcessoObrigatorio?: boolean;
         force_password_change?: boolean;
         password_status?: string;
@@ -62,19 +112,61 @@ export const api = {
           primeiroAcessoObrigatorio?: boolean;
           [key: string]: any;
         };
-      }>('/auth/login', { method: 'POST', body: JSON.stringify({ email, senha }) }),
+      }>('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ email: email.trim(), senha }),
+      });
+    },
     primeiroAcesso: (data: { email: string; senhaAtual: string; novaSenha: string; confirmarNovaSenha: string }) =>
-      fetchAPI<{ success: boolean; message: string; access_token: string; user: any }>('/auth/primeiro-acesso', { method: 'POST', body: JSON.stringify(data) }),
+      fetchAPI<{ success: boolean; message: string; access_token: string; user: any }>('/auth/primeiro-acesso', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
     register: (data: any) =>
-      fetchAPI<{ success: boolean; empresaId: string }>('/auth/register', { method: 'POST', body: JSON.stringify(data) }),
+      fetchAPI<{
+        success: boolean;
+        empresaId: string;
+        id?: string;
+        empresa?: any;
+        user?: any;
+        access_token?: string;
+        token?: string;
+        message?: string;
+      }>('/auth/register', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
     forgotPassword: (email: string) =>
-      fetchAPI('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) }),
+      fetchAPI('/auth/forgot-password', {
+        method: 'POST',
+        body: JSON.stringify({ email: email.trim() }),
+      }),
     resetPassword: (data: { token: string; novaSenha: string; confirmarSenha: string }) =>
-      fetchAPI('/auth/reset-password', { method: 'POST', body: JSON.stringify(data) }),
+      fetchAPI('/auth/reset-password', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
     logout: () =>
       fetchAPI('/auth/logout', { method: 'POST' }),
-    me: () =>
-      fetchAPI<any>('/auth/me'),
+    me: (tokenOverride?: string) => {
+      const options: RequestInit = { method: 'GET' };
+      if (tokenOverride) {
+        options.headers = {
+          Authorization: `Bearer ${tokenOverride}`,
+        };
+      }
+      return fetchAPI<{
+        user?: any;
+        id?: string;
+        email?: string;
+        role?: string;
+        empresa_id?: string;
+        tipo_negocio?: string;
+        modulo?: string;
+        status?: string;
+        [key: string]: any;
+      }>('/auth/me', options);
+    },
   },
   empresas: {
     list: (params?: { search?: string; status?: string; page?: number; limit?: number }) => {

@@ -226,17 +226,18 @@ function MenuModulosContent() {
     // 5. Tentar sincronizar dados mais recentes com a API
     api.auth.me()
       .then((meData) => {
-        if (meData?.user) {
-          setCurrentUser(meData.user);
-          const rawMod = meData.user.tipo_negocio || meData.user.tipoNegocio || meData.user.modulo || meData.user.segmento;
+        const userObj = meData?.user || meData;
+        if (userObj && (userObj.id || userObj.email)) {
+          setCurrentUser(userObj);
+          const rawMod = userObj.tipo_negocio || userObj.tipoNegocio || userObj.modulo || userObj.segmento;
           if (rawMod) {
             const apiMod = normalizeModuleId(rawMod);
             setActiveModuleId(apiMod);
             setSelectedModuleId(apiMod);
             setUserModule(apiMod);
           }
-          if (meData.user.status) {
-            setAccountStatus(meData.user.status);
+          if (userObj.status) {
+            setAccountStatus(userObj.status);
           }
         }
       })

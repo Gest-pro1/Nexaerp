@@ -13,13 +13,26 @@ function deleteCookie(name: string) {
 export function saveAuth(token: string, user: any) {
   if (typeof window === 'undefined') return;
   localStorage.setItem(TOKEN_KEY, token);
-  localStorage.setItem(USER_KEY, JSON.stringify(user));
+  localStorage.setItem('token', token);
+  localStorage.setItem('access_token', token);
+  if (user) {
+    localStorage.setItem(USER_KEY, JSON.stringify(user));
+  }
   setCookie('nexaerp_token', token, 7); // 7 days
 }
 
 export function getToken(): string | null {
   if (typeof window === 'undefined') return null;
-  return localStorage.getItem(TOKEN_KEY);
+  const local =
+    localStorage.getItem(TOKEN_KEY) ||
+    localStorage.getItem('token') ||
+    localStorage.getItem('access_token');
+  if (local) return local;
+  if (typeof document !== 'undefined') {
+    const match = document.cookie.match(new RegExp('(^| )' + TOKEN_KEY + '=([^;]+)'));
+    if (match) return decodeURIComponent(match[2]);
+  }
+  return null;
 }
 
 export function getUser(): any | null {
@@ -35,6 +48,8 @@ export function isAuthenticated(): boolean {
 export function logout() {
   if (typeof window === 'undefined') return;
   localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem('token');
+  localStorage.removeItem('access_token');
   localStorage.removeItem(USER_KEY);
   deleteCookie('nexaerp_token');
 }
