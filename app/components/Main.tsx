@@ -117,7 +117,7 @@ export default function Main() {
               },
               description: p.descricao || (p.nome?.toLowerCase().includes('stand') ? 'Para começar agora.' : p.nome?.toLowerCase().includes('prem') ? 'Para gestão e consultoria.' : 'Para quem quer crescer.'),
               features: features.length > 0 ? features : ['Recursos Inclusos'],
-              popular: Boolean(p.nome?.toLowerCase().includes('pro') || p.nome?.toLowerCase().includes('premium')),
+              popular: p.popular !== undefined ? Boolean(p.popular) : (p.destaque !== undefined ? Boolean(p.destaque) : false),
             };
           });
           setDisplayTiers(mapped);

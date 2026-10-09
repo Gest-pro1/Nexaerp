@@ -1,5 +1,6 @@
 export const getApiBase = () => {
-  let url = (process.env.NEXT_PUBLIC_API_URL || 'https://api.nexaerp.com.br/api').trim();
+  const raw = process.env.NEXT_PUBLIC_API_URL;
+  let url = (raw && raw !== 'undefined' ? raw : 'https://api.nexaerp.com.br/api').trim();
   if (!url.startsWith('http://') && !url.startsWith('https://')) {
     url = `https://${url}`;
   }
@@ -51,7 +52,7 @@ export async function fetchAPI<T>(endpoint: string, options: RequestInit = {}): 
     if (!cleanEndpoint.startsWith('/')) {
       cleanEndpoint = `/${cleanEndpoint}`;
     }
-    fullUrl = `${API_BASE}${cleanEndpoint}`;
+    fullUrl = `${getApiBase()}${cleanEndpoint}`;
   }
 
   const response = await fetch(fullUrl, {

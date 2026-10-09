@@ -333,6 +333,7 @@ const ConfiguracoesSistema = () => {
         precoMensal: cleanPrice,
         recursos: recursosArray.join("\n"),
         ativo: true,
+        popular: novoPlanoPopular,
       });
       if (created?.id) {
         realId = created.id;
@@ -398,6 +399,7 @@ const ConfiguracoesSistema = () => {
         nome: editPlanoNome.trim(),
         precoMensal: cleanPrice,
         recursos: recursosArray.join("\n"),
+        popular: editPlanoPopular,
       });
     } catch (err: any) {
       console.warn("Aviso ao atualizar plano na API:", err);
@@ -418,14 +420,16 @@ const ConfiguracoesSistema = () => {
       })
     );
 
-    if (editPlanoPopular) {
-      setDestaque((prev) => {
-        const next: DestaqueState = {};
-        Object.keys(prev).forEach((k) => (next[k] = false));
+    setDestaque((prev) => {
+      const next: DestaqueState = { ...prev };
+      if (editPlanoPopular) {
+        Object.keys(next).forEach((k) => (next[k] = false));
         next[modalEditarPlano.id] = true;
-        return next;
-      });
-    }
+      } else {
+        next[modalEditarPlano.id] = false;
+      }
+      return next;
+    });
 
     setModalEditarPlano(null);
   };
@@ -454,21 +458,20 @@ const ConfiguracoesSistema = () => {
   const toggleDestaque = (planoId: string) => {
     const proximoStatus = !destaque[planoId];
 
-    setDestaque((prev) => {
-      const next = { ...prev };
-      if (proximoStatus) {
-        Object.keys(next).forEach((k) => (next[k] = false));
-        next[planoId] = true;
-      } else {
-        next[planoId] = false;
-      }
-      return next;
-    });
+    const novoDestaque: DestaqueState = {};
+    if (proximoStatus) {
+      Object.keys(destaque).forEach((k) => (novoDestaque[k] = false));
+      novoDestaque[planoId] = true;
+    } else {
+      Object.keys(destaque).forEach((k) => (novoDestaque[k] = false));
+    }
+
+    setDestaque(novoDestaque);
 
     setPlanos((prev) =>
       prev.map((p) => ({
         ...p,
-        popular: p.id === planoId ? proximoStatus : proximoStatus ? false : p.popular,
+        popular: p.id === planoId ? proximoStatus : false,
       }))
     );
   };
@@ -581,6 +584,10 @@ const ConfiguracoesSistema = () => {
           if (gw.gatewayKeys) setGatewayKeys((prev) => ({ ...prev, ...gw.gatewayKeys }));
           if (gw.mercadopagoValidation) setValidacaoGateway(gw.mercadopagoValidation);
         }
+
+        if (configs?.destaque && typeof configs.destaque === "object") {
+          setDestaque(configs.destaque);
+        }
       })
       .catch((err) => {
         console.debug("Configurações remotas não disponíveis:", err);
@@ -594,7 +601,7 @@ const ConfiguracoesSistema = () => {
             id: p.id,
             nome: p.nome,
             preco: `R$ ${(p.preco_mensal || 0).toFixed(2).replace(".", ",")}`,
-            popular: p.nome?.toLowerCase().includes("pro") || p.nome?.toLowerCase().includes("premium"),
+            popular: Boolean(p.popular ?? p.destaque ?? false),
             recursos: typeof p.recursos === "string"
               ? p.recursos.split(/[,•\n]/).map((r: string) => r.trim()).filter(Boolean)
               : Array.isArray(p.recursos)
@@ -602,7 +609,7 @@ const ConfiguracoesSistema = () => {
               : ["Recursos Inclusos"],
           }));
           setPlanos(mapped);
-          setDestaque(Object.fromEntries(mapped.map((m) => [m.id, m.popular])));
+          setDestaque(Object.fromEntries(mapped.map((m) => [m.id, Boolean(m.popular)])));
         }
       })
       .catch((err) => {
@@ -636,22 +643,40 @@ const ConfiguracoesSistema = () => {
     setErroSalvar(null);
     const errosOcorridos: string[] = [];
 
+    // Garantir sincronia entre planos e o mapa de destaque
+    const planosAtualizados = planos.map((p) => ({
+      ...p,
+      popular: Boolean(destaque[p.id]),
+    }));
+
     const configToSave = {
       email,
       manutencaoGlobal,
       whatsappNotif,
       segmentos,
-      planos,
+      planos: planosAtualizados,
       destaque,
       financeiro,
       ativarLembretes,
       sandbox,
       gatewayKeys,
+      gateway_pagamento: {
+        ativo: gatewayAtivo,
+        sandbox,
+        gatewayKeys,
+      },
       updatedAt: new Date().toISOString(),
     };
 
+    // Salvar localmente primeiro para garantir persistência imediata
     try {
-      await api.planos.sync(planos);
+      localStorage.setItem("nexaerp_system_config", JSON.stringify(configToSave));
+    } catch (e) {
+      console.error("Erro ao salvar no storage local:", e);
+    }
+
+    try {
+      await api.planos.sync(planosAtualizados);
     } catch (err: any) {
       console.error("Erro ao sincronizar planos no banco:", err);
       errosOcorridos.push(`Planos: ${err.message || "Falha ao sincronizar planos"}`);
@@ -664,6 +689,7 @@ const ConfiguracoesSistema = () => {
           manutencaoGlobal,
           whatsappNotif,
         },
+        destaque,
         financeiro,
         segmentos,
         ativarLembretes,
@@ -687,14 +713,12 @@ const ConfiguracoesSistema = () => {
 
     if (errosOcorridos.length > 0) {
       setErroSalvar(errosOcorridos.join(" | "));
-      setSalvoSucesso(false);
+      // Notifica que o salvamento local foi efetuado mesmo que o backend remoto falhe
+      setSalvoSucesso(true);
+      setTimeout(() => {
+        setSalvoSucesso(false);
+      }, 4000);
       return;
-    }
-
-    try {
-      localStorage.setItem("nexaerp_system_config", JSON.stringify(configToSave));
-    } catch (e) {
-      console.error("Erro ao salvar no storage local:", e);
     }
 
     setSalvoSucesso(true);
