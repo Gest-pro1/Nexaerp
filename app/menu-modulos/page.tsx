@@ -66,7 +66,7 @@ export default function MenuModulosPage() {
 					width={225}
 					height={150}
 					priority
-					className="h-37.5 w-56.25 object-contain object-left"
+					className="h-auto w-56.25 object-contain object-left"
 				/>
 			</header>
 
