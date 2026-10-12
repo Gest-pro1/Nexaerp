@@ -110,7 +110,7 @@ export default function MenuModulosPage() {
 				<button
 					type="button"
 					onClick={() => router.push(`/modulos/${selectedModule}`)}
-					className="mt-7 flex min-h-12 w-full items-center justify-center gap-2 rounded-[7px] bg-[#2444b2] text-sm font-semibold text-white shadow-[0_2px_8px_rgba(36,68,178,0.25)] transition-colors hover:bg-[#1e3a9c] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 sm:h-10 sm:min-h-0"
+					className="mt-7 flex min-h-12 w-full items-center justify-center gap-2 rounded-[7px] bg-[#2444b2] text-sm font-semibold text-white shadow-[0_2px_8px_rgba(36,68,178,0.25)] transition-colors hover:bg-[#1e3a9c] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 sm:h-10 sm:min-h-0 cursor-pointer"
 				>
 					Acessar Painel
 					<ArrowRightIcon aria-hidden="true" className="size-4" strokeWidth={2} />

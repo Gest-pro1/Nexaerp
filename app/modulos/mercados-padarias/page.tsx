@@ -10,6 +10,7 @@ import {
   type PaymentMethodId,
 } from "@/lib/market-dashboard";
 import PdvScreen from "./pdv-screen";
+import CashierScreen from "./cashier-screen";
 import {
   BarChart3,
   Bell,
@@ -280,9 +281,13 @@ export default function MercadosPadariasPage() {
       </header>
 
       <main className={activeItem === "PDV" ? "h-[calc(100dvh-54px)]" : "mx-auto max-w-[1600px] px-5 pb-5 pt-4 sm:px-7"}>
+        <div hidden={activeItem !== "Caixa"}>
+          <CashierScreen operatorName={profile.personName} />
+        </div>
         {activeItem === "PDV" ? (
           <PdvScreen operatorName={profile.personName} />
         ) : (
+        <div hidden={activeItem === "Caixa"}>
         <>
         <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
           <div>
@@ -447,6 +452,7 @@ export default function MercadosPadariasPage() {
           </div>
         </section>
         </>
+        </div>
         )}
       </main>
       </div>
