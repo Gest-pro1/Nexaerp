@@ -11,6 +11,7 @@ import {
 } from "@/lib/market-dashboard";
 import PdvScreen from "./pdv-screen";
 import CashierScreen from "./cashier-screen";
+import InventoryScreen from "./inventory-screen";
 import {
   BarChart3,
   Bell,
@@ -122,9 +123,9 @@ export default function MercadosPadariasPage() {
           <span aria-hidden="true" className="absolute inset-0 pointer-events-auto" />
           <aside
             aria-label="Menu lateral"
-            className="pointer-events-auto fixed inset-y-0 left-0 flex w-[168px] -translate-x-full flex-col border-r border-white/10 bg-[#1e3a8a] text-white transition-transform duration-200 ease-out group-hover:translate-x-0 group-focus-within:translate-x-0"
+            className="pointer-events-auto fixed inset-y-0 left-0 flex w-42 -translate-x-full flex-col border-r border-white/10 bg-[#1e3a8a] text-white transition-transform duration-200 ease-out group-hover:translate-x-0 group-focus-within:translate-x-0"
           >
-            <div className="flex h-[80px] shrink-0 items-center justify-center border-b border-white/10">
+            <div className="flex h-20 shrink-0 items-center justify-center border-b border-white/10">
               <Image
                 src="/nova-logo.svg"
                 alt="Nexa ERP"
@@ -168,8 +169,8 @@ export default function MercadosPadariasPage() {
           </aside>
         </div>
       ) : (
-      <aside className="fixed inset-y-0 left-0 z-20 hidden w-[168px] flex-col border-r border-white/10 bg-[#1e3a8a] text-white lg:flex">
-        <div className="flex h-[80px] shrink-0 items-center justify-center border-b border-white/10">
+      <aside className="fixed inset-y-0 left-0 z-20 hidden w-42 flex-col border-r border-white/10 bg-[#1e3a8a] text-white lg:flex">
+        <div className="flex h-20 shrink-0 items-center justify-center border-b border-white/10">
           <Image
             src="/nova-logo.svg"
             alt="Nexa ERP"
@@ -213,7 +214,7 @@ export default function MercadosPadariasPage() {
       </aside>
       )}
 
-      <div className={`min-h-dvh ${activeItem === "PDV" ? "" : "lg:ml-[168px]"}`}>
+      <div className={`min-h-dvh ${activeItem === "PDV" ? "" : "lg:ml-42"}`}>
       <header className="flex h-13.5 items-center justify-between border-b border-slate-200 bg-white px-5 sm:px-7">
         <label className="flex h-10 w-full max-w-[320px] items-center gap-2 rounded-md border border-slate-200 px-3 text-slate-400 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100">
           <Search aria-hidden="true" className="size-4.5 shrink-0" />
@@ -274,20 +275,23 @@ export default function MercadosPadariasPage() {
                 {profile.internalEmail || profile.companyName}
               </span>
             </span>
-            <span className="flex size-8 items-center justify-center rounded-full bg-gradient-to-br from-amber-500 to-rose-800 text-[10px] font-bold text-white">{getInitials(profile.personName)}</span>
+            <span className="flex size-8 items-center justify-center rounded-full bg-linear-to-br from-amber-500 to-rose-800 text-[10px] font-bold text-white">{getInitials(profile.personName)}</span>
             <ChevronDown aria-hidden="true" className="hidden size-3.5 text-slate-500 sm:block" />
           </button>
         </div>
       </header>
 
-      <main className={activeItem === "PDV" ? "h-[calc(100dvh-54px)]" : "mx-auto max-w-[1600px] px-5 pb-5 pt-4 sm:px-7"}>
+      <main className={activeItem === "PDV" ? "h-[calc(100dvh-54px)]" : "mx-auto max-w-400 px-5 pb-5 pt-4 sm:px-7"}>
         <div hidden={activeItem !== "Caixa"}>
           <CashierScreen operatorName={profile.personName} />
+        </div>
+        <div hidden={activeItem !== "Estoque"}>
+          <InventoryScreen />
         </div>
         {activeItem === "PDV" ? (
           <PdvScreen operatorName={profile.personName} />
         ) : (
-        <div hidden={activeItem === "Caixa"}>
+        <div hidden={activeItem === "Caixa" || activeItem === "Estoque"}>
         <>
         <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
           <div>
@@ -314,22 +318,22 @@ export default function MercadosPadariasPage() {
         </div>
 
         <section aria-label="Indicadores do período" className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <article className="min-h-[104px] rounded-md bg-orange-500 p-4 text-white">
+          <article className="min-h-26 rounded-md bg-orange-500 p-4 text-white">
             <p className="text-xs">Faturamento Atual</p>
             <p className="mt-1 text-2xl font-semibold leading-7">{formatCurrency(dashboard.metrics.revenue)}</p>
             <p className="mt-2 text-[10px]">{dashboard.metrics.salesCount} vendas no período</p>
           </article>
-          <article className="min-h-[104px] rounded-md bg-green-600 p-4 text-white">
+          <article className="min-h-26 rounded-md bg-green-600 p-4 text-white">
             <p className="text-xs">Lucro Bruto</p>
             <p className="mt-1 text-2xl font-semibold leading-7">{formatCurrency(dashboard.metrics.grossProfit)}</p>
             <p className="mt-2 text-[10px]">Margem Média: {dashboard.metrics.averageProfitMargin}%</p>
           </article>
-          <article className="min-h-[104px] rounded-md bg-indigo-600 p-4 text-white">
+          <article className="min-h-26 rounded-md bg-indigo-600 p-4 text-white">
             <p className="text-xs">Total de Itens Vendidos</p>
             <p className="mt-1 text-2xl font-semibold leading-7">{dashboard.metrics.itemsSold}</p>
             <p className="mt-2 text-[10px]">Média de {dashboard.metrics.averageItemsPerSale} por venda</p>
           </article>
-          <article className="min-h-[104px] rounded-md bg-sky-600 p-4 text-white">
+          <article className="min-h-26 rounded-md bg-sky-600 p-4 text-white">
             <p className="text-xs">Vendas na Caderneta</p>
             <p className="mt-1 text-2xl font-semibold leading-7">{formatCurrency(dashboard.metrics.bookletRevenue)}</p>
             <p className="mt-2 text-[10px]">{dashboard.metrics.bookletRevenuePercentage}% do faturamento</p>
@@ -339,7 +343,7 @@ export default function MercadosPadariasPage() {
         <section className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-[0.95fr_1.5fr]">
           <article className="rounded-xl bg-white p-4 shadow-sm">
             <h2 className="mb-3 flex items-center gap-2 text-[13px] font-semibold text-slate-700">
-              <Wallet aria-hidden="true" className="size-[18px] text-sky-500" />
+              <Wallet aria-hidden="true" className="size-4.5 text-sky-500" />
               Recebimento por Meio de Pagamento
             </h2>
             <ul className="space-y-2">
@@ -365,7 +369,7 @@ export default function MercadosPadariasPage() {
           <article className="overflow-hidden rounded-xl bg-white shadow-sm">
             <div className="flex items-center justify-between px-5 pb-4 pt-5">
               <h2 className="flex items-center gap-2 text-[13px] font-semibold text-slate-700">
-                <BarChart3 aria-hidden="true" className="size-[18px] text-sky-500" />
+                <BarChart3 aria-hidden="true" className="size-4.5 text-sky-500" />
                 Produtos Mais Vendidos (Curva ABC)
               </h2>
               <span className="text-[9px] text-slate-500">
@@ -373,7 +377,7 @@ export default function MercadosPadariasPage() {
               </span>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[520px] text-left text-[10px]">
+              <table className="w-full min-w-130 text-left text-[10px]">
                 <thead className="bg-slate-50 text-slate-600">
                   <tr>
                     <th className="px-4 py-2 font-medium">Item</th>
@@ -412,7 +416,7 @@ export default function MercadosPadariasPage() {
             Histórico Detalhado de Vendas
           </h2>
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px] text-left text-[10px]">
+            <table className="w-full min-w-180 text-left text-[10px]">
               <thead className="border-y border-slate-200 bg-slate-50 text-slate-600">
                 <tr>
                   {salesColumns.map((column) => (
