@@ -12,6 +12,7 @@ import {
 import PdvScreen from "./pdv-screen";
 import CashierScreen from "./cashier-screen";
 import InventoryScreen from "./inventory-screen";
+import BookletScreen from "./booklet-screen";
 import {
   BarChart3,
   Bell,
@@ -288,10 +289,13 @@ export default function MercadosPadariasPage() {
         <div hidden={activeItem !== "Estoque"}>
           <InventoryScreen />
         </div>
+        <div hidden={activeItem !== "Caderneta"}>
+          <BookletScreen operatorName={profile.personName} />
+        </div>
         {activeItem === "PDV" ? (
           <PdvScreen operatorName={profile.personName} />
         ) : (
-        <div hidden={activeItem === "Caixa" || activeItem === "Estoque"}>
+        <div hidden={activeItem === "Caixa" || activeItem === "Estoque" || activeItem === "Caderneta"}>
         <>
         <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
           <div>
