@@ -1,21 +1,23 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import PaymentPage from '@/app/payment/page';
 import { api } from '@/lib/api';
 
 const mockPush = vi.fn();
 const mockReplace = vi.fn();
+const mockBack = vi.fn();
+const mockRouter = {
+  push: mockPush,
+  replace: mockReplace,
+  back: mockBack,
+};
 let mockSearchParams = new URLSearchParams();
 
 // Mock Next/Navigation
 vi.mock('next/navigation', () => ({
   useSearchParams: () => mockSearchParams,
-  useRouter: () => ({
-    push: mockPush,
-    replace: mockReplace,
-    back: vi.fn(),
-  }),
+  useRouter: () => mockRouter,
 }));
 
 // Mock API
@@ -23,6 +25,7 @@ vi.mock('@/lib/api', () => ({
   api: {
     pagamentos: {
       getCheckoutInfo: vi.fn(() => Promise.resolve({ success: true, jaPago: false, bloqueada: false, plano: {} })),
+      consultarStatusPix: vi.fn(() => Promise.resolve({ paymentId: 'pay_1', status: 'PENDING', isApproved: false, isExpired: false })),
       create: vi.fn(() => Promise.resolve({ success: true })),
     },
     planos: {
@@ -52,13 +55,13 @@ describe('Payment Guard & Checkout Security Flow', () => {
           tipoPlano: 'Mensal',
           valor: 199.0,
           valorFormatado: 'R$ 199,00',
-          recursos: ['Notas Ilimitadas', 'Gest�o de Estoque'],
+          recursos: ['Notas Ilimitadas', 'Gestão de Estoque'],
         },
       })
     );
   });
 
-  it('?? GUARD: Redirects immediately to /register when empresaId is missing in URL', async () => {
+  it('Redirects immediately to /register when empresaId is missing in URL', async () => {
     mockSearchParams = new URLSearchParams();
 
     render(<PaymentPage />);
@@ -69,7 +72,7 @@ describe('Payment Guard & Checkout Security Flow', () => {
     expect(api.pagamentos.getCheckoutInfo).not.toHaveBeenCalled();
   });
 
-  it('?? CHECKOUT: Fetches and displays real verified data from backend', async () => {
+  it('Fetches and displays real verified data from backend', async () => {
     mockSearchParams = new URLSearchParams('empresaId=e0000000-0000-0000-0000-000000000001');
 
     render(<PaymentPage />);
@@ -84,7 +87,7 @@ describe('Payment Guard & Checkout Security Flow', () => {
     expect(mockReplace).not.toHaveBeenCalled();
   });
 
-  it('?? GUARD: Redirects when company is already paid / active', async () => {
+  it('Redirects when company is already paid / active', async () => {
     mockSearchParams = new URLSearchParams('empresaId=e0000000-0000-0000-0000-000000000002');
 
     vi.mocked(api.pagamentos.getCheckoutInfo).mockImplementationOnce(() =>
@@ -114,7 +117,7 @@ describe('Payment Guard & Checkout Security Flow', () => {
     });
   });
 
-  it('?? GUARD: Redirects when company is blocked / suspended', async () => {
+  it('Redirects when company is blocked / suspended', async () => {
     mockSearchParams = new URLSearchParams('empresaId=e0000000-0000-0000-0000-000000000003');
 
     vi.mocked(api.pagamentos.getCheckoutInfo).mockImplementationOnce(() =>
@@ -125,7 +128,7 @@ describe('Payment Guard & Checkout Security Flow', () => {
         status: 'SUSPENDED',
         jaPago: false,
         bloqueada: true,
-        message: 'Esta conta encontra-se suspensa ou bloqueada. Entre em contato com o suporte do NexaERP para regulariza��o.',
+        message: 'Esta conta encontra-se suspensa ou bloqueada. Entre em contato com o suporte do NexaERP para regularização.',
       })
     );
 
@@ -136,17 +139,62 @@ describe('Payment Guard & Checkout Security Flow', () => {
     });
   });
 
-  it('?? GUARD: Redirects to /register if backend returns error', async () => {
+  it('Redirects to /register if backend returns error', async () => {
     mockSearchParams = new URLSearchParams('empresaId=e0000000-0000-0000-0000-000000000999');
 
     vi.mocked(api.pagamentos.getCheckoutInfo).mockImplementationOnce(() =>
-      Promise.reject(new Error('Empresa n�o encontrada para este checkout.'))
+      Promise.reject(new Error('Empresa não encontrada para este checkout.'))
     );
 
     render(<PaymentPage />);
 
     await waitFor(() => {
       expect(mockReplace).toHaveBeenCalledWith('/register');
+    });
+  });
+
+  it('Does not show fake PIX QR code before generating official Asaas charge and verifies payment before redirecting', async () => {
+    mockSearchParams = new URLSearchParams('empresaId=e0000000-0000-0000-0000-000000000001');
+
+    vi.mocked(api.pagamentos.create).mockResolvedValueOnce({
+      success: true,
+      message: 'PIX gerado',
+      paymentId: 'pay_asaas_123',
+      pix: {
+        copiaECola: '00020101021226830014br.gov.bcb.pix2561asaas-oficial',
+        qrCodeBase64: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+      },
+    });
+
+    render(<PaymentPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Padaria Segura LTDA')).toBeInTheDocument();
+    });
+
+    // Switch to PIX tab
+    fireEvent.click(screen.getByText('Pix'));
+
+    // Before generating PIX, QR Code image and "Copiar Chave" must NOT be rendered
+    expect(screen.queryByAltText('QR Code PIX')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Copiar Chave/i)).not.toBeInTheDocument();
+    expect(screen.getByText('Gerar Cobrança PIX Oficial →')).toBeInTheDocument();
+
+    // Generate official Asaas PIX
+    fireEvent.click(screen.getByText('Gerar Cobrança PIX Oficial →'));
+
+    await waitFor(() => {
+      expect(screen.getByAltText('QR Code PIX')).toBeInTheDocument();
+      expect(screen.getByText('00020101021226830014br.gov.bcb.pix2561asaas-oficial')).toBeInTheDocument();
+      expect(screen.getByText('Já realizei o pagamento →')).toBeInTheDocument();
+    });
+
+    // Click "Já realizei o pagamento →" while payment is still pending
+    fireEvent.click(screen.getByText('Já realizei o pagamento →'));
+
+    await waitFor(() => {
+      expect(api.pagamentos.consultarStatusPix).toHaveBeenCalledWith('pay_asaas_123');
+      expect(mockPush).not.toHaveBeenCalled();
     });
   });
 });

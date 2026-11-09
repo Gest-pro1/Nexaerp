@@ -1,36 +1,45 @@
-module.exports = {
-  ignores: ['.next', 'node_modules', 'backup', 'dist'],
-  overrides: [
-    {
-      files: ['*.ts', '*.tsx', '*.js', '*.jsx'],
-      parser: '@typescript-eslint/parser',
+const tsParser = require('@typescript-eslint/parser');
+const tsPlugin = require('@typescript-eslint/eslint-plugin');
+const reactPlugin = require('eslint-plugin-react');
+const reactHooksPlugin = require('eslint-plugin-react-hooks');
+
+module.exports = [
+  {
+    ignores: [
+      '.next/**',
+      '.open-next/**',
+      'node_modules/**',
+      'backup/**',
+      'dist/**',
+      'out/**',
+      'coverage/**',
+      'cloudflare-env.d.ts',
+    ],
+  },
+  {
+    files: ['**/*.{ts,tsx,js,jsx}'],
+    languageOptions: {
+      parser: tsParser,
       parserOptions: {
-        ecmaVersion: 2020,
+        ecmaVersion: 2022,
         sourceType: 'module',
         ecmaFeatures: { jsx: true },
-        project: './tsconfig.json'
       },
-      plugins: [
-        '@typescript-eslint',
-        'react',
-        'react-hooks',
-        'import',
-        'jsx-a11y',
-        'prettier'
-      ],
-      extends: [
-        'eslint:recommended',
-        'plugin:react/recommended',
-        'plugin:react-hooks/recommended',
-        'plugin:@typescript-eslint/recommended',
-        'plugin:import/errors',
-        'plugin:import/warnings',
-        'plugin:jsx-a11y/recommended',
-        'plugin:prettier/recommended',
-        'next/core-web-vitals'
-      ],
-      settings: { react: { version: 'detect' } },
-      rules: {}
-    }
-  ]
-};
+    },
+    plugins: {
+      '@typescript-eslint': tsPlugin,
+      react: reactPlugin,
+      'react-hooks': reactHooksPlugin,
+    },
+    settings: {
+      react: { version: 'detect' },
+    },
+    rules: {
+      'react/react-in-jsx-scope': 'off',
+      'react/prop-types': 'off',
+      'no-unused-vars': 'off',
+      '@typescript-eslint/no-unused-vars': 'off',
+      '@typescript-eslint/no-explicit-any': 'off',
+    },
+  },
+];

@@ -193,11 +193,15 @@ export const api = {
   },
   pagamentos: {
     getCheckoutInfo: (empresaId: string) => fetchAPI<any>(`/pagamentos/checkout/${empresaId}`),
+    consultarStatusPix: (paymentId: string) =>
+      fetchAPI<{ paymentId: string; status: string; isApproved: boolean; isExpired: boolean }>(
+        `/pagamentos/pix/status/${encodeURIComponent(paymentId)}`,
+      ),
     create: (
       data: { empresaId: string; metodo: string; cardName?: string; cardNumber?: string; expiryDate?: string; cvv?: string },
       idempotencyKey?: string,
     ) =>
-      fetchAPI<{ success: boolean; message: string; pix?: any; status?: string; isApproved?: boolean }>('/pagamentos', {
+      fetchAPI<{ success: boolean; message: string; paymentId?: string; pagamentoId?: string; pix?: any; status?: string; isApproved?: boolean }>('/pagamentos', {
         method: 'POST',
         headers: idempotencyKey ? { 'x-idempotency-key': idempotencyKey } : undefined,
         body: JSON.stringify(data),
@@ -209,6 +213,12 @@ export const api = {
       if (params?.status) query.set('status', params.status);
       return fetchAPI<any>(`/pagamentos?${query}`);
     },
+  },
+  mail: {
+    enviarCobranca: (empresaId: string) =>
+      fetchAPI<{ success: boolean; message: string }>(`/mail/enviar-cobranca/${encodeURIComponent(empresaId)}`, {
+        method: 'POST',
+      }),
   },
   admin: {
     stats: () => fetchAPI<any>('/admin/stats'),

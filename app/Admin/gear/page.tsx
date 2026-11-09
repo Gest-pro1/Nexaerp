@@ -130,7 +130,7 @@ const secoes = [
   { id: "modulos", titulo: "Módulos", subtitulo: "Segmentos ativos", icon: Square3Stack3DIcon },
   { id: "planos", titulo: "Planos", subtitulo: "Preços e recursos", icon: CreditCardIcon },
   { id: "financeiro", titulo: "Financeiro", subtitulo: "Regras de cobrança", icon: CurrencyDollarIcon },
-  { id: "integracoes", titulo: "Integrações", subtitulo: "Gateways de pagamento", icon: PuzzlePieceIcon },
+  { id: "integracoes", titulo: "Integrações", subtitulo: "Gateway Asaas", icon: PuzzlePieceIcon },
 ] as const;
 
 type SecaoId = (typeof secoes)[number]["id"];
@@ -213,6 +213,7 @@ const planosIniciais = [
   },
 ];
 
+// Gateway exclusivo padronizado: Asaas
 const gateways = [
   {
     id: "asaas",
@@ -222,24 +223,6 @@ const gateways = [
       { chave: "chave2", label: "Wallet ID", placeholder: "UUID da Carteira Asaas" },
     ],
     webhook: "/api/pagamentos/webhook/asaas",
-  },
-  {
-    id: "mercadopago",
-    label: "Mercado Pago",
-    campos: [
-      { chave: "chave1", label: "Public Key", placeholder: "TEST-... ou APP_USR-..." },
-      { chave: "chave2", label: "Access Token", placeholder: "APP_USR-... ou TEST-..." },
-    ],
-    webhook: "/api/pagamentos/webhook/mercadopago",
-  },
-  {
-    id: "stripe",
-    label: "Stripe",
-    campos: [
-      { chave: "chave1", label: "Publishable Key", placeholder: "pk_test_... ou pk_live_..." },
-      { chave: "chave2", label: "Secret Key", placeholder: "sk_test_... ou sk_live_..." },
-    ],
-    webhook: "/api/pagamentos/webhook/stripe",
   },
 ] as const;
 
@@ -515,23 +498,19 @@ const ConfiguracoesSistema = () => {
   );
   const [ativarLembretes, setAtivarLembretes] = useState<boolean>(initialConfig?.ativarLembretes ?? true);
 
-  // Integrações
+  // Integrações (exclusivo Asaas)
   const [gatewayAtivo, setGatewayAtivo] = useState<string>("asaas");
   const [sandbox, setSandbox] = useState<SandboxState>(
-    initialConfig?.sandbox ?? Object.fromEntries(gateways.map((g) => [g.id, true]))
+    initialConfig?.sandbox ?? { asaas: true }
   );
-  const [gatewayKeys, setGatewayKeys] = useState<Record<string, Record<string, string>>>(
-    initialConfig?.gatewayKeys ?? {
-      asaas: { chave1: "", chave2: "" },
-      mercadopago: { chave1: "", chave2: "" },
-      stripe: { chave1: "", chave2: "" },
-    }
-  );
+  const [gatewayKeys, setGatewayKeys] = useState<Record<string, Record<string, string>>>({
+    asaas: { chave1: "", chave2: "" },
+  });
   const [validacaoGateway, setValidacaoGateway] = useState<any>(null);
   const [testandoGateway, setTestandoGateway] = useState<boolean>(false);
   const [feedbackMensagem, setFeedbackMensagem] = useState<string>("");
 
-  const gatewaySelecionado = gateways.find((g) => g.id === gatewayAtivo)!;
+  const gatewaySelecionado = gateways[0];
 
   // Carregar dados salvos, planos e configurações do banco/API na montagem
   useEffect(() => {
@@ -547,8 +526,16 @@ const ConfiguracoesSistema = () => {
         if (parsed.destaque) setDestaque(parsed.destaque);
         if (parsed.financeiro) setFinanceiro(parsed.financeiro);
         if (typeof parsed.ativarLembretes === "boolean") setAtivarLembretes(parsed.ativarLembretes);
-        if (parsed.sandbox) setSandbox(parsed.sandbox);
-        if (parsed.gatewayKeys) setGatewayKeys(parsed.gatewayKeys);
+        if (parsed.sandbox) setSandbox({ asaas: parsed.sandbox.asaas !== false });
+
+        // NEXA-SEC-003: Remover quaisquer chaves de API anteriormente gravadas no localStorage
+        if (parsed.gatewayKeys || parsed.gateway_pagamento?.gatewayKeys) {
+          delete parsed.gatewayKeys;
+          if (parsed.gateway_pagamento) {
+            delete parsed.gateway_pagamento.gatewayKeys;
+          }
+          localStorage.setItem("nexaerp_system_config", JSON.stringify(parsed));
+        }
       }
     } catch (e) {
       console.warn("Erro ao carregar configurações salvas:", e);
@@ -579,10 +566,14 @@ const ConfiguracoesSistema = () => {
 
         if (configs?.gateway_pagamento) {
           const gw = configs.gateway_pagamento;
-          if (gw.ativo) setGatewayAtivo(gw.ativo);
-          if (gw.sandbox) setSandbox((prev) => ({ ...prev, ...gw.sandbox }));
-          if (gw.gatewayKeys) setGatewayKeys((prev) => ({ ...prev, ...gw.gatewayKeys }));
-          if (gw.mercadopagoValidation) setValidacaoGateway(gw.mercadopagoValidation);
+          setGatewayAtivo("asaas");
+          if (gw.sandbox) setSandbox({ asaas: gw.sandbox.asaas !== false });
+          if (gw.gatewayKeys?.asaas) {
+            setGatewayKeys({ asaas: gw.gatewayKeys.asaas });
+          }
+          if (gw.asaasValidation) {
+            setValidacaoGateway(gw.asaasValidation);
+          }
         }
 
         if (configs?.destaque && typeof configs.destaque === "object") {
@@ -620,12 +611,12 @@ const ConfiguracoesSistema = () => {
   const handleTestarGateway = async () => {
     setTestandoGateway(true);
     try {
-      const keys = gatewayKeys[gatewayAtivo] || {};
+      const keys = gatewayKeys.asaas || {};
       const res = await api.admin.testarGateway({
-        gateway: gatewayAtivo,
+        gateway: "asaas",
         chave1: keys.chave1 || "",
         chave2: keys.chave2 || "",
-        sandbox: sandbox[gatewayAtivo] !== false,
+        sandbox: sandbox.asaas !== false,
       });
 
       if (res?.resultado) {
@@ -633,7 +624,7 @@ const ConfiguracoesSistema = () => {
       }
       setFeedbackMensagem(res?.resultado?.mensagem || res?.message || "Teste concluído!");
     } catch (err: any) {
-      setFeedbackMensagem(`Erro ao testar gateway: ${err.message}`);
+      setFeedbackMensagem(`Erro ao testar gateway Asaas: ${err.message}`);
     } finally {
       setTestandoGateway(false);
     }
@@ -641,6 +632,7 @@ const ConfiguracoesSistema = () => {
 
   const salvarAlteracoes = async () => {
     setErroSalvar(null);
+    setSalvoSucesso(false);
     const errosOcorridos: string[] = [];
 
     // Garantir sincronia entre planos e o mapa de destaque
@@ -649,6 +641,7 @@ const ConfiguracoesSistema = () => {
       popular: Boolean(destaque[p.id]),
     }));
 
+    // NEXA-SEC-003: Nunca persistir gatewayKeys (chaves de API secretas) no localStorage do navegador
     const configToSave = {
       email,
       manutencaoGlobal,
@@ -658,17 +651,14 @@ const ConfiguracoesSistema = () => {
       destaque,
       financeiro,
       ativarLembretes,
-      sandbox,
-      gatewayKeys,
+      sandbox: { asaas: sandbox.asaas !== false },
       gateway_pagamento: {
-        ativo: gatewayAtivo,
-        sandbox,
-        gatewayKeys,
+        ativo: "asaas",
+        sandbox: { asaas: sandbox.asaas !== false },
       },
       updatedAt: new Date().toISOString(),
     };
 
-    // Salvar localmente primeiro para garantir persistência imediata
     try {
       localStorage.setItem("nexaerp_system_config", JSON.stringify(configToSave));
     } catch (e) {
@@ -694,9 +684,11 @@ const ConfiguracoesSistema = () => {
         segmentos,
         ativarLembretes,
         gateway_pagamento: {
-          ativo: gatewayAtivo,
-          sandbox,
-          gatewayKeys,
+          ativo: "asaas",
+          sandbox: { asaas: sandbox.asaas !== false },
+          gatewayKeys: {
+            asaas: gatewayKeys.asaas || { chave1: "", chave2: "" },
+          },
         },
       });
 
@@ -711,13 +703,9 @@ const ConfiguracoesSistema = () => {
       errosOcorridos.push(`Configurações: ${err.message || "Falha ao salvar configurações"}`);
     }
 
+    // NEXA-FUNC-005: Se ocorrer erro na sincronização com o backend, exibir apenas o erro (sem falso sucesso)
     if (errosOcorridos.length > 0) {
       setErroSalvar(errosOcorridos.join(" | "));
-      // Notifica que o salvamento local foi efetuado mesmo que o backend remoto falhe
-      setSalvoSucesso(true);
-      setTimeout(() => {
-        setSalvoSucesso(false);
-      }, 4000);
       return;
     }
 
@@ -857,7 +845,7 @@ const ConfiguracoesSistema = () => {
                       Gestão de Segmentos
                     </CardTitle>
                     <p className="text-xs text-gray-400 mt-1">
-                      Controle quais módulos estão disponíveis para venda. Use o "Modo Manutenção" para bloquear
+                      Controle quais módulos estão disponíveis para venda. Use o &quot;Modo Manutenção&quot; para bloquear
                       acesso a um segmento específico sem afetar os demais.
                     </p>
                   </CardHeader>
@@ -1022,7 +1010,6 @@ const ConfiguracoesSistema = () => {
                           placeholder="Ex: Suporte VIP 24/7"
                           value={novoRecursoTexto}
                           onChange={(e) => setNovoRecursoTexto(e.target.value)}
-                          autoFocus
                           required
                           className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
                         />
@@ -1253,7 +1240,7 @@ const ConfiguracoesSistema = () => {
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <PuzzlePieceIcon className="w-5 h-5 text-gray-500" />
-                      Gateways de Pagamento
+                      Gateway de Pagamento (Asaas)
                     </CardTitle>
                     <div className="flex items-center gap-5 border-b border-gray-100 pt-2">
                       {gateways.map((g) => (
@@ -1325,7 +1312,9 @@ const ConfiguracoesSistema = () => {
                           </p>
                           {validacaoGateway?.conta && (
                             <p className="text-xs text-gray-500 mt-1">
-                              Conta: <strong>{validacaoGateway.conta.nickname}</strong> ({validacaoGateway.conta.email}) — ID: {validacaoGateway.conta.id}
+                              {typeof validacaoGateway.conta.saldo === "number"
+                                ? `Conta Asaas verificada — Saldo disponível: R$ ${validacaoGateway.conta.saldo.toFixed(2).replace(".", ",")}`
+                                : `Conta Asaas conectada`}
                             </p>
                           )}
                         </div>
@@ -1377,7 +1366,7 @@ const ConfiguracoesSistema = () => {
                         </button>
                       </div>
                       <p className="text-xs text-gray-400 mt-1.5">
-                        Configure a URL para receber notificações de pagamento.
+                        Configure a URL no painel Asaas para receber notificações de pagamento.
                       </p>
                     </div>
                   </CardContent>

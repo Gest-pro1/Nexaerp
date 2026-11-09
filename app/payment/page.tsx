@@ -5,8 +5,6 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { api } from '@/lib/api';
 import { Suspense } from "react";
 
-const PIX_CODE = "00020126580014BR.GOV.BCB.PIX0136550e4f40-6d28-4f92-a5a7-2e7c2d5f8c3f52040000";
-
 function generateQRCode(text: string) {
   return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(text)}`;
 }
@@ -115,15 +113,6 @@ function SSLIcon() {
   );
 }
 
-function ShieldIcon() {
-  return (
-    <svg width="14" height="16" viewBox="0 0 16 18" fill="none">
-      <path d="M8 1L14 4v5c0 3.5-2.5 6.5-6 7.5C2.5 15.5 0 12.5 0 9V4L8 1z" fill="#F59E0B" />
-      <path d="M4.5 9l2 2 4-4" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
 
 // ── Payment Content ────────────────────────────────────────────────────────
 
@@ -153,8 +142,9 @@ function PaymentContent() {
   const [errors, setErrors] = useState<PaymentErrors>({});
   const [isLoading, setIsLoading] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [dynamicPixCode, setDynamicPixCode] = useState<string>(PIX_CODE);
+  const [dynamicPixCode, setDynamicPixCode] = useState<string>("");
   const [dynamicQrImage, setDynamicQrImage] = useState<string>("");
+  const [pixPaymentId, setPixPaymentId] = useState<string>("");
   const [pixGerado, setPixGerado] = useState<boolean>(false);
 
   useEffect(() => {
@@ -250,6 +240,40 @@ function PaymentContent() {
   const processPayment = async () => {
     try {
       setIsLoading(true);
+
+      // Se a cobrança PIX já foi gerada, verifica se o pagamento foi efetivamente compensado no Asaas/banco
+      if (paymentMethod === "pix" && pixGerado) {
+        let pagoConfirmado = false;
+
+        if (pixPaymentId && typeof api.pagamentos.consultarStatusPix === "function") {
+          try {
+            const pixStatus = await api.pagamentos.consultarStatusPix(pixPaymentId);
+            if (pixStatus?.isApproved || pixStatus?.status === "APPROVED" || pixStatus?.status === "pago") {
+              pagoConfirmado = true;
+            }
+          } catch {
+            // Prossegue para verificação via getCheckoutInfo
+          }
+        }
+
+        if (!pagoConfirmado) {
+          const checkoutStatus = await api.pagamentos.getCheckoutInfo(empresaId);
+          if (checkoutStatus?.jaPago || checkoutStatus?.status === "ativa" || checkoutStatus?.status === "ACTIVE") {
+            pagoConfirmado = true;
+          }
+        }
+
+        setIsLoading(false);
+        if (pagoConfirmado) {
+          router.push(
+            `/payment/sucesso?plan=${encodeURIComponent(planName)}&frequency=${encodeURIComponent(frequency)}&company=${encodeURIComponent(companyName)}${modulo ? `&modulo=${encodeURIComponent(modulo)}` : ""}`
+          );
+        } else {
+          alert("Pagamento PIX ainda aguardando confirmação bancária no Asaas. Assim que realizar o pagamento, aguarde alguns segundos e clique novamente.");
+        }
+        return;
+      }
+
       const res: any = await api.pagamentos.create(
         {
           empresaId,
@@ -265,6 +289,7 @@ function PaymentContent() {
       );
 
       if (paymentMethod === 'pix' && res?.pix) {
+        if (res.paymentId) setPixPaymentId(res.paymentId);
         if (res.pix.copiaECola) setDynamicPixCode(res.pix.copiaECola);
         if (res.pix.qrCodeBase64) setDynamicQrImage(res.pix.qrCodeBase64);
         setPixGerado(true);
@@ -315,6 +340,7 @@ function PaymentContent() {
   }
 
   const copyPix = () => {
+    if (!dynamicPixCode) return;
     navigator.clipboard?.writeText(dynamicPixCode);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -499,28 +525,40 @@ function PaymentContent() {
           {/* PIX */}
           {paymentMethod === "pix" && (
             <div className="flex flex-col gap-4">
-              <div className="border border-gray-200 rounded-2xl p-8 bg-white text-center">
-                <div className="inline-block bg-white p-2 rounded-xl shadow-sm ">
-                  <img
-                    src={dynamicQrImage || generateQRCode(dynamicPixCode)}
-                    alt="QR Code PIX"
-                    className="w-44 h-44 block object-contain"
-                  />
+              {pixGerado && dynamicPixCode ? (
+                <div className="border border-gray-200 rounded-2xl p-8 bg-white text-center">
+                  <div className="inline-block bg-white p-2 rounded-xl shadow-sm ">
+                    <img
+                      src={dynamicQrImage || generateQRCode(dynamicPixCode)}
+                      alt="QR Code PIX"
+                      className="w-44 h-44 block object-contain"
+                    />
+                  </div>
+                  <p className="font-bold text-gray-800 text-base mb-2">Escaneie o QR Code</p>
+                  <p className="text-gray-500 text-sm font-semibold leading-relaxed mb-5">
+                    Aponte a câmera do seu banco para o código acima<br />para pagar via PIX no Asaas.
+                  </p>
+                  <div className="flex items-center gap-3 border border-gray-200 rounded-xl px-4 py-3 bg-gray-50">
+                    <span className="flex-1 text-xs font-mono text-gray-500 truncate">{dynamicPixCode}</span>
+                    <button
+                      onClick={copyPix}
+                      className="shrink-0 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition flex items-center gap-1 cursor-pointer"
+                    >
+                      📋 {copied ? "Copiado!" : "Copiar Chave"}
+                    </button>
+                  </div>
                 </div>
-                <p className="font-bold text-gray-800 text-base mb-2">Escaneie o QR Code</p>
-                <p className="text-gray-500 text-sm font-semibold leading-relaxed mb-5">
-                  Aponte a câmera do seu banco para o código acima<br />para pagar via pix.
-                </p>
-                <div className="flex items-center gap-3 border border-gray-200 rounded-xl px-4 py-3 bg-gray-50">
-                  <span className="flex-1 text-xs font-mono text-gray-500 truncate">{dynamicPixCode}</span>
-                  <button
-                    onClick={copyPix}
-                    className="shrink-0 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition flex items-center gap-1 cursor-pointer"
-                  >
-                    📋 {copied ? "Copiado!" : "Copiar Chave"}
-                  </button>
+              ) : (
+                <div className="border border-gray-200 rounded-2xl p-8 bg-white text-center">
+                  <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-blue-50">
+                    <PixIcon active={true} />
+                  </div>
+                  <p className="font-bold text-gray-800 text-base mb-2">Pagamento Instantâneo via PIX</p>
+                  <p className="text-gray-500 text-sm font-semibold leading-relaxed">
+                    Clique no botão abaixo para gerar o QR Code oficial e a chave Copia e Cola do seu plano no Asaas.
+                  </p>
                 </div>
-              </div>
+              )}
 
               <button
                 onClick={processPayment}
@@ -536,7 +574,6 @@ function PaymentContent() {
           {/* Footer */}
           <div className="mt-8 pt-6 border-t border-gray-200 justify-center flex items-center gap-3">
               <img src="/cartoes-footer.svg" alt="cartoes" width={200} />
-            
           </div>
 
         </div>

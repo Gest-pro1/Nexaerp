@@ -7,7 +7,6 @@ import {
   type EmpresaAdmin,
 } from "../../lib/admin-data";
 import { api } from '@/lib/api';
-import { isAuthenticated, logout } from '@/lib/auth';
 
 import {
   BuildingOffice2Icon,
@@ -86,12 +85,13 @@ type EditFormState = {
 
 export default function AdminPage() {
   const [selectedCard, setSelectedCard] = useState(0);
-  const [notificacoes, setNotificacoes] = useState(0);
+  const [notificacoes] = useState(0);
   const [modalType, setModalType] = useState<ModalType>(null);
   const [modalData, setModalData] = useState<ModalData | null>(null);
+  const [enviandoMensagem, setEnviandoMensagem] = useState(false);
 
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
   const [planosDisponiveis, setPlanosDisponiveis] = useState<any[]>([
     { id: 'standard', nome: 'Standart', preco_mensal: 69.90 },
     { id: 'professional', nome: 'Profissional', preco_mensal: 129.90 },
@@ -221,6 +221,21 @@ export default function AdminPage() {
     setModalType("mensagem");
   };
 
+  // NEXA-FUNC-005: Dispara efetivamente o envio do e-mail de cobrança no backend
+  const confirmarEnvioMensagem = async () => {
+    if (!modalData) return;
+    setEnviandoMensagem(true);
+    try {
+      const res = await api.mail.enviarCobranca(String(modalData.empresaId));
+      alert(res?.message || `Notificação de cobrança enviada para ${modalData.empresaNome}.`);
+      closeModal();
+    } catch (err: any) {
+      alert("Erro ao enviar mensagem/cobrança: " + (err.message || "Falha na comunicação com o servidor."));
+    } finally {
+      setEnviandoMensagem(false);
+    }
+  };
+
   const handleNovaEmpresa = () => {
     setCreateForm({ ...defaultFormState });
     setModalType("criar");
@@ -231,15 +246,16 @@ export default function AdminPage() {
       alert("Por favor, preencha os campos obrigatórios: Razão Social/Nome Fantasia, CNPJ e E-mail.");
       return;
     }
-    
+
     const matchedPlano = planosDisponiveis.find((p) => p.nome === createForm.plano || p.id === createForm.plano);
 
     try {
+      // NEXA-SEC-012: Nunca usar senha padrão fraca '123456'; se omitida, o backend gera senha temporária CSPRNG
       await api.auth.register({
         razaoSocial: createForm.nome,
         cnpj: createForm.cnpj,
         email: createForm.email,
-        senha: createForm.senha || '123456',
+        ...(createForm.senha.trim() ? { senha: createForm.senha.trim() } : {}),
         telefone: createForm.telefone,
         cep: createForm.cep,
         rua: createForm.rua,
@@ -815,10 +831,11 @@ export default function AdminPage() {
                   Cancelar
                 </button>
                 <button
-                  onClick={closeModal}
-                  className="w-full rounded-lg bg-blue-600 px-5 py-2 font-medium text-white transition hover:bg-blue-700 sm:w-auto"
+                  onClick={confirmarEnvioMensagem}
+                  disabled={enviandoMensagem}
+                  className="w-full rounded-lg bg-blue-600 px-5 py-2 font-medium text-white transition hover:bg-blue-700 disabled:opacity-50 sm:w-auto"
                 >
-                  Enviar
+                  {enviandoMensagem ? "Enviando..." : "Enviar"}
                 </button>
               </div>
             </div>
@@ -874,7 +891,7 @@ export default function AdminPage() {
                 </div>
 
                 <div>
-                  <h4 className="mb-4 text-lg font-semibold text-gray-800">Localização & Endereço</h4>
+                  <h4 className="mb-4 text-lg font-semibold text-gray-800">Localização &amp; Endereço</h4>
                   <div className="space-y-3">
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                       <div>
@@ -983,7 +1000,7 @@ export default function AdminPage() {
                           type="password"
                           value={editForm.senha}
                           onChange={(e) => setEditForm((prev) => ({ ...prev, senha: e.target.value }))}
-                          placeholder="bony123"
+                          placeholder="••••••••"
                           className="w-full rounded-lg border border-gray-300 p-3 text-black placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
                         />
                       </div>
@@ -1094,7 +1111,7 @@ export default function AdminPage() {
                 </div>
 
                 <div>
-                  <h4 className="mb-3 text-base font-semibold text-gray-800">Localização & Endereço</h4>
+                  <h4 className="mb-3 text-base font-semibold text-gray-800">Localização &amp; Endereço</h4>
                   <div className="space-y-3">
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                       <div>
@@ -1173,7 +1190,7 @@ export default function AdminPage() {
                 </div>
 
                 <div>
-                  <h4 className="mb-3 text-base font-semibold text-gray-800">Contato & Acesso</h4>
+                  <h4 className="mb-3 text-base font-semibold text-gray-800">Contato &amp; Acesso</h4>
                   <div className="space-y-3">
                     <div>
                       <label className="mb-1 block text-sm font-medium text-gray-700">Nome do Responsável</label>
@@ -1198,12 +1215,12 @@ export default function AdminPage() {
                         />
                       </div>
                       <div>
-                        <label className="mb-1 block text-sm font-medium text-gray-700">Senha Inicial</label>
+                        <label className="mb-1 block text-sm font-medium text-gray-700">Senha Inicial (opcional — gerada automaticamente)</label>
                         <input
                           type="password"
                           value={createForm.senha}
                           onChange={(e) => setCreateForm((prev) => ({ ...prev, senha: e.target.value }))}
-                          placeholder="••••••••"
+                          placeholder="Deixe em branco para gerar senha segura"
                           className="w-full rounded-lg border border-gray-300 p-3 text-black placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
                         />
                       </div>

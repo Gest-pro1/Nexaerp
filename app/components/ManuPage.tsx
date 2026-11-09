@@ -45,8 +45,12 @@ export default function AdminLayout({ children, notificacoes = 0 }: AdminLayoutP
   const router = useRouter();
 
   useEffect(() => {
-    setUser(getUser());
-  }, []);
+    const currentUser = getUser();
+    setUser(currentUser);
+    if (currentUser && currentUser.role && currentUser.role !== 'admin') {
+      router.replace('/menu-modulos');
+    }
+  }, [router]);
 
   // Trava o scroll do body quando o menu mobile está aberto
   useEffect(() => {

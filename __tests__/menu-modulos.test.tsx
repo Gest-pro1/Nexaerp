@@ -41,51 +41,41 @@ describe('MenuModulosPage Component Tests', () => {
     vi.spyOn(authModule, 'getUserStatus').mockReturnValue('ativa');
   });
 
-  it('renders module page with authorized access header and subscribed module', () => {
+  it('renders module selection page and pre-selects the user module', () => {
     render(<MenuModulosPage />);
 
-    expect(screen.getByRole('heading', { name: /acesso autorizado/i })).toBeInTheDocument();
-    expect(screen.getAllByText(/bares e restaurantes/i).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText(/liberado/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /acessar módulo bares e restaurantes/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /login realizado!/i })).toBeInTheDocument();
+    expect(screen.getByText(/selecione o módulo para acessar:/i)).toBeInTheDocument();
+
+    const radioBares = screen.getByDisplayValue('bares-restaurantes') as HTMLInputElement;
+    expect(radioBares).toBeChecked();
+    expect(screen.getByRole('button', { name: /acessar painel/i })).toBeInTheDocument();
   });
 
-  it('shows other modules as Inacessível when switching to Todos os Módulos', () => {
+  it('renders all four ERP segment modules with descriptions', () => {
     render(<MenuModulosPage />);
-
-    const allModulesTab = screen.getByRole('button', { name: /todos os módulos/i });
-    fireEvent.click(allModulesTab);
 
     expect(screen.getByText(/lojas e varejo/i)).toBeInTheDocument();
-    expect(screen.getByText(/mercados e padarias/i)).toBeInTheDocument();
+    expect(screen.getByText(/bares e restaurantes/i)).toBeInTheDocument();
     expect(screen.getByText(/salões e barbearias/i)).toBeInTheDocument();
-
-    const inaccessibleBadges = screen.getAllByText(/inacessível/i);
-    expect(inaccessibleBadges.length).toBeGreaterThanOrEqual(3);
+    expect(screen.getByText(/mercados e padarias/i)).toBeInTheDocument();
   });
 
-  it('displays lock notice when clicking on an inaccessible module', () => {
+  it('allows switching module selection before accessing the panel', () => {
     render(<MenuModulosPage />);
 
-    const allModulesTab = screen.getByRole('button', { name: /todos os módulos/i });
-    fireEvent.click(allModulesTab);
+    const radioMercados = screen.getByDisplayValue('mercados-padarias') as HTMLInputElement;
+    fireEvent.click(radioMercados);
 
-    const retailModule = screen.getByText(/lojas e varejo/i);
-    fireEvent.click(retailModule);
-
-    expect(screen.getByText(/módulo inacessível/i)).toBeInTheDocument();
-    expect(screen.getByText(/está inacessível/i)).toBeInTheDocument();
+    expect(radioMercados).toBeChecked();
   });
 
-  it('opens module workspace with stats and operations when clicking access button', () => {
+  it('navigates to /modulos/:id when clicking Acessar Painel', () => {
     render(<MenuModulosPage />);
 
-    const accessButton = screen.getByRole('button', { name: /acessar módulo bares e restaurantes/i });
+    const accessButton = screen.getByRole('button', { name: /acessar painel/i });
     fireEvent.click(accessButton);
 
-    expect(screen.getByRole('heading', { name: /painel de gestão: bares e restaurantes/i })).toBeInTheDocument();
-    expect(screen.getByText(/métricas do módulo/i)).toBeInTheDocument();
-    expect(screen.getByText(/mapa de mesas/i)).toBeInTheDocument();
-    expect(screen.getByText(/painel cozinha \(kds\)/i)).toBeInTheDocument();
+    expect(mockPush).toHaveBeenCalledWith('/modulos/bares-restaurantes');
   });
 });
