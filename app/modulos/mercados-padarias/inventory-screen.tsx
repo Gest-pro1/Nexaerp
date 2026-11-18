@@ -1,25 +1,25 @@
 "use client";
 
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useId, useMemo, useState, type FormEvent } from "react";
 import {
+  AlertTriangle,
+  ArrowUpDown,
   Barcode,
-  Calendar,
-  CheckCircle2,
+  CalendarClock,
   CircleX,
   Package,
   Pencil,
   Plus,
   Search,
   Trash2,
-  Truck,
   X,
 } from "lucide-react";
 import {
+  applyStockMovement,
   calculateSalePrice,
   computeInventoryMetrics,
   EMPTY_INVENTORY_PRODUCTS,
   EMPTY_INVENTORY_SUPPLIERS,
-  formatExpirationDate,
   generateEan13,
   getExpirationStatus,
   INVENTORY_CATEGORIES,
@@ -28,20 +28,37 @@ import {
   type InventoryProduct,
   type InventorySupplier,
   type InventoryUnit,
+  type StockMovementRecord,
+  type StockMovementType,
 } from "@/lib/market-inventory";
 
-type InventoryScreenProps = {
+const brlFormatter = new Intl.NumberFormat("pt-BR", {
+  style: "currency",
+  currency: "BRL",
+});
+
+function formatCurrency(value: number): string {
+  return brlFormatter.format(value);
+}
+
+export interface InventoryScreenProps {
   initialProducts?: InventoryProduct[];
+  products?: InventoryProduct[];
   initialSuppliers?: InventorySupplier[];
-  onSaveProduct?: (product: InventoryProduct) => void | Promise<void>;
-  onDeleteProduct?: (productId: string) => void | Promise<void>;
-  onSaveSupplier?: (supplier: InventorySupplier) => void | Promise<void>;
-};
+  suppliers?: InventorySupplier[];
+  referenceDate?: Date;
+  onSaveProduct?: (product: InventoryProduct, isEdit: boolean) => void;
+  onDeleteProduct?: (productId: string) => void;
+  onMoveStock?: (
+    updatedProduct: InventoryProduct,
+    movement: StockMovementRecord,
+  ) => void;
+  onSaveSupplier?: (supplier: InventorySupplier, isEdit: boolean) => void;
+}
 
-type ProductModalMode = "create" | "edit" | null;
-type SupplierModalMode = "create" | "edit" | null;
-
-type ProductFormState = {
+interface ProductFormDraft {
+  id?: string;
+  code: string;
   barcode: string;
   description: string;
   category: string;
@@ -52,420 +69,578 @@ type ProductFormState = {
   currentStock: string;
   minStock: string;
   expirationDate: string;
-  supplierName: string;
-};
+  supplierId: string;
+  active: boolean;
+}
 
-type SupplierFormState = {
+interface SupplierFormDraft {
+  id?: string;
   name: string;
   document: string;
   representative: string;
   contact: string;
   email: string;
   notes: string;
-};
+}
 
-const EMPTY_PRODUCT_FORM: ProductFormState = {
-  barcode: "7921223330139",
-  description: "",
-  category: "Mercearia",
-  unit: "UN",
-  unitCost: "",
-  suggestedMargin: "35",
-  salePrice: "",
-  currentStock: "0",
-  minStock: "0",
-  expirationDate: "",
-  supplierName: "",
-};
+function createEmptyProductDraft(
+  defaultSupplierId = "",
+  nextCodeNumber = 1001,
+): ProductFormDraft {
+  return {
+    code: String(nextCodeNumber),
+    barcode: "7891000100103",
+    description: "",
+    category: INVENTORY_CATEGORIES[0],
+    unit: "UN",
+    unitCost: "",
+    suggestedMargin: "35",
+    salePrice: "",
+    currentStock: "",
+    minStock: "",
+    expirationDate: "",
+    supplierId: defaultSupplierId,
+    active: true,
+  };
+}
 
-const EMPTY_SUPPLIER_FORM: SupplierFormState = {
-  name: "",
-  document: "",
-  representative: "",
-  contact: "",
-  email: "",
-  notes: "",
-};
+function productToDraft(
+  product: InventoryProduct,
+  suppliers: InventorySupplier[],
+): ProductFormDraft {
+  const matchedSupplier =
+    suppliers.find((s) => s.id === product.supplierId) ??
+    suppliers.find((s) => s.name === product.supplierName);
 
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
+  return {
+    id: product.id,
+    code: product.code ?? "1001",
+    barcode: product.barcode,
+    description: product.description,
+    category: product.category,
+    unit: product.unit,
+    unitCost: String(product.unitCost),
+    suggestedMargin: String(product.suggestedMargin),
+    salePrice: String(product.salePrice),
+    currentStock: String(product.currentStock),
+    minStock: String(product.minStock),
+    expirationDate: product.expirationDate,
+    supplierId: matchedSupplier?.id ?? "",
+    active: product.active !== false,
+  };
+}
 
-function parseNumberInput(value: string): number {
-  const normalized = value.replace(",", ".").trim();
-  const parsed = Number(normalized);
-  return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
+function createEmptySupplierDraft(): SupplierFormDraft {
+  return {
+    name: "",
+    document: "",
+    representative: "",
+    contact: "",
+    email: "",
+    notes: "",
+  };
+}
+
+function supplierToDraft(supplier: InventorySupplier): SupplierFormDraft {
+  return {
+    id: supplier.id,
+    name: supplier.name,
+    document: supplier.document,
+    representative: supplier.representative,
+    contact: supplier.contact,
+    email: supplier.email,
+    notes: supplier.notes,
+  };
+}
+
+function formatDateDigits(raw: string): string {
+  const digits = raw.replace(/\D/g, "").slice(0, 8);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+  return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
 }
 
 export default function InventoryScreen({
   initialProducts = EMPTY_INVENTORY_PRODUCTS,
+  products: controlledProducts,
   initialSuppliers = EMPTY_INVENTORY_SUPPLIERS,
+  suppliers: controlledSuppliers,
+  referenceDate,
   onSaveProduct,
   onDeleteProduct,
+  onMoveStock,
   onSaveSupplier,
 }: InventoryScreenProps) {
-  const [products, setProducts] = useState<InventoryProduct[]>(initialProducts);
-  const [suppliers, setSuppliers] = useState<InventorySupplier[]>(initialSuppliers);
+  const [internalProducts, setInternalProducts] =
+    useState<InventoryProduct[]>(initialProducts);
+  const [internalSuppliers, setInternalSuppliers] =
+    useState<InventorySupplier[]>(initialSuppliers);
+
+  const products = controlledProducts ?? internalProducts;
+  const suppliers = controlledSuppliers ?? internalSuppliers;
+
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
 
-  const [productModalMode, setProductModalMode] = useState<ProductModalMode>(null);
-  const [editingProductId, setEditingProductId] = useState<string | null>(null);
-  const [productForm, setProductForm] = useState<ProductFormState>(EMPTY_PRODUCT_FORM);
+  // Product modal state
+  const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+  const [productDraft, setProductDraft] = useState<ProductFormDraft>(() =>
+    createEmptyProductDraft(suppliers[0]?.id ?? "", 1001 + products.length),
+  );
+  const [productError, setProductError] = useState<string | null>(null);
 
-  const [supplierModalMode, setSupplierModalMode] = useState<SupplierModalMode>(null);
-  const [editingSupplierId, setEditingSupplierId] = useState<string | null>(null);
-  const [editingSupplierOriginalName, setEditingSupplierOriginalName] = useState<string>("");
-  const [supplierForm, setSupplierForm] = useState<SupplierFormState>(EMPTY_SUPPLIER_FORM);
+  // Quick Supplier modal state
+  const [isSupplierModalOpen, setIsSupplierModalOpen] = useState(false);
+  const [supplierDraft, setSupplierDraft] = useState<SupplierFormDraft>(
+    createEmptySupplierDraft,
+  );
+  const [supplierError, setSupplierError] = useState<string | null>(null);
 
-  const [productToDelete, setProductToDelete] = useState<InventoryProduct | null>(null);
+  // Stock Movement modal state (Movimentar Estoque)
+  const [movingProduct, setMovingProduct] = useState<InventoryProduct | null>(
+    null,
+  );
+  const [movementType, setMovementType] = useState<StockMovementType>("entry");
+  const [movementQuantity, setMovementQuantity] = useState("");
+  const [movementCost, setMovementCost] = useState("");
+  const [movementReason, setMovementReason] = useState("");
+  const [movementError, setMovementError] = useState<string | null>(null);
 
-  const metrics = useMemo(() => computeInventoryMetrics(products), [products]);
+  // Delete confirmation modal state
+  const [deletingProduct, setDeletingProduct] =
+    useState<InventoryProduct | null>(null);
 
-  const availableCategories = useMemo(() => {
-    const customCategories = products
-      .map((item) => item.category.trim())
-      .filter((category) => category.length > 0 && !INVENTORY_CATEGORIES.includes(category));
-    return [...INVENTORY_CATEGORIES, ...Array.from(new Set(customCategories))];
-  }, [products]);
-
-  const availableSupplierNames = useMemo(() => {
-    const namesFromSuppliers = suppliers.map((s) => s.name.trim()).filter(Boolean);
-    const namesFromProducts = products.map((p) => p.supplierName.trim()).filter(Boolean);
-    return Array.from(new Set([...namesFromSuppliers, ...namesFromProducts]));
-  }, [suppliers, products]);
-
-  const filteredProducts = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
-
-    return products.filter((product) => {
-      if (selectedCategory && product.category !== selectedCategory) {
-        return false;
-      }
-
-      if (!query) return true;
-
-      return (
-        product.description.toLowerCase().includes(query) ||
-        product.barcode.toLowerCase().includes(query) ||
-        product.supplierName.toLowerCase().includes(query)
-      );
-    });
-  }, [products, searchQuery, selectedCategory]);
+  const productDialogTitleId = useId();
+  const supplierDialogTitleId = useId();
+  const movementDialogTitleId = useId();
+  const deleteDialogTitleId = useId();
 
   useEffect(() => {
-    if (!productModalMode && !supplierModalMode && !productToDelete) return;
-
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
-
-      if (supplierModalMode) {
-        setSupplierModalMode(null);
-        setEditingSupplierId(null);
-        setEditingSupplierOriginalName("");
-        return;
-      }
-      if (productToDelete) {
-        setProductToDelete(null);
-        return;
-      }
-      if (productModalMode) {
-        setProductModalMode(null);
-        setEditingProductId(null);
+      if (deletingProduct) {
+        setDeletingProduct(null);
+      } else if (movingProduct) {
+        setMovingProduct(null);
+        setMovementError(null);
+      } else if (isSupplierModalOpen) {
+        setIsSupplierModalOpen(false);
+        setSupplierError(null);
+      } else if (isProductModalOpen) {
+        setIsProductModalOpen(false);
+        setProductError(null);
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [productModalMode, supplierModalMode, productToDelete]);
+  }, [
+    deletingProduct,
+    isProductModalOpen,
+    isSupplierModalOpen,
+    movingProduct,
+  ]);
 
-  function openCreateProductModal() {
-    setEditingProductId(null);
-    setProductForm({
-      ...EMPTY_PRODUCT_FORM,
-      barcode: generateEan13(),
+  const metrics = useMemo(
+    () => computeInventoryMetrics(products, referenceDate),
+    [products, referenceDate],
+  );
+
+  const categoriesOptions = useMemo(() => {
+    const dynamic = new Set<string>(INVENTORY_CATEGORIES);
+    for (const item of products) {
+      if (item.category.trim()) dynamic.add(item.category.trim());
+    }
+    return Array.from(dynamic);
+  }, [products]);
+
+  const filteredProducts = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    return products.filter((product) => {
+      if (selectedCategory && product.category !== selectedCategory) {
+        return false;
+      }
+      if (!query) return true;
+      return (
+        product.description.toLowerCase().includes(query) ||
+        product.barcode.toLowerCase().includes(query) ||
+        (product.code ?? "").toLowerCase().includes(query) ||
+        product.category.toLowerCase().includes(query) ||
+        product.supplierName.toLowerCase().includes(query)
+      );
     });
-    setProductModalMode("create");
-  }
+  }, [products, searchQuery, selectedCategory]);
 
-  function openEditProductModal(product: InventoryProduct) {
-    setEditingProductId(product.id);
-    setProductForm({
-      barcode: product.barcode,
-      description: product.description,
-      category: product.category,
-      unit: product.unit,
-      unitCost: String(product.unitCost),
-      suggestedMargin: String(product.suggestedMargin),
-      salePrice: String(product.salePrice),
-      currentStock: String(product.currentStock),
-      minStock: String(product.minStock),
-      expirationDate: formatExpirationDate(product.expirationDate) === "—"
-        ? ""
-        : formatExpirationDate(product.expirationDate),
-      supplierName: product.supplierName,
-    });
-    setProductModalMode("edit");
-  }
-
-  function closeProductModal() {
-    setProductModalMode(null);
-    setEditingProductId(null);
-  }
-
-  function handleUnitCostChange(value: string) {
-    const cost = parseNumberInput(value);
-    const margin = parseNumberInput(productForm.suggestedMargin);
-    const calculatedSale = cost > 0 ? String(calculateSalePrice(cost, margin)) : "";
-    setProductForm((prev) => ({
-      ...prev,
-      unitCost: value,
-      salePrice: calculatedSale,
-    }));
-  }
-
-  function handleMarginChange(value: string) {
-    const cost = parseNumberInput(productForm.unitCost);
-    const margin = parseNumberInput(value);
-    const calculatedSale = cost > 0 ? String(calculateSalePrice(cost, margin)) : prevSalePrice(productForm.salePrice);
-    setProductForm((prev) => ({
-      ...prev,
-      suggestedMargin: value,
-      salePrice: cost > 0 ? calculatedSale : prev.salePrice,
-    }));
-  }
-
-  function prevSalePrice(value: string) {
-    return value;
-  }
-
-  function handleSaveProduct(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const description = productForm.description.trim();
-    if (!description) return;
-
-    const unitCost = parseNumberInput(productForm.unitCost);
-    const suggestedMargin = parseNumberInput(productForm.suggestedMargin);
-    const salePrice =
-      productForm.salePrice.trim() !== ""
-        ? parseNumberInput(productForm.salePrice)
-        : calculateSalePrice(unitCost, suggestedMargin);
-    const currentStock = parseNumberInput(productForm.currentStock);
-    const minStock = parseNumberInput(productForm.minStock);
-    const supplierName = productForm.supplierName.trim() || "Não informado";
-    const matchedSupplier = suppliers.find(
-      (s) => s.name.toLowerCase() === supplierName.toLowerCase(),
+  const handleOpenNewProduct = () => {
+    setProductDraft(
+      createEmptyProductDraft(suppliers[0]?.id ?? "", 1001 + products.length),
     );
+    setProductError(null);
+    setIsProductModalOpen(true);
+  };
+
+  const handleOpenEditProduct = (product: InventoryProduct) => {
+    setProductDraft(productToDraft(product, suppliers));
+    setProductError(null);
+    setIsProductModalOpen(true);
+  };
+
+  const handleOpenMoveStock = (product: InventoryProduct) => {
+    setMovingProduct(product);
+    setMovementType("entry");
+    setMovementQuantity("");
+    setMovementCost(String(product.unitCost));
+    setMovementReason("");
+    setMovementError(null);
+  };
+
+  const handleOpenNewSupplier = () => {
+    setSupplierDraft(createEmptySupplierDraft());
+    setSupplierError(null);
+    setIsSupplierModalOpen(true);
+  };
+
+  const handleOpenEditSupplierByName = (
+    supplierName: string,
+    supplierId?: string,
+  ) => {
+    const found =
+      (supplierId ? suppliers.find((s) => s.id === supplierId) : undefined) ??
+      suppliers.find((s) => s.name === supplierName);
+
+    if (found) {
+      setSupplierDraft(supplierToDraft(found));
+    } else {
+      setSupplierDraft({
+        ...createEmptySupplierDraft(),
+        name: supplierName,
+      });
+    }
+    setSupplierError(null);
+    setIsSupplierModalOpen(true);
+  };
+
+  const handleCostOrMarginChange = (
+    nextCostRaw: string,
+    nextMarginRaw: string,
+  ) => {
+    const parsedCost = Number(nextCostRaw.replace(",", "."));
+    const parsedMargin = Number(nextMarginRaw.replace(",", "."));
+    const autoSale =
+      parsedCost > 0
+        ? String(
+            calculateSalePrice(
+              parsedCost,
+              Number.isFinite(parsedMargin) ? parsedMargin : 0,
+            ),
+          )
+        : "";
+
+    setProductDraft((current) => ({
+      ...current,
+      unitCost: nextCostRaw,
+      suggestedMargin: nextMarginRaw,
+      salePrice: autoSale || current.salePrice,
+    }));
+  };
+
+  const handleSaveProduct = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const description = productDraft.description.trim();
+    const barcode = productDraft.barcode.trim();
+    const code = productDraft.code.trim() || "1001";
+    const unitCost = Number(productDraft.unitCost.replace(",", "."));
+    const suggestedMargin = Number(
+      productDraft.suggestedMargin.replace(",", "."),
+    );
+    const salePrice = Number(productDraft.salePrice.replace(",", "."));
+    const currentStock = Number(productDraft.currentStock.replace(",", "."));
+    const minStock = Number(productDraft.minStock.replace(",", "."));
+
+    if (!description) {
+      setProductError("Informe o nome / descrição do produto.");
+      return;
+    }
+
+    if (!Number.isFinite(salePrice) || salePrice <= 0) {
+      setProductError("Informe um preço de venda válido maior que zero.");
+      return;
+    }
+
+    const selectedSupplier = suppliers.find(
+      (s) => s.id === productDraft.supplierId,
+    );
+    const isEdit = Boolean(productDraft.id);
 
     const savedProduct: InventoryProduct = {
-      id: editingProductId ?? `prod-${Date.now()}`,
-      barcode: productForm.barcode.trim() || generateEan13(),
+      id: productDraft.id ?? `prod-${Date.now()}`,
+      code,
+      barcode: barcode || generateEan13(),
       description,
-      category: productForm.category || "Mercearia",
-      unit: productForm.unit,
-      unitCost,
-      suggestedMargin,
+      category: productDraft.category || INVENTORY_CATEGORIES[0],
+      unit: productDraft.unit,
+      unitCost: Number.isFinite(unitCost) && unitCost >= 0 ? unitCost : 0,
+      suggestedMargin: Number.isFinite(suggestedMargin) ? suggestedMargin : 0,
       salePrice,
-      currentStock,
-      minStock,
-      expirationDate: productForm.expirationDate.trim(),
-      supplierId: matchedSupplier?.id,
-      supplierName,
+      currentStock: Number.isFinite(currentStock) ? currentStock : 0,
+      minStock: Number.isFinite(minStock) && minStock >= 0 ? minStock : 0,
+      expirationDate: productDraft.expirationDate.trim(),
+      supplierId: selectedSupplier?.id,
+      supplierName: selectedSupplier?.name ?? "Sem fornecedor",
+      active: productDraft.active,
     };
 
-    if (productModalMode === "edit" && editingProductId) {
-      setProducts((current) =>
-        current.map((item) => (item.id === editingProductId ? savedProduct : item)),
+    if (!controlledProducts) {
+      setInternalProducts((current) =>
+        isEdit
+          ? current.map((item) =>
+              item.id === savedProduct.id ? savedProduct : item,
+            )
+          : [savedProduct, ...current],
       );
-    } else {
-      setProducts((current) => [savedProduct, ...current]);
     }
 
-    void onSaveProduct?.(savedProduct);
-    closeProductModal();
-  }
+    onSaveProduct?.(savedProduct, isEdit);
+    setIsProductModalOpen(false);
+    setProductError(null);
+  };
 
-  function openCreateSupplierModal() {
-    setEditingSupplierId(null);
-    setEditingSupplierOriginalName("");
-    setSupplierForm(EMPTY_SUPPLIER_FORM);
-    setSupplierModalMode("create");
-  }
-
-  function openEditSupplierModal(supplierName: string, supplierId?: string) {
-    const existing = suppliers.find(
-      (item) =>
-        (supplierId && item.id === supplierId) ||
-        item.name.toLowerCase() === supplierName.trim().toLowerCase(),
-    );
-
-    if (existing) {
-      setEditingSupplierId(existing.id);
-      setEditingSupplierOriginalName(existing.name);
-      setSupplierForm({
-        name: existing.name,
-        document: existing.document,
-        representative: existing.representative,
-        contact: existing.contact,
-        email: existing.email,
-        notes: existing.notes,
-      });
-    } else {
-      setEditingSupplierId(`sup-${Date.now()}`);
-      setEditingSupplierOriginalName(supplierName);
-      setSupplierForm({
-        ...EMPTY_SUPPLIER_FORM,
-        name: supplierName === "Não informado" ? "" : supplierName,
-      });
-    }
-
-    setSupplierModalMode("edit");
-  }
-
-  function closeSupplierModal() {
-    setSupplierModalMode(null);
-    setEditingSupplierId(null);
-    setEditingSupplierOriginalName("");
-  }
-
-  function handleSaveSupplier(event: FormEvent<HTMLFormElement>) {
+  const handleConfirmMoveStock = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const name = supplierForm.name.trim();
-    const contact = supplierForm.contact.trim();
-    if (!name || !contact) return;
+    if (!movingProduct) return;
 
-    const savedSupplier: InventorySupplier = {
-      id: editingSupplierId ?? `sup-${Date.now()}`,
-      name,
-      document: supplierForm.document.trim(),
-      representative: supplierForm.representative.trim(),
-      contact,
-      email: supplierForm.email.trim(),
-      notes: supplierForm.notes.trim(),
-    };
+    const parsedQty = Number(movementQuantity.replace(",", "."));
+    if (!Number.isFinite(parsedQty) || parsedQty <= 0) {
+      setMovementError("Informe uma quantidade válida maior que zero.");
+      return;
+    }
 
-    setSuppliers((current) => {
-      const exists = current.some((item) => item.id === savedSupplier.id);
-      if (exists) {
-        return current.map((item) => (item.id === savedSupplier.id ? savedSupplier : item));
-      }
-      return [...current, savedSupplier];
+    const parsedCost = Number(movementCost.replace(",", "."));
+    const updatedProduct = applyStockMovement(movingProduct, {
+      type: movementType,
+      quantity: parsedQty,
+      unitCost:
+        movementType === "entry" && Number.isFinite(parsedCost) && parsedCost > 0
+          ? parsedCost
+          : undefined,
     });
 
-    if (supplierModalMode === "edit" && editingSupplierOriginalName) {
-      setProducts((current) =>
+    const record: StockMovementRecord = {
+      id: `mov-${Date.now()}`,
+      productId: movingProduct.id,
+      productName: movingProduct.description,
+      type: movementType,
+      quantity: parsedQty,
+      unitCost:
+        movementType === "entry" && Number.isFinite(parsedCost) && parsedCost > 0
+          ? parsedCost
+          : undefined,
+      reason: movementReason.trim() || "Movimentação manual",
+      createdAt: new Date().toLocaleString("pt-BR"),
+      previousStock: movingProduct.currentStock,
+      newStock: updatedProduct.currentStock,
+    };
+
+    if (!controlledProducts) {
+      setInternalProducts((current) =>
+        current.map((item) =>
+          item.id === updatedProduct.id ? updatedProduct : item,
+        ),
+      );
+    }
+
+    onSaveProduct?.(updatedProduct, true);
+    onMoveStock?.(updatedProduct, record);
+    setMovingProduct(null);
+    setMovementError(null);
+  };
+
+  const handleSaveSupplier = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const trimmedName = supplierDraft.name.trim();
+    if (!trimmedName) {
+      setSupplierError("Informe o nome ou razão social do fornecedor.");
+      return;
+    }
+
+    const isEdit = Boolean(supplierDraft.id);
+    const savedSupplier: InventorySupplier = {
+      id: supplierDraft.id ?? `sup-${Date.now()}`,
+      name: trimmedName,
+      document: supplierDraft.document.trim(),
+      representative: supplierDraft.representative.trim(),
+      contact: supplierDraft.contact.trim(),
+      email: supplierDraft.email.trim(),
+      notes: supplierDraft.notes.trim(),
+    };
+
+    if (!controlledSuppliers) {
+      setInternalSuppliers((current) =>
+        isEdit
+          ? current.map((item) =>
+              item.id === savedSupplier.id ? savedSupplier : item,
+            )
+          : [...current, savedSupplier],
+      );
+    }
+
+    if (isEdit && !controlledProducts) {
+      setInternalProducts((current) =>
         current.map((product) =>
-          product.supplierId === savedSupplier.id ||
-          product.supplierName.toLowerCase() === editingSupplierOriginalName.toLowerCase()
-            ? { ...product, supplierId: savedSupplier.id, supplierName: savedSupplier.name }
+          product.supplierId === savedSupplier.id
+            ? { ...product, supplierName: savedSupplier.name }
             : product,
         ),
       );
     }
 
-    if (productModalMode) {
-      setProductForm((prev) => ({
-        ...prev,
-        supplierName: savedSupplier.name,
+    if (isProductModalOpen) {
+      setProductDraft((current) => ({
+        ...current,
+        supplierId: savedSupplier.id,
       }));
     }
 
-    void onSaveSupplier?.(savedSupplier);
-    closeSupplierModal();
-  }
+    onSaveSupplier?.(savedSupplier, isEdit);
+    setIsSupplierModalOpen(false);
+    setSupplierError(null);
+  };
 
-  function handleConfirmDeleteProduct() {
-    if (!productToDelete) return;
-    const deletedId = productToDelete.id;
-    setProducts((current) => current.filter((item) => item.id !== deletedId));
-    void onDeleteProduct?.(deletedId);
-    setProductToDelete(null);
-  }
+  const handleConfirmDeleteProduct = () => {
+    if (!deletingProduct) return;
+    const targetId = deletingProduct.id;
+
+    if (!controlledProducts) {
+      setInternalProducts((current) =>
+        current.filter((item) => item.id !== targetId),
+      );
+    }
+
+    onDeleteProduct?.(targetId);
+    setDeletingProduct(null);
+  };
+
+  const metricCards = [
+    {
+      id: "total-items",
+      title: "Total de Itens",
+      value: String(metrics.totalItems),
+      subtitle: "Produtos ativos no catálogo",
+      accentColor: "#0088ff",
+      icon: Package,
+    },
+    {
+      id: "low-stock",
+      title: "Estoque Baixo",
+      value: String(metrics.lowStockCount),
+      subtitle: "Abaixo do estoque mínimo",
+      accentColor: "#ff8d28",
+      icon: AlertTriangle,
+    },
+    {
+      id: "expiring-soon",
+      title: "Validade Próxima",
+      value: String(metrics.expiringSoonCount),
+      subtitle: "Vencem nos próximos 30 dias",
+      accentColor: "#ffcc00",
+      icon: CalendarClock,
+    },
+    {
+      id: "expired",
+      title: "Produtos Vencidos",
+      value: String(metrics.expiredCount),
+      subtitle: "Exigem retirada imediata",
+      accentColor: "#ff383c",
+      icon: CircleX,
+    },
+  ];
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <div className="mx-auto flex w-full max-w-[1250px] flex-col gap-5">
+      {/* Page Header */}
+      <header className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-lg font-semibold leading-7 text-blue-800">Gestão de Estoque</h1>
-          <p className="text-[11px] text-slate-500">
-            Controle de mercadorias e cadastro de parceiros comerciais.
+          <h1 className="text-[28px] font-semibold tracking-tight text-black">
+            Gestão de Estoque
+          </h1>
+          <p className="text-[13px] text-black/60">
+            Controle por categoria, posição do estoque e cadastro de produtos.
           </p>
-          <div className="mt-3 flex items-center gap-2 text-xs font-semibold text-blue-800">
-            <Package aria-hidden="true" className="size-4 text-orange-500" />
-            <span>Produtos em Estoque</span>
-          </div>
         </div>
 
         <button
           type="button"
-          onClick={openCreateProductModal}
-          className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-blue-600 px-4 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+          onClick={handleOpenNewProduct}
+          className="inline-flex h-[41px] items-center gap-2 rounded-[8px] bg-[#203f9f] px-4 text-[15px] font-semibold text-white shadow-sm transition-colors hover:bg-[#193382]"
         >
-          <Plus aria-hidden="true" className="size-4" />
-          Novo Produto
+          <Plus className="h-4 w-4 stroke-[2.5]" />
+          <span>Novo Produto</span>
         </button>
-      </div>
+      </header>
 
-      <section
-        aria-label="Indicadores de estoque"
-        className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4"
-      >
-        <article className="flex min-h-[96px] flex-col justify-between rounded-xl bg-white p-4 shadow-sm">
-          <h2 className="text-xs font-semibold text-slate-700">Total de Itens</h2>
-          <p className="my-1 text-2xl font-bold leading-7 text-emerald-600">
-            {metrics.totalItems}
-          </p>
-          <p className="text-[11px] text-slate-400">Produtos no catálogo</p>
-        </article>
+      {/* 4 Summary Metric Cards */}
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {metricCards.map((card) => {
+          const Icon = card.icon;
+          return (
+            <article
+              key={card.id}
+              className="relative min-h-[121px] overflow-hidden rounded-[8px] bg-white p-4 pl-6 shadow-[0_1px_3px_rgba(0,0,0,0.12)]"
+            >
+              <div
+                className="absolute inset-y-0 left-0 w-[9px]"
+                style={{ backgroundColor: card.accentColor }}
+              />
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <h2 className="text-[12px] font-semibold text-black/60">
+                    {card.title}
+                  </h2>
+                  <p className="mt-1.5 text-[22px] font-semibold leading-none text-black">
+                    {card.value}
+                  </p>
+                  <p className="mt-3 text-[11px] font-medium text-black/45">
+                    {card.subtitle}
+                  </p>
+                </div>
 
-        <article className="flex min-h-[96px] flex-col justify-between rounded-xl bg-white p-4 shadow-sm">
-          <h2 className="text-xs font-semibold text-slate-700">Estoque Baixo</h2>
-          <p className="my-1 text-2xl font-bold leading-7 text-amber-700">
-            {metrics.lowStockCount}
-          </p>
-          <p className="text-[11px] text-slate-400">Abaixo do estoque mínimo</p>
-        </article>
-
-        <article className="flex min-h-[96px] flex-col justify-between rounded-xl bg-white p-4 shadow-sm">
-          <h2 className="text-xs font-semibold text-slate-700">Validade Próxima</h2>
-          <p className="my-1 text-2xl font-bold leading-7 text-slate-800">
-            {metrics.expiringSoonCount}
-          </p>
-          <p className="text-[11px] text-slate-400">Vencem em até 30 dias</p>
-        </article>
-
-        <article className="flex min-h-[96px] flex-col justify-between rounded-xl bg-white p-4 shadow-sm">
-          <h2 className="text-xs font-semibold text-slate-700">Produtos Vencidos</h2>
-          <p className="my-1 text-2xl font-bold leading-7 text-blue-700">
-            {metrics.expiredCount}
-          </p>
-          <p className="text-[11px] text-slate-400">Remover do balcão</p>
-        </article>
+                <div
+                  className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[8px]"
+                  style={{
+                    backgroundColor: `${card.accentColor}26`,
+                    color: card.accentColor,
+                  }}
+                >
+                  <Icon className="h-[18px] w-[18px]" />
+                </div>
+              </div>
+            </article>
+          );
+        })}
       </section>
 
-      <section
-        aria-label="Filtros de busca e categoria"
-        className="flex flex-col gap-3 rounded-xl bg-white p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between"
-      >
-        <label className="flex h-10 flex-1 items-center gap-2.5 rounded-lg border border-slate-200 bg-[#f3f4f6]/60 px-3 text-slate-400 focus-within:border-blue-500 focus-within:bg-white focus-within:ring-2 focus-within:ring-blue-100">
-          <Search aria-hidden="true" className="size-4 shrink-0" />
+      {/* Search & Category Filter Bar */}
+      <section className="flex flex-col gap-3 rounded-[8px] border border-black/10 bg-white p-3 sm:flex-row sm:items-center">
+        <div className="relative flex-1">
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-black/45" />
           <input
             type="search"
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
-            placeholder="Buscar por nome, código de barras ou fornecedor..."
-            aria-label="Buscar por nome, código de barras ou fornecedor"
-            className="min-w-0 flex-1 bg-transparent text-xs text-slate-700 outline-none placeholder:text-slate-400"
+            placeholder="Buscar por nome, código de barras, código interno ou fornecedor..."
+            aria-label="Buscar produtos no estoque"
+            className="h-[42px] w-full rounded-[10px] border border-black/20 bg-white pl-10 pr-4 text-[14px] text-black placeholder:text-black/45 focus:border-[#203f9f] focus:outline-none"
           />
-        </label>
+        </div>
 
         <select
+          aria-label="Filtrar por categoria"
           value={selectedCategory}
           onChange={(event) => setSelectedCategory(event.target.value)}
-          aria-label="Filtrar por categoria"
-          className="h-10 rounded-lg border border-slate-200 bg-[#f3f4f6]/60 px-3 text-xs text-slate-600 outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100 sm:w-52"
+          className="h-[42px] min-w-[205px] rounded-[10px] border border-black/20 bg-[#f0f2f5] px-3.5 text-[14px] font-medium text-black/80 focus:border-[#203f9f] focus:outline-none"
         >
           <option value="">Todas as Categorias</option>
-          {availableCategories.map((category) => (
+          {categoriesOptions.map((category) => (
             <option key={category} value={category}>
               {category}
             </option>
@@ -473,163 +648,196 @@ export default function InventoryScreen({
         </select>
       </section>
 
-      <section
-        className="overflow-hidden rounded-xl bg-white shadow-sm"
-        aria-labelledby="inventory-table-heading"
-      >
-        <h2
-          id="inventory-table-heading"
-          className="px-5 py-3.5 text-sm font-semibold text-slate-700"
-        >
-          Histórico Detalhado de Vendas
-        </h2>
+      {/* Inventory Products Table */}
+      <section className="overflow-hidden rounded-[8px] border border-black/10 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.06)]">
+        <div className="flex items-center justify-between border-b border-black/10 px-5 py-3.5">
+          <h2 className="text-[15px] font-semibold text-black">
+            Produtos em Estoque
+          </h2>
+          <span className="text-[12px] font-semibold text-black/60">
+            {filteredProducts.length} item(ns)
+          </span>
+        </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[900px] text-left text-[11px]">
-            <thead className="border-y border-slate-200 bg-slate-50/70 text-slate-600">
-              <tr>
-                <th className="px-5 py-2.5 font-medium">Descrição / Código</th>
-                <th className="px-4 py-2.5 font-medium">Categoria</th>
-                <th className="px-4 py-2.5 font-medium">Custo Uni.</th>
-                <th className="px-4 py-2.5 font-medium">Preço Venda</th>
-                <th className="px-4 py-2.5 font-medium">Estoque Atual</th>
-                <th className="px-4 py-2.5 font-medium">Validade</th>
-                <th className="px-4 py-2.5 font-medium">Fornecedor</th>
-                <th className="px-5 py-2.5 text-right font-medium">Ações</th>
+          <table className="w-full min-w-[980px] border-collapse text-left">
+            <thead>
+              <tr className="border-b border-black/10 bg-[#f8f9fb] text-[12px] font-semibold text-black">
+                <th className="px-5 py-3">Descrição / Código</th>
+                <th className="px-4 py-3">Categoria</th>
+                <th className="px-4 py-3">Custo Uni.</th>
+                <th className="px-4 py-3">Preço Venda</th>
+                <th className="px-4 py-3">Estoque Atual</th>
+                <th className="px-4 py-3">Validade</th>
+                <th className="px-4 py-3">Fornecedor</th>
+                <th className="px-5 py-3 text-right">Ações</th>
               </tr>
             </thead>
-            <tbody>
-              {filteredProducts.length > 0 ? (
+            <tbody className="divide-y divide-black/10 text-[13px]">
+              {filteredProducts.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={8}
+                    className="px-5 py-10 text-center text-[13px] text-black/50"
+                  >
+                    Nenhum produto cadastrado no estoque.
+                  </td>
+                </tr>
+              ) : (
                 filteredProducts.map((product) => {
                   const lowStock = isLowStock(product);
-                  const expiration = getExpirationStatus(product.expirationDate);
+                  const expiration = getExpirationStatus(
+                    product.expirationDate,
+                    referenceDate,
+                  );
 
                   return (
                     <tr
                       key={product.id}
-                      className="border-b border-slate-100 transition-colors hover:bg-slate-50/60"
+                      className="transition-colors hover:bg-black/[0.015]"
                     >
-                      <td className="px-5 py-2.5">
-                        <span className="block font-semibold text-slate-800">
-                          {product.description}
-                        </span>
-                        <span className="mt-0.5 flex items-center gap-1 text-[10px] text-slate-400">
-                          <Barcode aria-hidden="true" className="size-3 shrink-0" />
-                          {product.barcode}
+                      <td className="px-5 py-3">
+                        <div className="flex items-center gap-2">
+                          <p className="font-semibold text-black">
+                            {product.description}
+                          </p>
+                          {product.active === false && (
+                            <span className="rounded bg-black/10 px-1.5 py-0.5 text-[10px] font-bold text-black/60">
+                              Inativo
+                            </span>
+                          )}
+                        </div>
+                        <div className="mt-0.5 flex items-center gap-1.5 text-[11px] font-medium text-black/55">
+                          <Barcode className="h-3.5 w-3.5 text-black/45" />
+                          <span>{product.barcode}</span>
+                          {product.code && (
+                            <span className="text-black/40">
+                              • Cód. {product.code}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+
+                      <td className="px-4 py-3">
+                        <span className="inline-flex rounded-[6px] border border-black/15 bg-[#f0f2f5] px-2.5 py-1 text-[11px] font-semibold text-black/75">
+                          {product.category}
                         </span>
                       </td>
 
-                      <td className="whitespace-nowrap px-4 py-2.5 text-slate-600">
-                        {product.category}
-                      </td>
-
-                      <td className="whitespace-nowrap px-4 py-2.5 text-slate-700">
+                      <td className="px-4 py-3 font-medium text-black/65">
                         {formatCurrency(product.unitCost)}
                       </td>
 
-                      <td className="whitespace-nowrap px-4 py-2.5 font-semibold text-emerald-600">
+                      <td className="px-4 py-3 font-semibold text-black">
                         {formatCurrency(product.salePrice)}
                       </td>
 
-                      <td className="whitespace-nowrap px-4 py-2.5">
-                        <div className="flex items-center gap-1.5">
-                          <span
-                            className={`font-semibold ${
-                              lowStock ? "text-orange-600" : "text-slate-800"
-                            }`}
-                          >
-                            {product.currentStock} {product.unit}
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-black">
+                            {product.currentStock} {product.unit.toLowerCase()}
                           </span>
                           {lowStock && (
-                            <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[9px] font-semibold text-amber-700">
+                            <span className="inline-flex items-center rounded-[5px] bg-[#ff383c]/20 px-2 py-0.5 text-[11px] font-semibold text-[#ff383c]">
                               Baixo
                             </span>
                           )}
                         </div>
-                        <span className="block text-[9px] text-slate-400">
-                          Min: {product.minStock}
-                        </span>
                       </td>
 
-                      <td className="whitespace-nowrap px-4 py-2.5">
-                        <span className="block text-slate-700">{expiration.formattedDate}</span>
-                        {expiration.label && (
-                          <span
-                            className={`block text-[9px] font-semibold ${
-                              expiration.status === "expired"
-                                ? "text-red-600"
-                                : "text-orange-600"
-                            }`}
-                          >
-                            {expiration.label}
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-medium text-black/75">
+                            {expiration.formattedDate}
                           </span>
-                        )}
-                      </td>
-
-                      <td className="whitespace-nowrap px-4 py-2.5">
-                        <div className="inline-flex items-center gap-1.5 text-slate-700">
-                          <span>{product.supplierName}</span>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              openEditSupplierModal(product.supplierName, product.supplierId)
-                            }
-                            aria-label={`Editar fornecedor ${product.supplierName}`}
-                            className="rounded p-0.5 text-blue-600 transition-colors hover:bg-blue-50 hover:text-blue-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-                          >
-                            <Pencil aria-hidden="true" className="size-3" />
-                          </button>
+                          {expiration.status === "expiring-soon" &&
+                            expiration.label && (
+                              <span className="inline-flex items-center rounded-[5px] bg-[#ffcc00]/35 px-2 py-0.5 text-[10px] font-semibold text-[#9a6700]">
+                                {expiration.label}
+                              </span>
+                            )}
+                          {expiration.status === "expired" &&
+                            expiration.label && (
+                              <span className="inline-flex items-center rounded-[5px] bg-[#ff383c]/20 px-2 py-0.5 text-[10px] font-semibold text-[#ff383c]">
+                                {expiration.label}
+                              </span>
+                            )}
                         </div>
                       </td>
 
-                      <td className="whitespace-nowrap px-5 py-2.5 text-right">
-                        <div className="inline-flex items-center justify-end gap-2">
+                      <td className="px-4 py-3">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleOpenEditSupplierByName(
+                              product.supplierName,
+                              product.supplierId,
+                            )
+                          }
+                          aria-label={`Editar fornecedor ${product.supplierName}`}
+                          className="inline-flex items-center gap-1.5 font-medium text-black/70 transition-colors hover:text-[#203f9f]"
+                        >
+                          <span>{product.supplierName}</span>
+                          <Pencil className="h-3.5 w-3.5 text-black/45" />
+                        </button>
+                      </td>
+
+                      <td className="px-5 py-3 text-right">
+                        <div className="inline-flex items-center gap-1.5">
                           <button
                             type="button"
-                            onClick={() => openEditProductModal(product)}
+                            onClick={() => handleOpenEditProduct(product)}
                             aria-label={`Editar produto ${product.description}`}
-                            className="rounded p-1 text-slate-600 transition-colors hover:bg-slate-100 hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                            title="Editar Produto"
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-[6px] text-black/65 transition-colors hover:bg-black/5 hover:text-[#203f9f]"
                           >
-                            <Pencil aria-hidden="true" className="size-3.5" />
+                            <Pencil className="h-4 w-4" />
                           </button>
+
                           <button
                             type="button"
-                            onClick={() => setProductToDelete(product)}
-                            aria-label={`Excluir produto ${product.description}`}
-                            className="rounded p-1 text-slate-600 transition-colors hover:bg-rose-50 hover:text-rose-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
+                            onClick={() => handleOpenMoveStock(product)}
+                            aria-label={`Movimentar estoque ${product.description}`}
+                            title="Movimentar Estoque"
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-[6px] text-black/65 transition-colors hover:bg-[#008f58]/10 hover:text-[#008f58]"
                           >
-                            <Trash2 aria-hidden="true" className="size-3.5" />
+                            <ArrowUpDown className="h-4 w-4" />
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setDeletingProduct(product)}
+                            aria-label={`Excluir produto ${product.description}`}
+                            title="Excluir Produto"
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-[6px] text-black/65 transition-colors hover:bg-[#ff383c]/10 hover:text-[#ff383c]"
+                          >
+                            <Trash2 className="h-4 w-4" />
                           </button>
                         </div>
                       </td>
                     </tr>
                   );
                 })
-              ) : (
-                <tr>
-                  <td colSpan={8} className="px-5 py-10 text-center text-xs text-slate-500">
-                    Nenhum produto cadastrado no estoque.
-                  </td>
-                </tr>
               )}
             </tbody>
           </table>
         </div>
 
-        <div className="flex items-center justify-between px-5 py-3 text-[10px] text-slate-500">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-black/10 px-5 py-3 text-[12px] text-black/60">
           <span>0 de {filteredProducts.length} linha(s) selecionadas</span>
-          <div className="flex gap-2">
+
+          <div className="flex items-center gap-2">
             <button
               type="button"
               disabled
-              className="rounded border border-slate-200 px-2.5 py-1 disabled:cursor-not-allowed disabled:opacity-50"
+              className="h-7 rounded-[4px] border border-black/10 bg-[#f0f2f5] px-3 text-[12px] font-medium text-black/60 disabled:opacity-60"
             >
               Anterior
             </button>
             <button
               type="button"
               disabled
-              className="rounded border border-slate-200 px-2.5 py-1 disabled:cursor-not-allowed disabled:opacity-50"
+              className="h-7 rounded-[4px] border border-black/10 bg-[#f0f2f5] px-3 text-[12px] font-medium text-black/60 disabled:opacity-60"
             >
               Próximo
             </button>
@@ -637,110 +845,162 @@ export default function InventoryScreen({
         </div>
       </section>
 
-      {productModalMode && (
-        <div
-          className="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-[2px]"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) closeProductModal();
-          }}
-        >
-          <section
+      {/* Modal: Cadastrar / Editar Produto */}
+      {isProductModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4">
+          <div
             role="dialog"
             aria-modal="true"
-            aria-labelledby="product-modal-title"
-            className="max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-xl bg-white shadow-2xl"
+            aria-labelledby={productDialogTitleId}
+            className="w-full max-w-[491px] overflow-hidden rounded-[15px] bg-white shadow-2xl"
           >
-            <header className="flex items-center justify-between gap-3 bg-[#153488] px-5 py-3.5 text-white">
-              <div className="flex items-center gap-2.5">
-                <Package aria-hidden="true" className="size-4.5 text-orange-400" />
-                <h2 id="product-modal-title" className="text-sm font-semibold">
-                  {productModalMode === "edit" ? "Editar Produto" : "Cadastrar Produto"}
+            <header className="flex items-start justify-between border-b border-black/10 px-5 py-4">
+              <div>
+                <h2
+                  id={productDialogTitleId}
+                  className="text-[20px] font-bold text-black"
+                >
+                  {productDraft.id ? "Editar Produto" : "Cadastrar Produto"}
                 </h2>
+                <p className="text-[12px] text-black/55">
+                  Código de barras, preços e quantidade em estoque do item.
+                </p>
               </div>
+
               <button
                 type="button"
-                onClick={closeProductModal}
+                onClick={() => {
+                  setIsProductModalOpen(false);
+                  setProductError(null);
+                }}
                 aria-label="Fechar modal de produto"
-                className="rounded p-1 text-blue-100 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                className="rounded-full p-1 text-black/60 transition-colors hover:bg-black/5 hover:text-black"
               >
-                <X aria-hidden="true" className="size-4" />
+                <X className="h-5 w-5" />
               </button>
             </header>
 
-            <form onSubmit={handleSaveProduct} className="space-y-3.5 p-5">
-              <div className="rounded-lg border border-blue-200 bg-slate-50/70 p-3">
-                <label
-                  htmlFor="product-barcode-input"
-                  className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-blue-900"
-                >
-                  <Barcode aria-hidden="true" className="size-4 text-blue-700" />
-                  Código de Barras (EAN - 13)
+            <form
+              onSubmit={handleSaveProduct}
+              className="max-h-[82vh] space-y-3.5 overflow-y-auto px-5 py-4"
+            >
+              {/* EAN-13 Box */}
+              <div className="rounded-[10px] border border-black/15 bg-[#f8f9fb] p-3">
+                <label className="mb-1.5 flex items-center gap-1.5 text-[12px] font-semibold text-black">
+                  <Barcode className="h-4 w-4 text-black/70" />
+                  <span>Código de Barras (EAN - 13)</span>
                 </label>
-                <div className="flex gap-2">
+
+                <div className="flex items-center gap-2">
                   <input
-                    id="product-barcode-input"
                     type="text"
-                    value={productForm.barcode}
+                    aria-label="Código de Barras (EAN - 13)"
+                    value={productDraft.barcode}
                     onChange={(event) =>
-                      setProductForm((prev) => ({ ...prev, barcode: event.target.value }))
+                      setProductDraft((current) => ({
+                        ...current,
+                        barcode: event.target.value,
+                      }))
                     }
-                    className="h-9 min-w-0 flex-1 rounded-md border border-blue-200 bg-white px-3 text-xs font-medium text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    className="h-[38px] flex-1 rounded-[8px] border border-black/20 bg-white px-3 text-[13px] font-semibold text-black focus:border-[#203f9f] focus:outline-none"
                   />
+
                   <button
                     type="button"
                     onClick={() =>
-                      setProductForm((prev) => ({ ...prev, barcode: generateEan13() }))
+                      setProductDraft((current) => ({
+                        ...current,
+                        barcode: generateEan13(),
+                      }))
                     }
-                    className="shrink-0 rounded-md border border-blue-200 bg-white px-3 text-[11px] font-semibold text-blue-800 transition-colors hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                    className="inline-flex h-[38px] items-center gap-1.5 rounded-[8px] border border-black/20 bg-white px-3 text-[12px] font-semibold text-black transition-colors hover:bg-black/5"
                   >
-                    Gerar EAN
+                    <Barcode className="h-3.5 w-3.5" />
+                    <span>Gerar EAN</span>
                   </button>
                 </div>
               </div>
 
-              <label className="block text-[11px] font-semibold text-slate-700">
-                Descrição *
-                <input
-                  required
-                  type="text"
-                  value={productForm.description}
-                  onChange={(event) =>
-                    setProductForm((prev) => ({ ...prev, description: event.target.value }))
-                  }
-                  placeholder="Ex: Café torrado e Moído"
-                  className="mt-1 h-9 w-full rounded-md border border-blue-200 px-3 text-xs font-normal text-slate-700 outline-none placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                />
-              </label>
-
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <label className="block text-[11px] font-semibold text-slate-700">
-                  Categoria
-                  <select
-                    value={productForm.category}
+              {/* Nome do Produto / Descrição + Código Interno */}
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-12">
+                <div className="sm:col-span-8">
+                  <label className="mb-1 block text-[13px] font-semibold text-black">
+                    Descrição / Nome do Produto *
+                  </label>
+                  <input
+                    type="text"
+                    aria-label="Descrição"
+                    value={productDraft.description}
                     onChange={(event) =>
-                      setProductForm((prev) => ({ ...prev, category: event.target.value }))
+                      setProductDraft((current) => ({
+                        ...current,
+                        description: event.target.value,
+                      }))
                     }
-                    className="mt-1 h-9 w-full rounded-md border border-blue-200 bg-white px-2.5 text-xs font-normal text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    placeholder="Ex: Café Torrado e Moído 500g"
+                    className="h-[38px] w-full rounded-[8px] border border-black/20 bg-white px-3 text-[13px] text-black placeholder:text-black/40 focus:border-[#203f9f] focus:outline-none"
+                  />
+                </div>
+
+                <div className="sm:col-span-4">
+                  <label className="mb-1 block text-[13px] font-semibold text-black">
+                    Código *
+                  </label>
+                  <input
+                    type="text"
+                    aria-label="Código Interno"
+                    value={productDraft.code}
+                    onChange={(event) =>
+                      setProductDraft((current) => ({
+                        ...current,
+                        code: event.target.value,
+                      }))
+                    }
+                    placeholder="Ex: 1001"
+                    className="h-[38px] w-full rounded-[8px] border border-black/20 bg-white px-3 text-[13px] text-black placeholder:text-black/40 focus:border-[#203f9f] focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Categoria & Unidade de Medida */}
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-[13px] font-semibold text-black">
+                    Categoria *
+                  </label>
+                  <select
+                    aria-label="Categoria"
+                    value={productDraft.category}
+                    onChange={(event) =>
+                      setProductDraft((current) => ({
+                        ...current,
+                        category: event.target.value,
+                      }))
+                    }
+                    className="h-[38px] w-full rounded-[8px] border border-black/20 bg-white px-3 text-[13px] text-black focus:border-[#203f9f] focus:outline-none"
                   >
-                    {availableCategories.map((category) => (
-                      <option key={category} value={category}>
-                        {category}
+                    {categoriesOptions.map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
                       </option>
                     ))}
                   </select>
-                </label>
+                </div>
 
-                <label className="block text-[11px] font-semibold text-slate-700">
-                  Unidade de Medida
+                <div>
+                  <label className="mb-1 block text-[13px] font-semibold text-black">
+                    Unidade de Medida *
+                  </label>
                   <select
-                    value={productForm.unit}
+                    aria-label="Unidade de Medida"
+                    value={productDraft.unit}
                     onChange={(event) =>
-                      setProductForm((prev) => ({
-                        ...prev,
+                      setProductDraft((current) => ({
+                        ...current,
                         unit: event.target.value as InventoryUnit,
                       }))
                     }
-                    className="mt-1 h-9 w-full rounded-md border border-blue-200 bg-white px-2.5 text-xs font-normal text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    className="h-[38px] w-full rounded-[8px] border border-black/20 bg-white px-3 text-[13px] text-black focus:border-[#203f9f] focus:outline-none"
                   >
                     {INVENTORY_UNITS.map((unit) => (
                       <option key={unit.value} value={unit.value}>
@@ -748,339 +1008,620 @@ export default function InventoryScreen({
                       </option>
                     ))}
                   </select>
-                </label>
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <label className="block text-[11px] font-semibold text-slate-700">
-                  Custo Unitário (R$)
+              {/* Custo Unitário, Margem Sugerida, Preço de Venda */}
+              <div className="grid grid-cols-1 gap-2.5 rounded-[10px] border border-black/15 bg-[#f8f9fb] p-3 sm:grid-cols-3">
+                <div>
+                  <label className="mb-1 block text-[12px] font-semibold text-black">
+                    Custo Unitário (R$)*
+                  </label>
                   <input
                     type="number"
-                    min="0"
                     step="0.01"
-                    value={productForm.unitCost}
-                    onChange={(event) => handleUnitCostChange(event.target.value)}
-                    placeholder="0,00"
-                    className="mt-1 h-9 w-full rounded-md border border-blue-200 px-3 text-xs font-normal text-slate-700 outline-none placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                  />
-                </label>
-
-                <label className="block text-[11px] font-semibold text-slate-700">
-                  Margem Sugerida (%)
-                  <input
-                    type="number"
                     min="0"
-                    step="0.1"
-                    value={productForm.suggestedMargin}
-                    onChange={(event) => handleMarginChange(event.target.value)}
-                    placeholder="35"
-                    className="mt-1 h-9 w-full rounded-md border border-blue-200 px-3 text-xs font-semibold text-emerald-600 outline-none placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                  />
-                </label>
-
-                <label className="block text-[11px] font-semibold text-slate-700">
-                  Preço de Venda (R$)
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={productForm.salePrice}
+                    aria-label="Custo Unitário (R$)"
+                    value={productDraft.unitCost}
                     onChange={(event) =>
-                      setProductForm((prev) => ({ ...prev, salePrice: event.target.value }))
+                      handleCostOrMarginChange(
+                        event.target.value,
+                        productDraft.suggestedMargin,
+                      )
                     }
                     placeholder="0,00"
-                    className="mt-1 h-9 w-full rounded-md border border-blue-200 bg-blue-50/50 px-3 text-xs font-normal text-slate-700 outline-none placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100"
+                    className="h-[38px] w-full rounded-[8px] border border-black/20 bg-white px-2.5 text-[13px] font-medium text-black focus:border-[#203f9f] focus:outline-none"
                   />
-                </label>
-              </div>
-
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <label className="block text-[11px] font-semibold text-slate-700">
-                  Estoque Atual ({productForm.unit})
-                  <input
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={productForm.currentStock}
-                    onChange={(event) =>
-                      setProductForm((prev) => ({ ...prev, currentStock: event.target.value }))
-                    }
-                    className="mt-1 h-9 w-full rounded-md border border-blue-200 px-3 text-xs font-normal text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                  />
-                </label>
-
-                <label className="block text-[11px] font-semibold text-slate-700">
-                  Estoque Mínimo
-                  <input
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={productForm.minStock}
-                    onChange={(event) =>
-                      setProductForm((prev) => ({ ...prev, minStock: event.target.value }))
-                    }
-                    className="mt-1 h-9 w-full rounded-md border border-blue-200 px-3 text-xs font-normal text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                  />
-                </label>
-              </div>
-
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_1.4fr]">
-                <label className="block text-[11px] font-semibold text-slate-700">
-                  Data de Validade
-                  <span className="mt-1 flex h-9 items-center rounded-md border border-blue-200 px-2.5 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100">
-                    <input
-                      type="text"
-                      value={productForm.expirationDate}
-                      onChange={(event) =>
-                        setProductForm((prev) => ({
-                          ...prev,
-                          expirationDate: event.target.value,
-                        }))
-                      }
-                      placeholder="DD/MM/AAAA"
-                      className="min-w-0 flex-1 bg-transparent text-xs font-normal text-slate-700 outline-none placeholder:text-slate-400"
-                    />
-                    <Calendar aria-hidden="true" className="size-3.5 shrink-0 text-slate-500" />
-                  </span>
-                </label>
+                </div>
 
                 <div>
-                  <div className="flex items-center justify-between">
-                    <label
-                      htmlFor="product-supplier-input"
-                      className="text-[11px] font-semibold text-slate-700"
-                    >
+                  <label className="mb-1 block text-[12px] font-semibold text-[#008f58]">
+                    Margem Sugerida (%)
+                  </label>
+                  <input
+                    type="number"
+                    step="1"
+                    aria-label="Margem Sugerida (%)"
+                    value={productDraft.suggestedMargin}
+                    onChange={(event) =>
+                      handleCostOrMarginChange(
+                        productDraft.unitCost,
+                        event.target.value,
+                      )
+                    }
+                    placeholder="35"
+                    className="h-[38px] w-full rounded-[8px] border border-black/20 bg-white px-2.5 text-[13px] font-semibold text-[#008f58] focus:border-[#008f58] focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-[12px] font-semibold text-[#203f9f]">
+                    Preço de Venda (R$)*
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    aria-label="Preço de Venda (R$)"
+                    value={productDraft.salePrice}
+                    onChange={(event) =>
+                      setProductDraft((current) => ({
+                        ...current,
+                        salePrice: event.target.value,
+                      }))
+                    }
+                    placeholder="0,00"
+                    className="h-[38px] w-full rounded-[8px] border border-black/20 bg-white px-2.5 text-[13px] font-semibold text-[#203f9f] focus:border-[#203f9f] focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Estoque Atual & Estoque Mínimo */}
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-[13px] font-semibold text-black">
+                    Estoque Atual *
+                  </label>
+                  <input
+                    type="number"
+                    step="1"
+                    aria-label="Estoque Atual"
+                    value={productDraft.currentStock}
+                    onChange={(event) =>
+                      setProductDraft((current) => ({
+                        ...current,
+                        currentStock: event.target.value,
+                      }))
+                    }
+                    placeholder="0"
+                    className="h-[38px] w-full rounded-[8px] border border-black/20 bg-white px-3 text-[13px] text-black focus:border-[#203f9f] focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-[13px] font-semibold text-black">
+                    Estoque Mínimo (Alerta) *
+                  </label>
+                  <input
+                    type="number"
+                    step="1"
+                    aria-label="Estoque Mínimo (Alerta)"
+                    value={productDraft.minStock}
+                    onChange={(event) =>
+                      setProductDraft((current) => ({
+                        ...current,
+                        minStock: event.target.value,
+                      }))
+                    }
+                    placeholder="10"
+                    className="h-[38px] w-full rounded-[8px] border border-black/20 bg-white px-3 text-[13px] text-black focus:border-[#203f9f] focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Data de Validade & Fornecedor */}
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-[13px] font-semibold text-black">
+                    Data de Validade
+                  </label>
+                  <input
+                    type="text"
+                    aria-label="Data de Validade"
+                    value={productDraft.expirationDate}
+                    onChange={(event) =>
+                      setProductDraft((current) => ({
+                        ...current,
+                        expirationDate: formatDateDigits(event.target.value),
+                      }))
+                    }
+                    placeholder="dd/mm/aaaa"
+                    className="h-[38px] w-full rounded-[8px] border border-black/20 bg-white px-3 text-[13px] text-black placeholder:text-black/40 focus:border-[#203f9f] focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <div className="mb-1 flex items-center justify-between">
+                    <label className="text-[13px] font-semibold text-black">
                       Fornecedor
                     </label>
                     <button
                       type="button"
-                      onClick={openCreateSupplierModal}
-                      className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-blue-600 hover:text-blue-800 focus-visible:outline-none focus-visible:underline"
+                      onClick={handleOpenNewSupplier}
+                      className="inline-flex items-center gap-0.5 text-[11px] font-semibold text-[#203f9f] hover:underline"
                     >
-                      <Plus aria-hidden="true" className="size-3" />
-                      Novo
+                      <Plus className="h-3 w-3" />
+                      <span>Novo</span>
                     </button>
                   </div>
-                  <input
-                    id="product-supplier-input"
-                    list="inventory-suppliers-list"
-                    type="text"
-                    value={productForm.supplierName}
+
+                  <select
+                    aria-label="Fornecedor"
+                    value={productDraft.supplierId}
                     onChange={(event) =>
-                      setProductForm((prev) => ({ ...prev, supplierName: event.target.value }))
+                      setProductDraft((current) => ({
+                        ...current,
+                        supplierId: event.target.value,
+                      }))
                     }
-                    placeholder="Selecione ou insira um novo fornecedor"
-                    className="mt-1 h-9 w-full rounded-md border border-blue-200 px-3 text-xs font-normal text-slate-700 outline-none placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                  />
-                  <datalist id="inventory-suppliers-list">
-                    {availableSupplierNames.map((name) => (
-                      <option key={name} value={name} />
+                    className="h-[38px] w-full rounded-[8px] border border-black/20 bg-white px-3 text-[13px] text-black focus:border-[#203f9f] focus:outline-none"
+                  >
+                    <option value="">Sem fornecedor</option>
+                    {suppliers.map((sup) => (
+                      <option key={sup.id} value={sup.id}>
+                        {sup.name}
+                      </option>
                     ))}
-                  </datalist>
+                  </select>
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-2">
+              {/* Produto Ativo Toggle */}
+              <div className="flex items-center justify-between rounded-[10px] border border-black/15 bg-[#f8f9fb] px-3.5 py-2.5">
+                <div>
+                  <p className="text-[13px] font-semibold text-black">
+                    Produto Ativo
+                  </p>
+                  <p className="text-[11px] text-black/55">
+                    Produtos inativos não aparecem na frente de caixa.
+                  </p>
+                </div>
+
                 <button
                   type="button"
-                  onClick={closeProductModal}
-                  className="rounded-md px-3 py-2 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-100"
+                  role="switch"
+                  aria-checked={productDraft.active}
+                  aria-label="Produto Ativo"
+                  onClick={() =>
+                    setProductDraft((curr) => ({
+                      ...curr,
+                      active: !curr.active,
+                    }))
+                  }
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
+                    productDraft.active ? "bg-[#008f58]" : "bg-black/25"
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+                      productDraft.active ? "translate-x-5" : "translate-x-0"
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {productError && (
+                <p className="text-[12px] font-medium text-[#ff383c]">
+                  {productError}
+                </p>
+              )}
+
+              <footer className="flex items-center justify-end gap-4 border-t border-black/10 pt-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsProductModalOpen(false);
+                    setProductError(null);
+                  }}
+                  className="text-[14px] font-semibold text-black/60 transition-colors hover:text-black"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-blue-600 px-4 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                  className="inline-flex h-[36px] items-center gap-2 rounded-[8px] bg-[#008f58] px-4 text-[14px] font-semibold text-white shadow-sm transition-colors hover:bg-[#007a4b]"
                 >
-                  <CheckCircle2 aria-hidden="true" className="size-3.5" />
-                  Salvar no Estoque
+                  <span>Salvar no Estoque</span>
                 </button>
-              </div>
+              </footer>
             </form>
-          </section>
+          </div>
         </div>
       )}
 
-      {supplierModalMode && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-[2px]"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) closeSupplierModal();
-          }}
-        >
-          <section
+      {/* Modal: Movimentar Estoque (Entrada / Saída / Ajuste) */}
+      {movingProduct && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4">
+          <div
             role="dialog"
             aria-modal="true"
-            aria-labelledby="supplier-modal-title"
-            className="max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-xl bg-white shadow-2xl"
+            aria-labelledby={movementDialogTitleId}
+            className="w-full max-w-[445px] overflow-hidden rounded-[15px] bg-white shadow-2xl"
           >
-            <header className="flex items-center justify-between gap-3 bg-[#153488] px-5 py-3.5 text-white">
-              <div className="flex items-center gap-2.5">
-                <Truck aria-hidden="true" className="size-4.5 text-orange-400" />
-                <h2 id="supplier-modal-title" className="text-sm font-semibold">
-                  {supplierModalMode === "edit"
-                    ? "Editar Fornecedor"
-                    : "Cadastrar Novo Fornecedor"}
+            <header className="flex items-start justify-between border-b border-black/10 px-5 py-4">
+              <div>
+                <h2
+                  id={movementDialogTitleId}
+                  className="text-[20px] font-bold text-black"
+                >
+                  Movimentar Estoque
                 </h2>
+                <p className="text-[12px] text-black/55">
+                  Registre entradas de mercadorias, baixas manuais ou ajuste por contagem.
+                </p>
               </div>
               <button
                 type="button"
-                onClick={closeSupplierModal}
-                aria-label="Fechar modal de fornecedor"
-                className="rounded p-1 text-blue-100 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                onClick={() => {
+                  setMovingProduct(null);
+                  setMovementError(null);
+                }}
+                aria-label="Fechar modal de movimentação"
+                className="rounded-full p-1 text-black/60 transition-colors hover:bg-black/5 hover:text-black"
               >
-                <X aria-hidden="true" className="size-4" />
+                <X className="h-5 w-5" />
               </button>
             </header>
 
-            <form onSubmit={handleSaveSupplier} className="space-y-3.5 p-5">
-              <label className="block text-[11px] font-semibold text-slate-700">
-                Nome / Razão Social *
+            <form
+              onSubmit={handleConfirmMoveStock}
+              className="space-y-4 px-5 py-4"
+            >
+              {/* Product Banner */}
+              <div className="rounded-[10px] border border-black/15 bg-[#f8f9fb] p-3">
+                <p className="text-[14px] font-bold text-black">
+                  {movingProduct.description}
+                </p>
+                <p className="mt-0.5 text-[12px] text-black/60">
+                  Estoque atual: {movingProduct.currentStock}{" "}
+                  {movingProduct.unit.toLowerCase()} - custo atual{" "}
+                  {formatCurrency(movingProduct.unitCost)}
+                </p>
+              </div>
+
+              {/* Tipo de Movimentação 3-Tab Selector */}
+              <div>
+                <label className="mb-1.5 block text-[13px] font-semibold text-black">
+                  Tipo de Movimentação
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {(
+                    [
+                      { id: "entry", label: "Entrada" },
+                      { id: "exit", label: "Saída" },
+                      { id: "adjustment", label: "Ajuste (contagem)" },
+                    ] as const
+                  ).map((tab) => {
+                    const active = movementType === tab.id;
+                    return (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => setMovementType(tab.id)}
+                        className={`h-[34px] rounded-[8px] border text-[12px] font-semibold transition-colors ${
+                          active
+                            ? "border-[#008f58] bg-[#008f58]/15 text-[#008f58]"
+                            : "border-black/20 bg-white text-black/70 hover:bg-black/5"
+                        }`}
+                      >
+                        {tab.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Quantity Input */}
+              <div>
+                <label className="mb-1 block text-[13px] font-semibold text-black">
+                  {movementType === "entry"
+                    ? "Quantidade Recebida"
+                    : movementType === "exit"
+                      ? "Quantidade Retirada"
+                      : "Quantidade Contada"}
+                </label>
                 <input
-                  required
-                  type="text"
-                  value={supplierForm.name}
-                  onChange={(event) =>
-                    setSupplierForm((prev) => ({ ...prev, name: event.target.value }))
+                  type="number"
+                  step="1"
+                  min="0"
+                  aria-label="Quantidade da Movimentação"
+                  value={movementQuantity}
+                  onChange={(e) => setMovementQuantity(e.target.value)}
+                  placeholder={
+                    movementType === "adjustment" ? "Ex: 24" : "Ex: 12"
                   }
-                  placeholder="Ex: Distribuidora Express"
-                  className="mt-1 h-9 w-full rounded-md border border-blue-200 px-3 text-xs font-normal text-slate-700 outline-none placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  className="h-[38px] w-full rounded-[8px] border border-black/20 bg-white px-3 text-[13px] text-black focus:border-[#203f9f] focus:outline-none"
                 />
-              </label>
+              </div>
+
+              {/* Purchase Unit Cost (only for Entrada) */}
+              {movementType === "entry" && (
+                <div>
+                  <label className="mb-1 block text-[13px] font-semibold text-black">
+                    Custo Unitário da Compra
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    aria-label="Custo Unitário da Compra"
+                    value={movementCost}
+                    onChange={(e) => setMovementCost(e.target.value)}
+                    placeholder="Ex: 4,90"
+                    className="h-[38px] w-full rounded-[8px] border border-black/20 bg-white px-3 text-[13px] text-black focus:border-[#203f9f] focus:outline-none"
+                  />
+                  <p className="mt-1 text-[11px] text-black/50">
+                    Fica gravado nesta entrada e atualiza o preço de custo do produto
+                  </p>
+                </div>
+              )}
+
+              {/* Motivo */}
+              <div>
+                <label className="mb-1 block text-[13px] font-semibold text-black">
+                  Motivo
+                </label>
+                <input
+                  type="text"
+                  aria-label="Motivo da Movimentação"
+                  value={movementReason}
+                  onChange={(e) => setMovementReason(e.target.value)}
+                  placeholder="Ex: compra do fornecedor, quebra, perda"
+                  className="h-[38px] w-full rounded-[8px] border border-black/20 bg-white px-3 text-[13px] text-black placeholder:text-black/40 focus:border-[#203f9f] focus:outline-none"
+                />
+              </div>
+
+              {movementError && (
+                <p className="text-[12px] font-medium text-[#ff383c]">
+                  {movementError}
+                </p>
+              )}
+
+              <button
+                type="submit"
+                className="h-[40px] w-full rounded-[8px] bg-[#008f58] text-[14px] font-semibold text-white shadow-sm transition-colors hover:bg-[#007a4b]"
+              >
+                Confirmar Movimentação
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Cadastrar / Editar Fornecedor (Quick Modal from Inventory) */}
+      {isSupplierModalOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={supplierDialogTitleId}
+            className="w-full max-w-[421px] overflow-hidden rounded-[15px] bg-white shadow-2xl"
+          >
+            <header className="flex items-center justify-between border-b border-black/10 px-5 py-4">
+              <h2
+                id={supplierDialogTitleId}
+                className="text-[18px] font-bold text-black"
+              >
+                {supplierDraft.id
+                  ? "Editar Fornecedor"
+                  : "Cadastrar Novo Fornecedor"}
+              </h2>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setIsSupplierModalOpen(false);
+                  setSupplierError(null);
+                }}
+                aria-label="Fechar modal de fornecedor"
+                className="rounded-full p-1 text-black/60 transition-colors hover:bg-black/5 hover:text-black"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </header>
+
+            <form
+              onSubmit={handleSaveSupplier}
+              className="space-y-3.5 px-5 py-4"
+            >
+              <div>
+                <label className="mb-1 block text-[13px] font-semibold text-black">
+                  Nome / Razão Social *
+                </label>
+                <input
+                  type="text"
+                  aria-label="Nome / Razão Social"
+                  value={supplierDraft.name}
+                  onChange={(event) =>
+                    setSupplierDraft((current) => ({
+                      ...current,
+                      name: event.target.value,
+                    }))
+                  }
+                  placeholder="Ex: JDE Jacobs Douwe"
+                  className="h-[38px] w-full rounded-[8px] border border-black/20 bg-white px-3 text-[13px] text-black focus:border-[#203f9f] focus:outline-none"
+                />
+              </div>
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <label className="block text-[11px] font-semibold text-slate-700">
-                  CNPJ / CPF
+                <div>
+                  <label className="mb-1 block text-[13px] font-semibold text-black">
+                    CNPJ / CPF
+                  </label>
                   <input
                     type="text"
-                    value={supplierForm.document}
+                    aria-label="CNPJ / CPF"
+                    value={supplierDraft.document}
                     onChange={(event) =>
-                      setSupplierForm((prev) => ({ ...prev, document: event.target.value }))
+                      setSupplierDraft((current) => ({
+                        ...current,
+                        document: event.target.value,
+                      }))
                     }
-                    placeholder="Ex: 45.997.418/0001-53"
-                    className="mt-1 h-9 w-full rounded-md border border-blue-200 px-3 text-xs font-normal text-slate-700 outline-none placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    placeholder="00.000.000/0000-00"
+                    className="h-[38px] w-full rounded-[8px] border border-black/20 bg-white px-3 text-[13px] text-black focus:border-[#203f9f] focus:outline-none"
                   />
-                </label>
+                </div>
 
-                <label className="block text-[11px] font-semibold text-slate-700">
-                  Representante / Vendedor
+                <div>
+                  <label className="mb-1 block text-[13px] font-semibold text-black">
+                    Vendedor / Representante
+                  </label>
                   <input
                     type="text"
-                    value={supplierForm.representative}
+                    aria-label="Vendedor / Representante"
+                    value={supplierDraft.representative}
                     onChange={(event) =>
-                      setSupplierForm((prev) => ({
-                        ...prev,
+                      setSupplierDraft((current) => ({
+                        ...current,
                         representative: event.target.value,
                       }))
                     }
-                    placeholder="Ex: Carlos"
-                    className="mt-1 h-9 w-full rounded-md border border-blue-200 px-3 text-xs font-normal text-slate-700 outline-none placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    placeholder="Nome do contato"
+                    className="h-[38px] w-full rounded-[8px] border border-black/20 bg-white px-3 text-[13px] text-black focus:border-[#203f9f] focus:outline-none"
                   />
-                </label>
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-[0.85fr_1.15fr]">
-                <label className="block text-[11px] font-semibold text-slate-700">
-                  Contato *
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-[13px] font-semibold text-black">
+                    Contato (WhatsApp) *
+                  </label>
                   <input
-                    required
                     type="text"
-                    value={supplierForm.contact}
+                    aria-label="Contato (WhatsApp)"
+                    value={supplierDraft.contact}
                     onChange={(event) =>
-                      setSupplierForm((prev) => ({ ...prev, contact: event.target.value }))
+                      setSupplierDraft((current) => ({
+                        ...current,
+                        contact: event.target.value,
+                      }))
                     }
-                    placeholder="Ex: (11) 98451-6521"
-                    className="mt-1 h-9 w-full rounded-md border border-blue-200 px-3 text-xs font-normal text-slate-700 outline-none placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    placeholder="(11) 98451-6521"
+                    className="h-[38px] w-full rounded-[8px] border border-black/20 bg-white px-3 text-[13px] text-black focus:border-[#203f9f] focus:outline-none"
                   />
-                </label>
+                </div>
 
-                <label className="block text-[11px] font-semibold text-slate-700">
-                  E-mail
+                <div>
+                  <label className="mb-1 block text-[13px] font-semibold text-black">
+                    E-mail
+                  </label>
                   <input
                     type="email"
-                    value={supplierForm.email}
+                    aria-label="E-mail"
+                    value={supplierDraft.email}
                     onChange={(event) =>
-                      setSupplierForm((prev) => ({ ...prev, email: event.target.value }))
+                      setSupplierDraft((current) => ({
+                        ...current,
+                        email: event.target.value,
+                      }))
                     }
-                    placeholder="Ex: pedidos@express.com.br"
-                    className="mt-1 h-9 w-full rounded-md border border-blue-200 px-3 text-xs font-normal text-slate-700 outline-none placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    placeholder="pedidos@fornecedor.com.br"
+                    className="h-[38px] w-full rounded-[8px] border border-black/20 bg-white px-3 text-[13px] text-black focus:border-[#203f9f] focus:outline-none"
                   />
-                </label>
+                </div>
               </div>
 
-              <label className="block text-[11px] font-semibold text-slate-700">
-                Observações
-                <textarea
-                  rows={3}
-                  value={supplierForm.notes}
+              <div>
+                <label className="mb-1 block text-[13px] font-semibold text-black">
+                  Observações (Prazo, dia de visita)
+                </label>
+                <input
+                  type="text"
+                  aria-label="Observações (Prazo, dia de visita)"
+                  value={supplierDraft.notes}
                   onChange={(event) =>
-                    setSupplierForm((prev) => ({ ...prev, notes: event.target.value }))
+                    setSupplierDraft((current) => ({
+                      ...current,
+                      notes: event.target.value,
+                    }))
                   }
-                  placeholder="Ex: Entregas terças e sextas pela manhã. Pedido mínimo de R$ 300,00."
-                  className="mt-1 w-full resize-y rounded-md border border-blue-200 px-3 py-2 text-xs font-normal text-slate-700 outline-none placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  placeholder="Ex: Entrega toda quarta-feira, boleto 28 dias"
+                  className="h-[38px] w-full rounded-[8px] border border-black/20 bg-white px-3 text-[13px] text-black focus:border-[#203f9f] focus:outline-none"
                 />
-              </label>
+              </div>
 
-              <div className="flex items-center justify-end gap-3 pt-1">
+              {supplierError && (
+                <p className="text-[12px] font-medium text-[#ff383c]">
+                  {supplierError}
+                </p>
+              )}
+
+              <footer className="flex items-center justify-end gap-4 border-t border-black/10 pt-3">
                 <button
                   type="button"
-                  onClick={closeSupplierModal}
-                  className="rounded-md px-3 py-2 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-100"
+                  onClick={() => {
+                    setIsSupplierModalOpen(false);
+                    setSupplierError(null);
+                  }}
+                  className="text-[14px] font-semibold text-black/60 transition-colors hover:text-black"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-blue-600 px-4 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                  className="h-[34px] rounded-[8px] bg-[#008f58] px-4 text-[13px] font-semibold text-white transition-colors hover:bg-[#007a4b]"
                 >
-                  <CheckCircle2 aria-hidden="true" className="size-3.5" />
-                  {supplierModalMode === "edit" ? "Salvar Alterações" : "Salvar Fornecedor"}
+                  {supplierDraft.id ? "Salvar Alterações" : "Salvar Fornecedor"}
                 </button>
-              </div>
+              </footer>
             </form>
-          </section>
+          </div>
         </div>
       )}
 
-      {productToDelete && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-[2px]"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) setProductToDelete(null);
-          }}
-        >
-          <section
+      {/* Modal: Excluir Produto */}
+      {deletingProduct && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4">
+          <div
             role="dialog"
             aria-modal="true"
-            aria-labelledby="delete-product-title"
-            className="w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-2xl"
+            aria-labelledby={deleteDialogTitleId}
+            className="w-full max-w-[333px] rounded-[15px] bg-white p-6 text-center shadow-2xl"
           >
-            <div className="mx-auto mb-3 flex size-10 items-center justify-center rounded-full text-red-500">
-              <CircleX aria-hidden="true" className="size-8 stroke-[1.75]" />
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-[#ff383c]/10 text-[#ff383c]">
+              <CircleX className="h-8 w-8" />
             </div>
-            <h2 id="delete-product-title" className="text-base font-bold text-slate-900">
+
+            <h2
+              id={deleteDialogTitleId}
+              className="text-[20px] font-semibold text-black"
+            >
               Excluir Produto
             </h2>
-            <p className="mt-2 text-xs leading-5 text-slate-600">
+
+            <p className="mt-2 text-[13px] leading-snug text-black/60">
               Atenção: Todos os dados desse produto serão perdidos. Confirmar exclusão?
             </p>
+
             <div className="mt-5 flex items-center justify-center gap-3">
               <button
                 type="button"
-                onClick={() => setProductToDelete(null)}
-                className="rounded-lg px-4 py-2 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-100"
+                onClick={() => setDeletingProduct(null)}
+                className="h-[33px] min-w-[115px] rounded-[8px] border border-black/30 bg-[#d9d9d9]/40 px-4 text-[14px] font-semibold text-black/60 transition-colors hover:bg-black/10"
               >
                 Cancelar
               </button>
               <button
                 type="button"
                 onClick={handleConfirmDeleteProduct}
-                className="rounded-lg bg-red-500 px-5 py-2 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2"
+                className="h-[33px] min-w-[115px] rounded-[8px] bg-[#ff383c] px-4 text-[14px] font-semibold text-white transition-colors hover:bg-[#e0282c]"
               >
                 Confirmar
               </button>
             </div>
-          </section>
+          </div>
         </div>
       )}
     </div>

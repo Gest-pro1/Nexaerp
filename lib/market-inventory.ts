@@ -1,5 +1,7 @@
 export type InventoryUnit = "UN" | "KG" | "PCT" | "CX" | "L" | "FD";
 
+export type StockMovementType = "entry" | "exit" | "adjustment";
+
 export interface InventorySupplier {
   id: string;
   name: string;
@@ -7,11 +9,19 @@ export interface InventorySupplier {
   representative: string;
   contact: string;
   email: string;
+  cep?: string;
+  street?: string;
+  number?: string;
+  neighborhood?: string;
+  city?: string;
+  state?: string;
   notes: string;
+  accentColor?: string;
 }
 
 export interface InventoryProduct {
   id: string;
+  code?: string;
   barcode: string;
   description: string;
   category: string;
@@ -24,6 +34,20 @@ export interface InventoryProduct {
   expirationDate: string;
   supplierId?: string;
   supplierName: string;
+  active?: boolean;
+}
+
+export interface StockMovementRecord {
+  id: string;
+  productId: string;
+  productName: string;
+  type: StockMovementType;
+  quantity: number;
+  unitCost?: number;
+  reason: string;
+  createdAt: string;
+  previousStock: number;
+  newStock: number;
 }
 
 export interface InventoryMetrics {
@@ -53,6 +77,12 @@ export const INVENTORY_UNITS: { value: InventoryUnit; label: string }[] = [
   { value: "FD", label: "FD - Fardo" },
 ];
 
+export const BRAZILIAN_STATES: string[] = [
+  "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA",
+  "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN",
+  "RS", "RO", "RR", "SC", "SP", "SE", "TO",
+];
+
 export const EMPTY_INVENTORY_PRODUCTS: InventoryProduct[] = [];
 export const EMPTY_INVENTORY_SUPPLIERS: InventorySupplier[] = [];
 
@@ -76,6 +106,37 @@ export function calculateSalePrice(unitCost: number, suggestedMargin: number): n
   if (!Number.isFinite(unitCost) || unitCost <= 0) return 0;
   const margin = Number.isFinite(suggestedMargin) ? suggestedMargin : 0;
   return Number((unitCost * (1 + margin / 100)).toFixed(2));
+}
+
+export function applyStockMovement(
+  product: InventoryProduct,
+  input: {
+    type: StockMovementType;
+    quantity: number;
+    unitCost?: number;
+  },
+): InventoryProduct {
+  const qty = Number.isFinite(input.quantity) && input.quantity >= 0 ? input.quantity : 0;
+  let newStock = product.currentStock;
+
+  if (input.type === "entry") {
+    newStock = Math.max(0, product.currentStock + qty);
+  } else if (input.type === "exit") {
+    newStock = Math.max(0, product.currentStock - qty);
+  } else if (input.type === "adjustment") {
+    newStock = Math.max(0, qty);
+  }
+
+  const nextUnitCost =
+    input.type === "entry" && Number.isFinite(input.unitCost) && (input.unitCost ?? 0) > 0
+      ? Number(input.unitCost!.toFixed(2))
+      : product.unitCost;
+
+  return {
+    ...product,
+    currentStock: newStock,
+    unitCost: nextUnitCost,
+  };
 }
 
 export function parseExpirationDate(value: string): Date | null {
