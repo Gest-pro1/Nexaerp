@@ -2,22 +2,29 @@
 
 import { useEffect, useId, useState, type FormEvent } from "react";
 import {
-  Check,
-  Home,
-  Pencil,
-  Plus,
-  QrCode,
-  Save,
-  Settings,
-  ShieldCheck,
-  Trash2,
-  UserCheck,
-  X,
-} from "lucide-react";
+  BookOpenIcon,
+  ChartBarIcon,
+  CheckCircleIcon,
+  Cog6ToothIcon,
+  CubeIcon,
+  CurrencyDollarIcon,
+  DocumentCheckIcon,
+  DocumentTextIcon,
+  HomeIcon,
+  LockClosedIcon,
+  PencilSquareIcon,
+  QrCodeIcon,
+  ShieldCheckIcon,
+  TrashIcon,
+  UserGroupIcon,
+  UserIcon,
+  UserPlusIcon,
+  XCircleIcon,
+  XMarkIcon,
+} from "@heroicons/react/24/outline";
 import {
   DEFAULT_OPERATORS,
   DEFAULT_STORE_SETTINGS,
-  formatOperatorRoleLabel,
   getPresetPermissionsForRole,
   OPERATOR_PERMISSION_ITEMS,
   PIX_KEY_TYPES,
@@ -54,8 +61,8 @@ function createEmptyOperatorDraft(): OperatorFormDraft {
     name: "",
     username: "",
     password: "",
-    role: "cashier",
-    permissions: getPresetPermissionsForRole("cashier"),
+    role: "admin",
+    permissions: getPresetPermissionsForRole("admin"),
   };
 }
 
@@ -68,6 +75,31 @@ function operatorToDraft(operator: SystemOperator): OperatorFormDraft {
     role: operator.role,
     permissions: { ...operator.permissions },
   };
+}
+
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) {
+    return `${parts[0][0] ?? ""}${parts[1][0] ?? ""}`.toUpperCase();
+  }
+  return name.slice(0, 2).toUpperCase();
+}
+
+function getPermissionIcon(key: keyof OperatorPermissions) {
+  switch (key) {
+    case "authorizeBookletSale":
+      return BookOpenIcon;
+    case "grantPosDiscounts":
+      return CurrencyDollarIcon;
+    case "cancelItemsAndSales":
+      return XCircleIcon;
+    case "manageStockAndPrices":
+      return CubeIcon;
+    case "financialReportsAndProfits":
+      return ChartBarIcon;
+    case "manageTeamAndPermissions":
+      return UserGroupIcon;
+  }
 }
 
 export default function SettingsScreen({
@@ -199,61 +231,71 @@ export default function SettingsScreen({
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-[1250px] flex-col gap-5">
-      {/* Header */}
-      <header className="flex flex-col gap-1">
-        <h1 className="text-[28px] font-semibold tracking-tight text-black">
-          Configurações do Sistema
-        </h1>
-        <p className="text-[13px] text-black/60">
-          Gerencie parâmetros do estabelecimento, terminal físico PDV e a equipe de operadores.
-        </p>
-      </header>
+    <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-4">
+      {/* Header & Underline Tabs Card (Screenshots 110040.png & 110054.png) */}
+      <div className="-mx-5 -mt-5 border-b border-slate-200 bg-white px-6 pt-5 lg:-mx-6 lg:-mt-6">
+        <header className="flex flex-col gap-0.5">
+          <h1 className="text-[20px] font-bold tracking-tight text-[#203f9f]">
+            Configurações do Sistema
+          </h1>
+          <p className="text-[11px] text-slate-400">
+            Gerencie parâmetros do estabelecimento, terminal físico PDV e a
+            equipe de operadores.
+          </p>
+        </header>
 
-      {/* Tabs Bar */}
-      <div className="flex flex-wrap items-center gap-3 rounded-[8px] border border-black/10 bg-white p-2 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
-        <button
-          type="button"
-          onClick={() => setActiveTab("general")}
-          className={`inline-flex h-[42px] items-center gap-2 rounded-[8px] px-4 text-[14px] font-semibold transition-colors ${
-            activeTab === "general"
-              ? "bg-[#203f9f] text-white shadow-sm"
-              : "bg-[#f0f2f5] text-black/75 hover:bg-black/10"
-          }`}
-        >
-          <Settings className="h-4 w-4" />
-          <span>Gerais do Estabelecimento</span>
-        </button>
+        <div className="mt-4 flex items-center gap-6">
+          <button
+            type="button"
+            onClick={() => setActiveTab("general")}
+            className={`inline-flex items-center gap-2 border-b-2 pb-2.5 text-[12px] font-bold transition-colors ${
+              activeTab === "general"
+                ? "border-[#203f9f] text-[#203f9f]"
+                : "border-transparent text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            <Cog6ToothIcon
+              className={`h-4 w-4 ${
+                activeTab === "general" ? "text-[#ff6b00]" : "text-slate-500"
+              }`}
+            />
+            <span>Gerais do Estabelecimento</span>
+          </button>
 
-        <button
-          type="button"
-          onClick={() => setActiveTab("operators")}
-          className={`inline-flex h-[42px] items-center gap-2 rounded-[8px] px-4 text-[14px] font-semibold transition-colors ${
-            activeTab === "operators"
-              ? "bg-[#203f9f] text-white shadow-sm"
-              : "bg-[#f0f2f5] text-black/75 hover:bg-black/10"
-          }`}
-        >
-          <UserCheck className="h-4 w-4" />
-          <span>Operadores e Permissões</span>
-        </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("operators")}
+            className={`inline-flex items-center gap-2 border-b-2 pb-2.5 text-[12px] font-bold transition-colors ${
+              activeTab === "operators"
+                ? "border-[#203f9f] text-[#203f9f]"
+                : "border-transparent text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            <UserPlusIcon
+              className={`h-4 w-4 ${
+                activeTab === "operators" ? "text-[#ff6b00]" : "text-slate-500"
+              }`}
+            />
+            <span>Operadores e Permissões</span>
+          </button>
+        </div>
       </div>
 
-      {/* Tab 1: Gerais do Estabelecimento */}
+      {/* Tab 1: Gerais do Estabelecimento (Screenshot 110040.png) */}
       {activeTab === "general" && (
-        <form onSubmit={handleSaveStoreForm} className="space-y-4">
+        <form onSubmit={handleSaveStoreForm} className="space-y-4 pt-1">
           {/* Card 1: Identificação do Estabelecimento */}
-          <section className="rounded-[8px] border border-black/10 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
-            <div className="mb-4 flex items-center gap-2.5">
-              <Home className="h-5 w-5 text-[#203f9f]" />
-              <h2 className="text-[18px] font-bold text-black">
+          <section className="rounded-[10px] border border-slate-200/80 bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+            <div className="mb-4 flex items-center gap-2">
+              <HomeIcon className="h-4 w-4 text-[#ff6b00]" />
+              <h2 className="text-[13px] font-bold text-[#203f9f]">
                 Identificação do Estabelecimento
               </h2>
             </div>
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div>
-                <label className="mb-1 block text-[13px] font-semibold text-black/70">
+                <label className="mb-1 block text-[11px] font-semibold text-slate-700">
                   Razão Social *
                 </label>
                 <input
@@ -266,12 +308,12 @@ export default function SettingsScreen({
                       razaoSocial: e.target.value,
                     }))
                   }
-                  className="h-[42px] w-full rounded-[8px] border border-black/20 bg-white px-3.5 text-[14px] text-black focus:border-[#203f9f] focus:outline-none"
+                  className="h-[36px] w-full rounded-[6px] border border-blue-200/80 bg-white px-3 text-[12px] text-slate-800 focus:border-[#203f9f] focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="mb-1 block text-[13px] font-semibold text-black/70">
+                <label className="mb-1 block text-[11px] font-semibold text-slate-700">
                   Nome Fantasia (Aparece no Cupom)*
                 </label>
                 <input
@@ -284,14 +326,14 @@ export default function SettingsScreen({
                       nomeFantasia: e.target.value,
                     }))
                   }
-                  className="h-[42px] w-full rounded-[8px] border border-black/20 bg-white px-3.5 text-[14px] text-black focus:border-[#203f9f] focus:outline-none"
+                  className="h-[36px] w-full rounded-[6px] border border-blue-200/80 bg-white px-3 text-[12px] text-slate-800 focus:border-[#203f9f] focus:outline-none"
                 />
               </div>
             </div>
 
-            <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div className="mt-3.5 grid grid-cols-1 gap-4 md:grid-cols-3">
               <div>
-                <label className="mb-1 block text-[13px] font-semibold text-black/70">
+                <label className="mb-1 block text-[11px] font-semibold text-slate-700">
                   CNPJ *
                 </label>
                 <input
@@ -304,12 +346,12 @@ export default function SettingsScreen({
                       cnpj: e.target.value,
                     }))
                   }
-                  className="h-[42px] w-full rounded-[8px] border border-black/20 bg-white px-3.5 text-[14px] text-black focus:border-[#203f9f] focus:outline-none"
+                  className="h-[36px] w-full rounded-[6px] border border-blue-200/80 bg-white px-3 text-[12px] text-slate-800 focus:border-[#203f9f] focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="mb-1 block text-[13px] font-semibold text-black/70">
+                <label className="mb-1 block text-[11px] font-semibold text-slate-700">
                   Inscrição Estadual (IE)
                 </label>
                 <input
@@ -322,12 +364,12 @@ export default function SettingsScreen({
                       ie: e.target.value,
                     }))
                   }
-                  className="h-[42px] w-full rounded-[8px] border border-black/20 bg-white px-3.5 text-[14px] text-black focus:border-[#203f9f] focus:outline-none"
+                  className="h-[36px] w-full rounded-[6px] border border-blue-200/80 bg-white px-3 text-[12px] text-slate-800 focus:border-[#203f9f] focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="mb-1 block text-[13px] font-semibold text-black/70">
+                <label className="mb-1 block text-[11px] font-semibold text-slate-700">
                   Contato
                 </label>
                 <input
@@ -340,13 +382,13 @@ export default function SettingsScreen({
                       phone: e.target.value,
                     }))
                   }
-                  className="h-[42px] w-full rounded-[8px] border border-black/20 bg-white px-3.5 text-[14px] text-black focus:border-[#203f9f] focus:outline-none"
+                  className="h-[36px] w-full rounded-[6px] border border-blue-200/80 bg-white px-3 text-[12px] text-slate-800 focus:border-[#203f9f] focus:outline-none"
                 />
               </div>
             </div>
 
-            <div className="mt-4">
-              <label className="mb-1 block text-[13px] font-semibold text-black/70">
+            <div className="mt-3.5">
+              <label className="mb-1 block text-[11px] font-semibold text-slate-700">
                 Endereço Completo
               </label>
               <input
@@ -359,23 +401,23 @@ export default function SettingsScreen({
                     address: e.target.value,
                   }))
                 }
-                className="h-[42px] w-full rounded-[8px] border border-black/20 bg-white px-3.5 text-[14px] text-black focus:border-[#203f9f] focus:outline-none"
+                className="h-[36px] w-full rounded-[6px] border border-blue-200/80 bg-white px-3 text-[12px] text-slate-800 focus:border-[#203f9f] focus:outline-none"
               />
             </div>
           </section>
 
           {/* Card 2: Chave Pix do Estabelecimento */}
-          <section className="rounded-[8px] border border-black/10 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
-            <div className="mb-4 flex items-center gap-2.5">
-              <QrCode className="h-5 w-5 text-[#008f58]" />
-              <h2 className="text-[18px] font-bold text-black">
+          <section className="rounded-[10px] border border-slate-200/80 bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+            <div className="mb-4 flex items-center gap-2">
+              <QrCodeIcon className="h-4 w-4 text-[#008f58]" />
+              <h2 className="text-[13px] font-bold text-[#203f9f]">
                 Chave Pix do Estabelecimento (Para PDV e Cobrança da Caderneta)
               </h2>
             </div>
 
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-12">
-              <div className="md:col-span-4">
-                <label className="mb-1 block text-[13px] font-semibold text-black/70">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div>
+                <label className="mb-1 block text-[11px] font-semibold text-slate-700">
                   Tipo da Chave
                 </label>
                 <select
@@ -387,7 +429,7 @@ export default function SettingsScreen({
                       pixKeyType: e.target.value as PixKeyType,
                     }))
                   }
-                  className="h-[42px] w-full rounded-[8px] border border-black/20 bg-white px-3.5 text-[14px] text-black focus:border-[#203f9f] focus:outline-none"
+                  className="h-[36px] w-full rounded-[6px] border border-blue-200/80 bg-white px-3 text-[12px] text-slate-800 focus:border-[#203f9f] focus:outline-none"
                 >
                   {PIX_KEY_TYPES.map((type) => (
                     <option key={type} value={type}>
@@ -397,8 +439,8 @@ export default function SettingsScreen({
                 </select>
               </div>
 
-              <div className="md:col-span-8">
-                <label className="mb-1 block text-[13px] font-semibold text-black/70">
+              <div>
+                <label className="mb-1 block text-[11px] font-semibold text-slate-700">
                   Chave Pix Cadastrada *
                 </label>
                 <input
@@ -411,17 +453,20 @@ export default function SettingsScreen({
                       pixKey: e.target.value,
                     }))
                   }
-                  className="h-[42px] w-full rounded-[8px] border border-black/20 bg-white px-3.5 text-[14px] text-black focus:border-[#203f9f] focus:outline-none"
+                  className="h-[36px] w-full rounded-[6px] border border-blue-200/80 bg-white px-3 text-[12px] text-slate-800 focus:border-[#203f9f] focus:outline-none"
                 />
               </div>
             </div>
           </section>
 
           {/* Card 3: Mensagem de Rodapé do Cupom */}
-          <section className="rounded-[8px] border border-black/10 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
-            <h2 className="mb-2 text-[16px] font-bold text-black">
-              Mensagem de Rodapé do Cupom
-            </h2>
+          <section className="rounded-[10px] border border-slate-200/80 bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+            <div className="mb-3 flex items-center gap-2">
+              <DocumentTextIcon className="h-4 w-4 text-[#ff6b00]" />
+              <h2 className="text-[13px] font-bold text-[#203f9f]">
+                Mensagem de Rodapé do Cupom
+              </h2>
+            </div>
             <input
               type="text"
               aria-label="Mensagem de Rodapé do Cupom"
@@ -432,22 +477,22 @@ export default function SettingsScreen({
                   receiptFooter: e.target.value,
                 }))
               }
-              className="h-[42px] w-full rounded-[8px] border border-black/20 bg-white px-3.5 text-[14px] text-black focus:border-[#203f9f] focus:outline-none"
+              className="h-[36px] w-full rounded-[6px] border border-blue-200/80 bg-white px-3 text-[12px] text-slate-800 focus:border-[#203f9f] focus:outline-none"
             />
           </section>
 
           <div className="flex items-center gap-4">
             <button
               type="submit"
-              className="inline-flex h-[42px] items-center gap-2 rounded-[8px] bg-[#008f58] px-5 text-[15px] font-semibold text-white shadow-sm transition-colors hover:bg-[#007a4b]"
+              className="inline-flex h-[36px] items-center gap-1.5 rounded-[6px] bg-[#0f766e] px-4 text-[12px] font-semibold text-white shadow-xs transition-colors hover:bg-[#0d645d]"
             >
-              <Save className="h-4 w-4" />
+              <DocumentCheckIcon className="h-4 w-4" />
               <span>Salvar dados da loja</span>
             </button>
 
             {savedNotice && (
-              <span className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-[#008f58]">
-                <Check className="h-4 w-4" />
+              <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[#008f58]">
+                <CheckCircleIcon className="h-4 w-4" />
                 Dados da loja salvos com sucesso!
               </span>
             )}
@@ -455,25 +500,27 @@ export default function SettingsScreen({
         </form>
       )}
 
-      {/* Tab 2: Operadores e Permissões */}
+      {/* Tab 2: Operadores e Permissões (Screenshot 110054.png) */}
       {activeTab === "operators" && (
-        <div className="space-y-4">
+        <div className="space-y-4 pt-1">
           {/* Terminal & Operator Header Card */}
-          <section className="flex flex-col justify-between gap-4 rounded-[8px] border border-black/10 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)] md:flex-row md:items-center">
-            <div className="space-y-3">
-              <div>
-                <h2 className="text-[18px] font-bold text-black">
-                  Configurações de Operadores e Níveis de Permissão
-                </h2>
-                <p className="text-[13px] text-black/60">
-                  Defina acessos para caixas, gerentes e administradores do estabelecimento.
-                </p>
-              </div>
+          <section className="rounded-[10px] border border-slate-200/80 bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+            <div className="flex items-center gap-2">
+              <UserGroupIcon className="h-4 w-4 text-[#ff6b00]" />
+              <h2 className="text-[13px] font-bold text-[#203f9f]">
+                Configurações de Operadores e Níveis de Permissão
+              </h2>
+            </div>
+            <p className="mt-0.5 text-[11px] text-slate-400">
+              Defina acessos para caixas, gerentes e administradores do
+              estabelecimento.
+            </p>
 
-              <div className="flex flex-wrap items-center gap-3">
-                <label className="text-[13px] font-semibold text-black/75">
-                  Número / Identificação do Terminal *:
-                </label>
+            <div className="mt-4">
+              <label className="mb-1 block text-[11px] font-semibold text-slate-800">
+                Terminal
+              </label>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                 <input
                   type="text"
                   aria-label="Número / Identificação do Terminal"
@@ -489,128 +536,90 @@ export default function SettingsScreen({
                     }
                     onSaveSettings?.(next);
                   }}
-                  className="h-[38px] w-[180px] rounded-[8px] border border-black/20 bg-white px-3 text-[13px] font-medium text-black focus:border-[#203f9f] focus:outline-none"
+                  className="h-[38px] flex-1 rounded-[8px] border border-slate-200 bg-white px-3.5 text-[12px] text-slate-600 focus:border-[#203f9f] focus:outline-none"
                 />
+
+                <button
+                  type="button"
+                  onClick={handleOpenNewOperator}
+                  className="inline-flex h-[38px] shrink-0 items-center gap-1.5 rounded-[8px] bg-[#0f766e] px-4 text-[12px] font-semibold text-white shadow-xs transition-colors hover:bg-[#0d645d]"
+                >
+                  <UserPlusIcon className="h-4 w-4" />
+                  <span>Cadastrar Operador</span>
+                </button>
               </div>
             </div>
-
-            <button
-              type="button"
-              onClick={handleOpenNewOperator}
-              className="inline-flex h-[42px] shrink-0 items-center gap-2 rounded-[8px] bg-[#203f9f] px-4 text-[14px] font-semibold text-white shadow-sm transition-colors hover:bg-[#193382]"
-            >
-              <Plus className="h-4 w-4" />
-              <span>Cadastrar Operador</span>
-            </button>
           </section>
 
-          {/* Operators Grid */}
-          <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {operators.map((op) => {
-              const activeBadges = OPERATOR_PERMISSION_ITEMS.filter(
-                (item) => op.permissions[item.key],
-              );
-              const allActive =
-                activeBadges.length === OPERATOR_PERMISSION_ITEMS.length;
+          {/* Usuários com acesso List (Screenshot 110054.png) */}
+          <section className="overflow-hidden rounded-[10px] border border-slate-200/80 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+            <div className="border-b border-slate-100 px-5 py-3">
+              <h3 className="text-[13px] font-bold text-slate-700">
+                Usuários com acesso
+              </h3>
+            </div>
 
-              return (
-                <article
+            <ul className="divide-y divide-slate-100">
+              {operators.map((op) => (
+                <li
                   key={op.id}
-                  className="flex flex-col justify-between rounded-[8px] border border-black/10 bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.06)]"
+                  className="flex items-center justify-between px-5 py-3 hover:bg-slate-50/70"
                 >
-                  <div>
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h3 className="text-[16px] font-bold text-black">
-                            {op.name}
-                          </h3>
-                          <span
-                            className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${
-                              op.role === "admin"
-                                ? "bg-[#6155f5]/15 text-[#6155f5]"
-                                : op.role === "manager"
-                                  ? "bg-[#203f9f]/15 text-[#203f9f]"
-                                  : "bg-[#008f58]/15 text-[#008f58]"
-                            }`}
-                          >
-                            {formatOperatorRoleLabel(op.role)}
-                          </span>
-                        </div>
-                        <p className="mt-0.5 text-[12px] text-black/55">
-                          Login: @{op.username}
-                        </p>
-                      </div>
-
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => handleOpenEditOperator(op)}
-                          aria-label={`Editar operador ${op.name}`}
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-[6px] text-black/60 transition-colors hover:bg-black/5 hover:text-[#203f9f]"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteOperator(op.id)}
-                          aria-label={`Excluir operador ${op.name}`}
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-[6px] text-black/60 transition-colors hover:bg-[#ff383c]/10 hover:text-[#ff383c]"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[10px] font-bold text-slate-600">
+                      {getInitials(op.name)}
                     </div>
-
-                    <div className="mt-3 border-t border-black/10 pt-3">
-                      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-black/50">
-                        Permissões de Acesso
+                    <div>
+                      <p className="text-[12px] font-bold text-slate-800">
+                        {op.name}
                       </p>
-                      {allActive ? (
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-[#008f58]/15 px-3 py-1 text-[12px] font-semibold text-[#008f58]">
-                          <ShieldCheck className="h-3.5 w-3.5" />
-                          Todas as permissões ativas
-                        </span>
-                      ) : activeBadges.length === 0 ? (
-                        <span className="text-[12px] text-black/45">
-                          Apenas vendas básicas no PDV
-                        </span>
-                      ) : (
-                        <div className="flex flex-wrap gap-1.5">
-                          {activeBadges.map((badge) => (
-                            <span
-                              key={badge.key}
-                              className="rounded-md bg-[#f0f2f5] px-2.5 py-1 text-[11px] font-semibold text-black/75"
-                            >
-                              {badge.badgeLabel}
-                            </span>
-                          ))}
-                        </div>
-                      )}
+                      <p className="text-[10px] text-slate-400">
+                        Login: @{op.username}
+                      </p>
                     </div>
                   </div>
-                </article>
-              );
-            })}
+
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEditOperator(op)}
+                      aria-label={`Editar operador ${op.name}`}
+                      className="inline-flex h-7 w-7 items-center justify-center rounded text-slate-600 transition-colors hover:bg-slate-100 hover:text-[#203f9f]"
+                    >
+                      <PencilSquareIcon className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteOperator(op.id)}
+                      aria-label={`Excluir operador ${op.name}`}
+                      className="inline-flex h-7 w-7 items-center justify-center rounded text-slate-600 transition-colors hover:bg-rose-50 hover:text-rose-600"
+                    >
+                      <TrashIcon className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
           </section>
         </div>
       )}
 
-      {/* Modal: Cadastrar / Editar Operador */}
+      {/* Modal: Cadastrar / Editar Operador (Screenshots 110104.png & 110111.png) */}
       {isOperatorModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-[1px]">
           <div
             role="dialog"
             aria-modal="true"
             aria-labelledby={operatorModalTitleId}
-            className="w-full max-w-[463px] overflow-hidden rounded-[15px] bg-white shadow-2xl"
+            className="w-full max-w-[440px] overflow-hidden rounded-[12px] bg-white shadow-2xl"
           >
-            <header className="flex items-center justify-between border-b border-black/10 px-5 py-4">
-              <div className="flex items-center gap-2.5">
-                <UserCheck className="h-5 w-5 text-[#203f9f]" />
+            {/* Royal Blue Header */}
+            <header className="flex items-center justify-between bg-[#153488] px-5 py-3.5 text-white">
+              <div className="flex items-center gap-2">
+                <PencilSquareIcon className="h-5 w-5 text-[#ff6b00]" />
                 <h2
                   id={operatorModalTitleId}
-                  className="text-[19px] font-bold text-black"
+                  className="text-[15px] font-bold text-white"
                 >
                   {operatorDraft.id ? "Editar Operador" : "Cadastrar Operador"}
                 </h2>
@@ -622,18 +631,18 @@ export default function SettingsScreen({
                   setOperatorError(null);
                 }}
                 aria-label="Fechar modal de operador"
-                className="rounded-full p-1 text-black/60 transition-colors hover:bg-black/5 hover:text-black"
+                className="rounded p-1 text-blue-100 transition-colors hover:bg-white/10 hover:text-white"
               >
-                <X className="h-5 w-5" />
+                <XMarkIcon className="h-4 w-4" />
               </button>
             </header>
 
             <form
               onSubmit={handleSaveOperatorForm}
-              className="space-y-3.5 px-5 py-4"
+              className="space-y-3.5 p-5"
             >
               <div>
-                <label className="mb-1 block text-[12px] font-semibold text-black/75">
+                <label className="mb-1 block text-[11px] font-semibold text-slate-700">
                   Nome Completo / Apelido *
                 </label>
                 <input
@@ -647,13 +656,13 @@ export default function SettingsScreen({
                     }))
                   }
                   placeholder="Ex: Carlos Mendes"
-                  className="h-[38px] w-full rounded-[8px] border border-black/20 bg-white px-3 text-[13px] text-black focus:border-[#203f9f] focus:outline-none"
+                  className="h-[36px] w-full rounded-[6px] border border-slate-200 bg-[#f8fafc] px-3 text-[12px] text-slate-800 placeholder:text-slate-400 focus:border-[#203f9f] focus:bg-white focus:outline-none"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="mb-1 block text-[12px] font-semibold text-black/75">
+                  <label className="mb-1 block text-[11px] font-semibold text-slate-700">
                     Nome de Usuário / Login *
                   </label>
                   <input
@@ -667,83 +676,104 @@ export default function SettingsScreen({
                       }))
                     }
                     placeholder="carlos.caixa"
-                    className="h-[38px] w-full rounded-[8px] border border-black/20 bg-white px-3 text-[13px] text-black focus:border-[#203f9f] focus:outline-none"
+                    className="h-[36px] w-full rounded-[6px] border border-slate-200 bg-[#f8fafc] px-3 text-[12px] text-slate-800 placeholder:text-slate-400 focus:border-[#203f9f] focus:bg-white focus:outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-[12px] font-semibold text-black/75">
+                  <label className="mb-1 block text-[11px] font-semibold text-slate-700">
                     Senha *
                   </label>
-                  <input
-                    type="password"
-                    aria-label="Senha"
-                    value={operatorDraft.password}
-                    onChange={(e) =>
-                      setOperatorDraft((curr) => ({
-                        ...curr,
-                        password: e.target.value,
-                      }))
-                    }
-                    placeholder="****"
-                    className="h-[38px] w-full rounded-[8px] border border-black/20 bg-white px-3 text-[13px] text-black focus:border-[#203f9f] focus:outline-none"
-                  />
+                  <div className="relative">
+                    <LockClosedIcon className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="password"
+                      aria-label="Senha"
+                      value={operatorDraft.password}
+                      onChange={(e) =>
+                        setOperatorDraft((curr) => ({
+                          ...curr,
+                          password: e.target.value,
+                        }))
+                      }
+                      placeholder="****"
+                      className="h-[36px] w-full rounded-[6px] border border-slate-200 bg-[#f8fafc] pl-8 pr-3 text-[12px] text-slate-800 placeholder:text-slate-400 focus:border-[#203f9f] focus:bg-white focus:outline-none"
+                    />
+                  </div>
                 </div>
               </div>
 
-              {/* Role Selector Cards */}
+              {/* Role Selector Cards with Icons */}
               <div className="grid grid-cols-3 gap-2.5 pt-1">
                 {(
                   [
-                    { id: "cashier", label: "Operador de caixa" },
-                    { id: "manager", label: "Gerente" },
-                    { id: "admin", label: "Administrador" },
+                    {
+                      id: "cashier",
+                      label: "Operador de caixa",
+                      icon: UserIcon,
+                    },
+                    {
+                      id: "manager",
+                      label: "Gerente",
+                      icon: ShieldCheckIcon,
+                    },
+                    {
+                      id: "admin",
+                      label: "Administrador",
+                      icon: ShieldCheckIcon,
+                    },
                   ] as const
                 ).map((roleOption) => {
                   const selected = operatorDraft.role === roleOption.id;
+                  const RoleIcon = roleOption.icon;
                   return (
                     <button
                       key={roleOption.id}
                       type="button"
                       onClick={() => handleSelectRole(roleOption.id)}
-                      className={`flex h-[58px] flex-col items-center justify-center rounded-[8px] border px-2 text-center text-[12px] font-semibold transition-colors ${
+                      className={`flex h-[50px] flex-col items-center justify-center gap-1 rounded-[8px] border px-2 text-center text-[10px] font-semibold transition-colors ${
                         selected
-                          ? "border-[#203f9f] bg-[#203f9f]/10 text-[#203f9f]"
-                          : "border-black/20 bg-white text-black/70 hover:bg-black/5"
+                          ? "border-[#2563eb] bg-[#eff6ff] text-[#2563eb]"
+                          : "border-slate-200 bg-[#f8fafc] text-slate-500 hover:bg-slate-100"
                       }`}
                     >
+                      <RoleIcon className="h-3.5 w-3.5" />
                       <span>{roleOption.label}</span>
                     </button>
                   );
                 })}
               </div>
 
-              {/* Granular Permissions Checklist */}
-              <div className="pt-1">
+              {/* Granular Permissions Checklist Box */}
+              <div className="rounded-[8px] border border-slate-200 bg-[#f8fafc] p-3">
                 <div className="mb-2 flex items-center justify-between">
-                  <span className="text-[12px] font-bold text-black/75">
+                  <span className="text-[11px] font-bold text-slate-700">
                     Permissões Específicas
                   </span>
-                  <span className="text-[11px] text-black/45">
+                  <span className="text-[9px] text-slate-400">
                     Personalize individualmente
                   </span>
                 </div>
 
-                <div className="space-y-2">
+                <div className="max-h-[168px] space-y-1.5 overflow-y-auto pr-1">
                   {OPERATOR_PERMISSION_ITEMS.map((item) => {
                     const checked = operatorDraft.permissions[item.key];
+                    const PermIcon = getPermissionIcon(item.key);
                     return (
                       <label
                         key={item.key}
-                        className="flex h-[34px] cursor-pointer items-center gap-2.5 rounded-[8px] border border-black/15 bg-white px-3 text-[12px] font-medium text-black/85 hover:bg-black/[0.02]"
+                        className="flex h-[28px] cursor-pointer items-center justify-between rounded-[6px] border border-slate-200/80 bg-white px-2.5 text-[10px] font-medium text-slate-700 hover:bg-slate-50"
                       >
+                        <span className="flex items-center gap-2">
+                          <PermIcon className="h-3.5 w-3.5 text-[#2563eb]" />
+                          <span>{item.label}</span>
+                        </span>
                         <input
                           type="checkbox"
                           checked={checked}
                           onChange={() => handleTogglePermission(item.key)}
-                          className="h-4 w-4 rounded border-black/30 text-[#203f9f] focus:ring-[#203f9f]"
+                          className="h-3.5 w-3.5 rounded accent-[#2563eb]"
                         />
-                        <span>{item.label}</span>
                       </label>
                     );
                   })}
@@ -751,27 +781,32 @@ export default function SettingsScreen({
               </div>
 
               {operatorError && (
-                <p className="text-[12px] font-medium text-[#ff383c]">
+                <p className="text-[11px] font-medium text-rose-600">
                   {operatorError}
                 </p>
               )}
 
-              <footer className="flex items-center justify-end gap-4 border-t border-black/10 pt-3">
+              <footer className="flex items-center justify-end gap-4 pt-1">
                 <button
                   type="button"
                   onClick={() => {
                     setIsOperatorModalOpen(false);
                     setOperatorError(null);
                   }}
-                  className="text-[14px] font-semibold text-black/60 transition-colors hover:text-black"
+                  className="text-[12px] font-semibold text-slate-600 hover:text-slate-900"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="h-[36px] rounded-[8px] bg-[#008f58] px-4 text-[14px] font-semibold text-white shadow-sm transition-colors hover:bg-[#007a4b]"
+                  className={`inline-flex h-[34px] items-center gap-1.5 rounded-[6px] px-4 text-[12px] font-semibold text-white shadow-xs transition-colors ${
+                    operatorDraft.id
+                      ? "bg-[#2563eb] hover:bg-blue-700"
+                      : "bg-[#0f766e] hover:bg-[#0d645d]"
+                  }`}
                 >
-                  Salvar Operador
+                  <CheckCircleIcon className="h-4 w-4" />
+                  <span>Salvar Operador</span>
                 </button>
               </footer>
             </form>

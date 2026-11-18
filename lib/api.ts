@@ -55,10 +55,26 @@ export async function fetchAPI<T>(endpoint: string, options: RequestInit = {}): 
     fullUrl = `${getApiBase()}${cleanEndpoint}`;
   }
 
-  const response = await fetch(fullUrl, {
-    ...options,
-    headers,
-  });
+  let response: Response;
+  try {
+    response = await fetch(fullUrl, {
+      ...options,
+      headers,
+    });
+  } catch (networkErr) {
+    if (fullUrl.startsWith('http://localhost:8080/api')) {
+      const fallbackUrl = fullUrl.replace(
+        'http://localhost:8080/api',
+        'https://api.nexaerp.com.br/api',
+      );
+      response = await fetch(fallbackUrl, {
+        ...options,
+        headers,
+      });
+    } else {
+      throw networkErr;
+    }
+  }
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: 'Erro de conexão' }));

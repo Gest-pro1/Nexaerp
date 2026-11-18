@@ -2,31 +2,28 @@
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import {
-  AlertCircle,
-  ArrowDownLeft,
-  ArrowUpRight,
-  BookOpen,
-  Calendar,
-  CheckCircle2,
-  CircleDollarSign,
-  CreditCard,
-  DollarSign,
-  FileSignature,
-  FileText,
-  Pencil,
-  Printer,
-  QrCode,
-  Receipt,
-  Search,
-  ShieldCheck,
-  SquarePen,
-  User,
-  UserPlus,
-  X,
-} from "lucide-react";
+  ArrowDownLeftIcon,
+  ArrowUpRightIcon,
+  BookOpenIcon,
+  CheckCircleIcon,
+  CreditCardIcon,
+  CurrencyDollarIcon,
+  DocumentCheckIcon,
+  DocumentTextIcon,
+  ExclamationCircleIcon,
+  EyeIcon,
+  MagnifyingGlassIcon,
+  PencilSquareIcon,
+  PhoneIcon,
+  PrinterIcon,
+  QrCodeIcon,
+  ShieldCheckIcon,
+  UserIcon,
+  UserPlusIcon,
+  XMarkIcon,
+} from "@heroicons/react/24/outline";
 import {
   BOOKLET_DUE_OPTIONS,
-  calculateLimitUtilization,
   computeBookletMetrics,
   EMPTY_BOOKLET_CUSTOMERS,
   extractDueDayLabel,
@@ -73,7 +70,10 @@ const EMPTY_CUSTOMER_FORM: CustomerFormState = {
 };
 
 const formatCurrency = (value: number) =>
-  new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
+  new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(value);
 
 function parseNumberInput(value: string): number {
   const normalized = value.replace(/\./g, "").replace(",", ".").trim();
@@ -81,7 +81,9 @@ function parseNumberInput(value: string): number {
   const parsed = Number(fallback);
   if (Number.isFinite(parsed) && parsed >= 0) return parsed;
   const parsedNormalized = Number(normalized);
-  return Number.isFinite(parsedNormalized) && parsedNormalized >= 0 ? parsedNormalized : 0;
+  return Number.isFinite(parsedNormalized) && parsedNormalized >= 0
+    ? parsedNormalized
+    : 0;
 }
 
 function formatDateTime(date: Date = new Date()): string {
@@ -117,15 +119,24 @@ export default function BookletScreen({
   const [searchQuery, setSearchQuery] = useState("");
   const [onlyActiveDebt, setOnlyActiveDebt] = useState(false);
 
-  const [customerModalMode, setCustomerModalMode] = useState<CustomerModalMode>(null);
-  const [editingCustomerId, setEditingCustomerId] = useState<string | null>(null);
-  const [customerForm, setCustomerForm] = useState<CustomerFormState>(EMPTY_CUSTOMER_FORM);
+  const [customerModalMode, setCustomerModalMode] =
+    useState<CustomerModalMode>(null);
+  const [editingCustomerId, setEditingCustomerId] = useState<string | null>(
+    null,
+  );
+  const [customerForm, setCustomerForm] =
+    useState<CustomerFormState>(EMPTY_CUSTOMER_FORM);
 
-  const [paymentCustomerId, setPaymentCustomerId] = useState<string | null>(null);
+  const [paymentCustomerId, setPaymentCustomerId] = useState<string | null>(
+    null,
+  );
   const [paymentAmount, setPaymentAmount] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<BookletPaymentMethod>("pix");
+  const [paymentMethod, setPaymentMethod] =
+    useState<BookletPaymentMethod>("pix");
 
-  const [statementCustomerId, setStatementCustomerId] = useState<string | null>(null);
+  const [statementCustomerId, setStatementCustomerId] = useState<string | null>(
+    null,
+  );
 
   const [termCustomerId, setTermCustomerId] = useState<string | null>(null);
   const [termFormat, setTermFormat] = useState<TermFormat>("a4");
@@ -215,7 +226,12 @@ export default function BookletScreen({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [customerModalMode, paymentCustomerId, statementCustomerId, termCustomerId]);
+  }, [
+    customerModalMode,
+    paymentCustomerId,
+    statementCustomerId,
+    termCustomerId,
+  ]);
 
   function openCreateCustomerModal() {
     setEditingCustomerId(null);
@@ -265,7 +281,9 @@ export default function BookletScreen({
 
       if (!controlledCustomers) {
         setInternalCustomers((current) =>
-          current.map((item) => (item.id === editingCustomer.id ? updatedCustomer : item)),
+          current.map((item) =>
+            item.id === editingCustomer.id ? updatedCustomer : item,
+          ),
         );
       }
       void onSaveCustomer?.(updatedCustomer);
@@ -301,7 +319,9 @@ export default function BookletScreen({
   function openPaymentModal(customer: BookletCustomer) {
     setPaymentCustomerId(customer.id);
     setPaymentAmount(
-      customer.balance > 0 ? customer.balance.toFixed(2).replace(".", ",") : "0,00",
+      customer.balance > 0
+        ? customer.balance.toFixed(2).replace(".", ",")
+        : "0,00",
     );
     setPaymentMethod("pix");
   }
@@ -318,7 +338,10 @@ export default function BookletScreen({
     const amount = parseNumberInput(paymentAmount);
     if (amount <= 0) return;
 
-    const nextBalance = Math.max(0, Number((paymentCustomer.balance - amount).toFixed(2)));
+    const nextBalance = Math.max(
+      0,
+      Number((paymentCustomer.balance - amount).toFixed(2)),
+    );
     const methodLabel = formatBookletPaymentMethod(paymentMethod);
     const newEntry: BookletEntry = {
       id: `entry-${Date.now()}`,
@@ -355,68 +378,66 @@ export default function BookletScreen({
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-[1250px] flex-col gap-5">
+    <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-4">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-[28px] font-semibold tracking-tight text-black">
+          <h1 className="text-[20px] font-bold tracking-tight text-[#203f9f]">
             Gestão da Caderneta
           </h1>
-          <p className="text-[13px] text-black/60">
-            Controle de contas a receber, histórico por cliente, quitação no balcão e cobranças automáticas.
+          <p className="text-[11px] text-slate-400">
+            Controle de contas a receber, histórico por cliente, quitação no
+            balcão e cobranças automáticas.
           </p>
         </div>
 
         <button
           type="button"
           onClick={openCreateCustomerModal}
-          className="inline-flex h-[41px] items-center gap-2 rounded-[8px] bg-[#008f58] px-4 text-[15px] font-semibold text-white shadow-sm transition-colors hover:bg-[#007a4b]"
+          className="inline-flex h-[36px] items-center gap-1.5 rounded-[8px] bg-[#008f58] px-4 text-[13px] font-semibold text-white shadow-xs transition-colors hover:bg-[#007a4b]"
         >
-          <UserPlus aria-hidden="true" className="size-4" />
-          Novo Cliente
+          <UserPlusIcon aria-hidden="true" className="h-4 w-4" />
+          <span>Novo Cliente</span>
         </button>
       </div>
 
-      {/* 3 Metric Cards */}
+      {/* 3 Clean White Metric Cards (Screenshots 105927.png & 105938.png) */}
       <section
         aria-label="Indicadores da caderneta"
-        className="grid grid-cols-1 gap-4 sm:grid-cols-3"
+        className="grid grid-cols-1 gap-3.5 sm:grid-cols-3"
       >
-        <article className="relative flex min-h-[115px] flex-col justify-between overflow-hidden rounded-[8px] bg-white p-4 pl-6 shadow-[0_1px_3px_rgba(0,0,0,0.12)]">
-          <div className="absolute inset-y-0 left-0 w-[9px] bg-[#008f58]" />
-          <h2 className="text-[13px] font-semibold text-black/60">
+        <article className="flex min-h-[98px] flex-col justify-between rounded-[10px] border border-slate-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+          <h2 className="text-[12px] font-semibold text-slate-600">
             Total a Receber na Caderneta
           </h2>
-          <p className="my-1 text-[24px] font-bold leading-7 text-[#008f58]">
+          <p className="my-1 font-mono text-[22px] font-bold leading-7 text-[#008f58]">
             {formatCurrency(metrics.totalReceivable)}
           </p>
-          <p className="text-[11px] font-medium text-black/45">
+          <p className="text-[11px] text-slate-400">
             {metrics.activeDebtCount} clientes com débitos ativos
           </p>
         </article>
 
-        <article className="relative flex min-h-[115px] flex-col justify-between overflow-hidden rounded-[8px] bg-white p-4 pl-6 shadow-[0_1px_3px_rgba(0,0,0,0.12)]">
-          <div className="absolute inset-y-0 left-0 w-[9px] bg-[#ff8d28]" />
-          <h2 className="text-[13px] font-semibold text-black/60">
+        <article className="flex min-h-[98px] flex-col justify-between rounded-[10px] border border-slate-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+          <h2 className="text-[12px] font-semibold text-slate-600">
             Limite de Crédito Concedido
           </h2>
-          <p className="my-1 text-[24px] font-bold leading-7 text-[#9a3412]">
+          <p className="my-1 font-mono text-[22px] font-bold leading-7 text-[#9a3412]">
             {formatCurrency(metrics.totalCreditLimit)}
           </p>
-          <p className="text-[11px] font-medium text-black/45">
+          <p className="text-[11px] text-slate-400">
             Taxa de comprometimento {metrics.commitmentRate}%
           </p>
         </article>
 
-        <article className="relative flex min-h-[115px] flex-col justify-between overflow-hidden rounded-[8px] bg-white p-4 pl-6 shadow-[0_1px_3px_rgba(0,0,0,0.12)]">
-          <div className="absolute inset-y-0 left-0 w-[9px] bg-[#203f9f]" />
-          <h2 className="text-[13px] font-semibold text-black/60">
+        <article className="flex min-h-[98px] flex-col justify-between rounded-[10px] border border-slate-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+          <h2 className="text-[12px] font-semibold text-slate-600">
             Clientes Cadastrados
           </h2>
-          <p className="my-1 text-[24px] font-bold leading-7 text-[#203f9f]">
+          <p className="my-1 font-mono text-[22px] font-bold leading-7 text-[#203f9f]">
             {metrics.totalCustomers}
           </p>
-          <p className="text-[11px] font-medium text-black/45">
+          <p className="text-[11px] text-slate-400">
             {metrics.upToDateCount} clientes em dia
           </p>
         </article>
@@ -425,17 +446,17 @@ export default function BookletScreen({
       {/* Search & Filter Bar */}
       <section
         aria-label="Busca e filtro da caderneta"
-        className="flex flex-col gap-3 rounded-[8px] border border-black/10 bg-white p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between"
+        className="flex flex-col gap-3 rounded-[10px] border border-slate-200/80 bg-white p-3 shadow-[0_1px_2px_rgba(0,0,0,0.04)] sm:flex-row sm:items-center sm:justify-between"
       >
-        <label className="flex h-[42px] flex-1 items-center gap-2.5 rounded-[10px] border border-black/20 bg-white px-3.5 text-black/45 focus-within:border-[#203f9f]">
-          <Search aria-hidden="true" className="size-4 shrink-0" />
+        <label className="flex h-[38px] flex-1 items-center gap-2.5 rounded-[8px] border border-slate-200 bg-[#f3f4f6] px-3.5 text-slate-400 focus-within:border-[#203f9f] focus-within:bg-white">
+          <MagnifyingGlassIcon aria-hidden="true" className="h-4 w-4 shrink-0" />
           <input
             type="search"
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
             placeholder="Buscar clientes por nome ou CPF..."
             aria-label="Buscar clientes por nome ou CPF"
-            className="min-w-0 flex-1 bg-transparent text-[14px] text-black outline-none placeholder:text-black/45"
+            className="min-w-0 flex-1 bg-transparent text-[12px] text-slate-800 outline-none placeholder:text-slate-400"
           />
         </label>
 
@@ -443,18 +464,21 @@ export default function BookletScreen({
           type="button"
           aria-pressed={onlyActiveDebt}
           onClick={() => setOnlyActiveDebt((prev) => !prev)}
-          className={`inline-flex h-[42px] items-center justify-center gap-2 rounded-[10px] border px-4 text-[13px] font-semibold transition-colors ${
+          className={`inline-flex h-[38px] items-center justify-center gap-2 rounded-[8px] border px-4 text-[12px] font-semibold transition-colors ${
             onlyActiveDebt
-              ? "border-[#ff8d28] bg-[#ff8d28]/15 text-[#9a3412]"
-              : "border-black/20 bg-[#f0f2f5] text-black/75 hover:bg-black/10"
+              ? "border-[#ff8d28] bg-amber-50 text-[#9a3412]"
+              : "border-slate-200 bg-[#f3f4f6] text-slate-600 hover:bg-slate-200/60"
           }`}
         >
-          <AlertCircle aria-hidden="true" className="size-4 text-[#ff8d28]" />
-          Dívida Ativa ({metrics.activeDebtCount})
+          <ExclamationCircleIcon
+            aria-hidden="true"
+            className="h-4 w-4 text-[#ff8d28]"
+          />
+          <span>Dívida Ativa ({metrics.activeDebtCount})</span>
         </button>
       </section>
 
-      {/* Customer Cards Grid vs Empty State */}
+      {/* Customer Cards Grid vs Empty State (Screenshots 105927.png & 105938.png) */}
       {filteredCustomers.length > 0 ? (
         <section
           aria-label="Lista de clientes na caderneta"
@@ -462,10 +486,6 @@ export default function BookletScreen({
         >
           {filteredCustomers.map((customer) => {
             const hasDebt = customer.balance > 0;
-            const utilization = calculateLimitUtilization(
-              customer.balance,
-              customer.creditLimit,
-            );
             const availableCredit = Math.max(
               0,
               customer.creditLimit - customer.balance,
@@ -474,147 +494,124 @@ export default function BookletScreen({
             return (
               <article
                 key={customer.id}
-                className={`flex flex-col justify-between rounded-[10px] border border-black/10 border-l-[8px] bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.08)] ${
-                  hasDebt ? "border-l-[#9a3412]" : "border-l-[#008f58]"
-                }`}
+                className="flex flex-col justify-between rounded-[10px] border border-slate-200/80 border-l-[6px] border-l-[#0f766e] bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
               >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="truncate text-[15px] font-bold text-black">
+                <div>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <h3 className="truncate text-[13px] font-bold text-slate-900">
                         {customer.name}
                       </h3>
-                      {hasDebt ? (
-                        <span className="rounded-full border border-orange-200 bg-orange-50/70 px-2 py-0.5 text-[10px] font-semibold text-[#9a3412]">
-                          Com Débito
-                        </span>
-                      ) : (
-                        <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-[#008f58]">
-                          Em Dia
-                        </span>
-                      )}
+                      <p className="mt-0.5 text-[10px] text-slate-400">
+                        CPF: {customer.cpf}
+                      </p>
                     </div>
-                    <p className="mt-0.5 text-[11px] text-black/55">
-                      CPF: {customer.cpf} | {customer.phone}
-                    </p>
-                    <p className="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold text-[#203f9f]">
-                      <Calendar className="h-3 w-3" />
-                      <span>Pagamento {customer.dueDay.toLowerCase()}</span>
+
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => setStatementCustomerId(customer.id)}
+                        aria-label={`Extrato de ${customer.name}`}
+                        title="Ver Extrato"
+                        className="inline-flex h-6 w-6 items-center justify-center rounded text-slate-600 transition-colors hover:bg-slate-100 hover:text-[#203f9f]"
+                      >
+                        <EyeIcon className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => openEditCustomerModal(customer)}
+                        aria-label={`Editar caderneta de ${customer.name}`}
+                        title="Editar Caderneta"
+                        className="inline-flex h-6 w-6 items-center justify-center rounded text-slate-600 transition-colors hover:bg-slate-100 hover:text-[#203f9f]"
+                      >
+                        <PencilSquareIcon className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => openTermModal(customer)}
+                        aria-label={`Imprimir termo de ${customer.name}`}
+                        title="Termo de Abertura"
+                        className="inline-flex h-6 w-6 items-center justify-center rounded text-slate-600 transition-colors hover:bg-slate-100 hover:text-[#203f9f]"
+                      >
+                        <DocumentTextIcon className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => openPaymentModal(customer)}
+                        aria-label={`Receber de ${customer.name}`}
+                        className="sr-only"
+                      >
+                        Receber
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="mt-2.5 space-y-0.5 text-[11px] text-slate-500">
+                    <div className="flex items-center gap-1.5">
+                      <PhoneIcon className="h-3.5 w-3.5 shrink-0 text-slate-500" />
+                      <span>{customer.phone}</span>
+                    </div>
+                    <p className="text-[10px] text-slate-400">
+                      Pagamento {customer.dueDay.toLowerCase()}
                     </p>
                   </div>
 
-                  <div className="shrink-0 text-right">
-                    <p className="text-[16px] font-bold text-[#008f58]">
-                      {formatCurrency(customer.balance)}
-                    </p>
-                    <p className="text-[10px] text-black/45">Saldo Devedor</p>
+                  {/* LIMITE / DEVE Row */}
+                  <div className="mt-3 flex items-end justify-between text-[11px]">
+                    <div>
+                      <span className="block text-[9px] font-bold uppercase text-slate-400">
+                        LIMITE
+                      </span>
+                      <strong className="text-[12px] font-bold text-slate-900">
+                        {formatCurrency(customer.creditLimit)}
+                      </strong>
+                    </div>
+
+                    <div className="text-right">
+                      <span className="block text-[9px] font-bold uppercase text-slate-400">
+                        DEVE
+                      </span>
+                      <strong
+                        className={`text-[12px] font-bold ${
+                          hasDebt ? "text-rose-500" : "text-slate-500"
+                        }`}
+                      >
+                        {formatCurrency(customer.balance)}
+                      </strong>
+                    </div>
                   </div>
                 </div>
 
-                {/* 3-Box Summary: LIMITE / DEVE / DISPONÍVEL */}
-                <div className="mt-3 grid grid-cols-3 gap-2 rounded-[8px] bg-[#f8f9fb] p-2.5 text-center text-[11px]">
-                  <div>
-                    <span className="block text-[10px] font-bold uppercase text-black/45">
-                      LIMITE
-                    </span>
-                    <span className="font-bold text-black">
-                      {formatCurrency(customer.creditLimit)}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="block text-[10px] font-bold uppercase text-black/45">
-                      DEVE
-                    </span>
-                    <span className="font-bold text-[#9a3412]">
-                      {formatCurrency(customer.balance)}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="block text-[10px] font-bold uppercase text-black/45">
-                      DISPONÍVEL
-                    </span>
-                    <span className="font-bold text-[#008f58]">
-                      {formatCurrency(availableCredit)}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="mt-3">
-                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
-                    <div
-                      className="h-full rounded-full bg-[#008f58] transition-all"
-                      style={{ width: `${Math.min(Math.max(utilization, 0), 100)}%` }}
-                    />
-                  </div>
-                  <div className="mt-1.5 flex items-center justify-between text-[11px] font-medium text-black/55">
-                    <span>Limite: {formatCurrency(customer.creditLimit)}</span>
-                    <span className="font-semibold text-black/70">
-                      {utilization}% utilizado
-                    </span>
-                  </div>
-                </div>
-
-                <div className="mt-4 flex items-center justify-between border-t border-black/10 pt-3">
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => openPaymentModal(customer)}
-                      aria-label={`Receber de ${customer.name}`}
-                      className="rounded-[7px] bg-[#203f9f] px-3.5 py-1.5 text-[12px] font-semibold text-white transition-colors hover:bg-[#193382]"
-                    >
-                      Receber
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setStatementCustomerId(customer.id)}
-                      aria-label={`Extrato de ${customer.name}`}
-                      className="rounded-[7px] bg-[#f0f2f5] px-3.5 py-1.5 text-[12px] font-semibold text-black/75 transition-colors hover:bg-black/10"
-                    >
-                      Extrato
-                    </button>
-                  </div>
-
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => openEditCustomerModal(customer)}
-                      aria-label={`Editar caderneta de ${customer.name}`}
-                      className="rounded-[7px] border border-[#008f58] p-1.5 text-[#008f58] transition-colors hover:bg-emerald-50"
-                    >
-                      <Pencil aria-hidden="true" className="size-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => openTermModal(customer)}
-                      aria-label={`Imprimir termo de ${customer.name}`}
-                      className="rounded-[7px] border border-[#ff8d28] p-1.5 text-[#ff8d28] transition-colors hover:bg-amber-50"
-                    >
-                      <Printer aria-hidden="true" className="size-3.5" />
-                    </button>
-                  </div>
+                {/* DISPONÍVEL Footer Row */}
+                <div className="mt-2.5 flex items-center justify-between border-t border-slate-100 pt-2">
+                  <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">
+                    DISPONÍVEL
+                  </span>
+                  <span className="text-[12px] font-bold text-[#0f766e]">
+                    {formatCurrency(availableCredit)}
+                  </span>
                 </div>
               </article>
             );
           })}
         </section>
       ) : (
-        <section className="flex min-h-[250px] flex-col items-center justify-center rounded-[12px] border border-black/10 bg-white px-5 py-12 text-center shadow-sm">
-          <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-[#203f9f]/10 text-[#203f9f]">
-            <BookOpen className="h-6 w-6" />
-          </div>
-          <p className="text-[16px] font-semibold text-black">
-            Nenhum cliente cadastrado na caderneta.
+        <section className="flex min-h-[260px] flex-col items-center justify-center rounded-[12px] border border-slate-200/80 bg-white px-5 py-12 text-center shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+          <BookOpenIcon className="mb-2.5 h-10 w-10 stroke-[1.4] text-slate-400" />
+          <p className="text-[16px] font-bold text-slate-800">
+            Nenhum cliente na caderneta
           </p>
-          <p className="mt-1 text-[13px] text-black/55">
+          <p className="sr-only">Nenhum cliente cadastrado na caderneta.</p>
+          <p className="mt-1 text-[11px] text-slate-400">
             Cadastre um cliente com limite de crédito para vender fiado no PDV.
           </p>
         </section>
       )}
 
-      {/* Modal: Cadastrar / Editar Cliente na Caderneta */}
+      {/* Modal: Novo Cliente na Caderneta / Editar Caderneta (Screenshots 105947.png & 110012.png) */}
       {customerModalMode && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-[2px]"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-[1px]"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) closeCustomerModal();
           }}
@@ -623,105 +620,108 @@ export default function BookletScreen({
             role="dialog"
             aria-modal="true"
             aria-labelledby="customer-modal-title"
-            className="max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-[15px] bg-white shadow-2xl"
+            className="max-h-[92dvh] w-full max-w-[440px] overflow-y-auto rounded-[14px] bg-white shadow-2xl"
           >
-            <header className="flex items-start justify-between gap-3 border-b border-black/10 px-5 py-4">
-              <div className="flex items-start gap-2.5">
-                {customerModalMode === "edit" ? (
-                  <SquarePen aria-hidden="true" className="mt-0.5 size-5 text-[#203f9f]" />
-                ) : (
-                  <UserPlus aria-hidden="true" className="mt-0.5 size-5 text-[#203f9f]" />
-                )}
-                <div>
-                  <h2 id="customer-modal-title" className="text-[18px] font-bold text-black">
-                    {customerModalMode === "edit"
-                      ? "Editar Caderneta"
-                      : "Cadastrar Cliente na Caderneta"}
-                  </h2>
-                  <p className="text-[12px] text-black/55">
-                    Defina o limite de crédito para as compras fiadas deste cliente.
-                  </p>
-                </div>
+            <header className="flex items-start justify-between gap-3 px-5 pt-5 pb-3">
+              <div>
+                <h2
+                  id="customer-modal-title"
+                  className="text-[18px] font-bold text-slate-900"
+                >
+                  {customerModalMode === "edit"
+                    ? "Editar Caderneta"
+                    : "Cadastrar Cliente na Caderneta"}
+                </h2>
+                <p className="text-[11px] text-slate-400">
+                  Defina o limite de crédito para as compras fiadas deste
+                  cliente.
+                </p>
               </div>
               <button
                 type="button"
                 onClick={closeCustomerModal}
                 aria-label="Fechar modal de cliente"
-                className="rounded-full p-1 text-black/60 transition-colors hover:bg-black/5 hover:text-black"
+                className="rounded-full p-1 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
               >
-                <X aria-hidden="true" className="size-4" />
+                <XMarkIcon aria-hidden="true" className="h-5 w-5" />
               </button>
             </header>
 
-            <form onSubmit={handleSaveCustomer} className="space-y-3.5 p-5">
-              {customerModalMode === "edit" && editingCustomer && (
-                <div className="-mt-2 text-right text-[11px] text-slate-500">
-                  Saldo Devedor Atual:{" "}
-                  <strong className="font-bold text-[#9a3412]">
-                    {formatCurrency(editingCustomer.balance)}
-                  </strong>
-                </div>
-              )}
-
-              <label className="block text-[12px] font-semibold text-black">
+            <form
+              onSubmit={handleSaveCustomer}
+              className="space-y-3 px-5 pb-5"
+            >
+              <label className="block text-[11px] font-semibold text-slate-800">
                 Nome Completo / Apelido *
                 <input
                   required
                   type="text"
                   value={customerForm.name}
                   onChange={(event) =>
-                    setCustomerForm((prev) => ({ ...prev, name: event.target.value }))
+                    setCustomerForm((prev) => ({
+                      ...prev,
+                      name: event.target.value,
+                    }))
                   }
                   placeholder="Ex: Manoel das Frutas"
-                  className="mt-1 h-[38px] w-full rounded-[8px] border border-black/20 bg-white px-3 text-[13px] font-normal text-black outline-none placeholder:text-black/40 focus:border-[#203f9f]"
+                  className="mt-1 h-[36px] w-full rounded-[6px] border border-slate-300 bg-[#f8fafc] px-3 text-[12px] font-normal text-slate-800 outline-none placeholder:text-slate-400 focus:border-[#0f766e] focus:bg-white"
                 />
               </label>
 
-              <label className="block text-[12px] font-semibold text-black">
+              <label className="block text-[11px] font-semibold text-slate-800">
                 WhatsApp (Com DDD) *
                 <input
                   required
                   type="text"
                   value={customerForm.phone}
                   onChange={(event) =>
-                    setCustomerForm((prev) => ({ ...prev, phone: event.target.value }))
+                    setCustomerForm((prev) => ({
+                      ...prev,
+                      phone: event.target.value,
+                    }))
                   }
-                  placeholder="Ex: (83) 99485-6521"
-                  className="mt-1 h-[38px] w-full rounded-[8px] border border-black/20 bg-white px-3 text-[13px] font-normal text-black outline-none placeholder:text-black/40 focus:border-[#203f9f]"
+                  placeholder="(00) 00000-0000"
+                  className="mt-1 h-[36px] w-full rounded-[6px] border border-slate-300 bg-[#f8fafc] px-3 text-[12px] font-normal text-slate-800 outline-none placeholder:text-slate-400 focus:border-[#0f766e] focus:bg-white"
                 />
               </label>
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <label className="block text-[12px] font-semibold text-black">
+                <label className="block text-[11px] font-semibold text-slate-800">
                   CPF *
                   <input
                     required
                     type="text"
                     value={customerForm.cpf}
                     onChange={(event) =>
-                      setCustomerForm((prev) => ({ ...prev, cpf: event.target.value }))
+                      setCustomerForm((prev) => ({
+                        ...prev,
+                        cpf: event.target.value,
+                      }))
                     }
                     placeholder="000.000.000-00"
-                    className="mt-1 h-[38px] w-full rounded-[8px] border border-black/20 bg-white px-3 text-[13px] font-normal text-black outline-none placeholder:text-black/40 focus:border-[#203f9f]"
+                    className="mt-1 h-[36px] w-full rounded-[6px] border border-slate-300 bg-[#f8fafc] px-3 text-[12px] font-normal text-slate-800 outline-none placeholder:text-slate-400 focus:border-[#0f766e] focus:bg-white"
                   />
                 </label>
 
-                <label className="block text-[12px] font-semibold text-black">
+                <label className="block text-[11px] font-semibold text-slate-800">
                   RG (Opcional)
                   <input
                     type="text"
                     value={customerForm.rg}
                     onChange={(event) =>
-                      setCustomerForm((prev) => ({ ...prev, rg: event.target.value }))
+                      setCustomerForm((prev) => ({
+                        ...prev,
+                        rg: event.target.value,
+                      }))
                     }
                     placeholder="EX: 12.345.678"
-                    className="mt-1 h-[38px] w-full rounded-[8px] border border-black/20 bg-white px-3 text-[13px] font-normal text-black outline-none placeholder:text-black/40 focus:border-[#203f9f]"
+                    className="mt-1 h-[36px] w-full rounded-[6px] border border-slate-300 bg-[#f8fafc] px-3 text-[12px] font-normal text-slate-800 outline-none placeholder:text-slate-400 focus:border-[#0f766e] focus:bg-white"
                   />
                 </label>
               </div>
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <label className="block text-[12px] font-semibold text-black">
+                <label className="block text-[11px] font-semibold text-slate-800">
                   Limite Autorizado (R$) *
                   <input
                     required
@@ -734,18 +734,21 @@ export default function BookletScreen({
                       }))
                     }
                     placeholder="0,00"
-                    className="mt-1 h-[38px] w-full rounded-[8px] border border-black/20 bg-white px-3 text-[13px] font-normal text-black outline-none placeholder:text-black/40 focus:border-[#203f9f]"
+                    className="mt-1 h-[36px] w-full rounded-[6px] border border-slate-300 bg-[#f8fafc] px-3 text-[12px] font-normal text-slate-800 outline-none placeholder:text-slate-400 focus:border-[#0f766e] focus:bg-white"
                   />
                 </label>
 
-                <label className="block text-[12px] font-semibold text-black">
+                <label className="block text-[11px] font-semibold text-slate-800">
                   Vencimento / Acerto
                   <select
                     value={customerForm.dueDay}
                     onChange={(event) =>
-                      setCustomerForm((prev) => ({ ...prev, dueDay: event.target.value }))
+                      setCustomerForm((prev) => ({
+                        ...prev,
+                        dueDay: event.target.value,
+                      }))
                     }
-                    className="mt-1 h-[38px] w-full rounded-[8px] border border-black/20 bg-white px-2.5 text-[13px] font-normal text-black outline-none focus:border-[#203f9f]"
+                    className="mt-1 h-[36px] w-full rounded-[6px] border border-slate-300 bg-white px-2.5 text-[12px] font-normal text-slate-800 outline-none focus:border-[#0f766e]"
                   >
                     {BOOKLET_DUE_OPTIONS.map((option) => (
                       <option key={option} value={option}>
@@ -756,33 +759,40 @@ export default function BookletScreen({
                 </label>
               </div>
 
-              <label className="block text-[12px] font-semibold text-black">
+              <label className="block text-[11px] font-semibold text-slate-800">
                 Observações/Pessoas Autorizadas
                 <textarea
                   rows={3}
                   value={customerForm.notes}
                   onChange={(event) =>
-                    setCustomerForm((prev) => ({ ...prev, notes: event.target.value }))
+                    setCustomerForm((prev) => ({
+                      ...prev,
+                      notes: event.target.value,
+                    }))
                   }
                   placeholder="Ex: Paga todo dia 05 após aposentadoria"
-                  className="mt-1 w-full resize-y rounded-[8px] border border-black/20 bg-white px-3 py-2 text-[13px] font-normal text-black outline-none placeholder:text-black/40 focus:border-[#203f9f]"
+                  className="mt-1 w-full resize-y rounded-[6px] border border-slate-300 bg-[#f8fafc] px-3 py-2 text-[12px] font-normal text-slate-800 outline-none placeholder:text-slate-400 focus:border-[#0f766e] focus:bg-white"
                 />
               </label>
 
-              <div className="flex items-center justify-end gap-3 border-t border-black/10 pt-3">
+              <div className="flex items-center justify-end gap-4 pt-2">
                 <button
                   type="button"
                   onClick={closeCustomerModal}
-                  className="rounded-md px-3 py-2 text-[13px] font-semibold text-black/60 transition-colors hover:bg-slate-100"
+                  className="text-[12px] font-semibold text-slate-600 hover:text-slate-900"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="inline-flex h-9 items-center gap-1.5 rounded-[8px] bg-[#008f58] px-4 text-[13px] font-semibold text-white shadow-sm transition-colors hover:bg-[#007a4b]"
+                  className="inline-flex h-[34px] items-center gap-1.5 rounded-[6px] bg-[#0f766e] px-4 text-[12px] font-semibold text-white shadow-xs transition-colors hover:bg-[#0d645d]"
                 >
-                  <CheckCircle2 aria-hidden="true" className="size-3.5" />
-                  {customerModalMode === "edit" ? "Salvar Alterações" : "Salvar e Gerar Termo"}
+                  <CheckCircleIcon aria-hidden="true" className="h-4 w-4" />
+                  <span>
+                    {customerModalMode === "edit"
+                      ? "Salvar Alterações"
+                      : "Salvar e Gerar Termo"}
+                  </span>
                 </button>
               </div>
             </form>
@@ -790,10 +800,10 @@ export default function BookletScreen({
         </div>
       )}
 
-      {/* Modal: Receber Pagamento */}
+      {/* Modal: Receber Pagamento (Screenshot 110001.png) */}
       {paymentCustomer && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-[2px]"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-[1px]"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) closePaymentModal();
           }}
@@ -802,14 +812,17 @@ export default function BookletScreen({
             role="dialog"
             aria-modal="true"
             aria-labelledby="payment-modal-title"
-            className="w-full max-w-md overflow-hidden rounded-[15px] bg-white shadow-2xl"
+            className="w-full max-w-[420px] overflow-hidden rounded-[14px] bg-white shadow-2xl"
           >
-            <header className="flex items-center justify-between gap-3 border-b border-black/10 px-5 py-4">
+            <header className="flex items-start justify-between border-b border-slate-100 px-5 py-4">
               <div>
-                <p className="text-[11px] font-semibold text-[#008f58]">
+                <p className="text-[11px] font-medium text-slate-500">
                   Receber Pagamento
                 </p>
-                <h2 id="payment-modal-title" className="text-[18px] font-bold text-black">
+                <h2
+                  id="payment-modal-title"
+                  className="text-[15px] font-bold text-slate-900"
+                >
                   {paymentCustomer.name}
                 </h2>
               </div>
@@ -817,28 +830,30 @@ export default function BookletScreen({
                 type="button"
                 onClick={closePaymentModal}
                 aria-label="Fechar modal de pagamento"
-                className="rounded-full p-1 text-black/60 transition-colors hover:bg-black/5 hover:text-black"
+                className="rounded-full p-1 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
               >
-                <X aria-hidden="true" className="size-4" />
+                <XMarkIcon aria-hidden="true" className="h-4 w-4" />
               </button>
             </header>
 
             <form onSubmit={handleConfirmPayment} className="space-y-4 p-5">
-              <div className="-mt-2 text-right text-[11px] text-slate-500">
+              <div className="-mt-2 text-right text-[10px] text-slate-500">
                 Saldo Devedor Atual:{" "}
                 <strong className="font-bold text-[#9a3412]">
                   {formatCurrency(paymentCustomer.balance)}
                 </strong>
               </div>
 
-              <div className="rounded-[10px] border border-black/10 bg-[#f8f9fb] p-3">
-                <p className="text-xs font-semibold text-slate-700">Dívida Total em Aberto:</p>
+              <div>
+                <p className="text-xs font-semibold text-slate-700">
+                  Dívida Total em Aberto:
+                </p>
                 <p className="mt-0.5 text-lg font-bold text-[#b45309]">
                   {formatCurrency(paymentCustomer.balance)}
                 </p>
               </div>
 
-              <label className="block text-[12px] font-semibold text-black">
+              <label className="block text-[11px] font-semibold text-slate-800">
                 Valor a Pagar / Abater (R$)
                 <input
                   required
@@ -846,12 +861,12 @@ export default function BookletScreen({
                   value={paymentAmount}
                   onChange={(event) => setPaymentAmount(event.target.value)}
                   placeholder="0,00"
-                  className="mt-1 h-10 w-full rounded-[8px] border border-black/20 bg-white px-3 text-[15px] font-bold text-black outline-none focus:border-[#008f58]"
+                  className="mt-1 h-[38px] w-full rounded-[6px] border border-slate-300 bg-white px-3 text-[13px] font-bold text-slate-800 outline-none focus:border-[#0f766e]"
                 />
               </label>
 
               <fieldset>
-                <legend className="mb-1.5 text-[12px] font-semibold text-black">
+                <legend className="mb-1.5 text-[11px] font-semibold text-slate-800">
                   Meio de Recebimento
                 </legend>
                 <div className="grid grid-cols-3 gap-2">
@@ -859,58 +874,58 @@ export default function BookletScreen({
                     type="button"
                     aria-pressed={paymentMethod === "pix"}
                     onClick={() => setPaymentMethod("pix")}
-                    className={`flex h-9 items-center justify-center gap-1.5 rounded-lg border text-xs font-semibold transition-colors ${
+                    className={`flex h-9 items-center justify-center gap-1.5 rounded-[6px] border text-xs font-semibold transition-colors ${
                       paymentMethod === "pix"
-                        ? "border-[#008f58] bg-[#008f58] text-white"
+                        ? "border-[#4f86f7] bg-[#4f86f7] text-white"
                         : "border-slate-300 bg-white text-slate-600 hover:bg-slate-50"
                     }`}
                   >
-                    <QrCode aria-hidden="true" className="size-3.5" />
-                    Pix
+                    <QrCodeIcon aria-hidden="true" className="h-4 w-4" />
+                    <span>Pix</span>
                   </button>
                   <button
                     type="button"
                     aria-pressed={paymentMethod === "cash"}
                     onClick={() => setPaymentMethod("cash")}
-                    className={`flex h-9 items-center justify-center gap-1.5 rounded-lg border text-xs font-semibold transition-colors ${
+                    className={`flex h-9 items-center justify-center gap-1.5 rounded-[6px] border text-xs font-semibold transition-colors ${
                       paymentMethod === "cash"
-                        ? "border-[#008f58] bg-[#008f58] text-white"
+                        ? "border-[#4f86f7] bg-[#4f86f7] text-white"
                         : "border-slate-300 bg-white text-slate-600 hover:bg-slate-50"
                     }`}
                   >
-                    <CircleDollarSign aria-hidden="true" className="size-3.5" />
-                    Dinheiro
+                    <CurrencyDollarIcon aria-hidden="true" className="h-4 w-4" />
+                    <span>Dinheiro</span>
                   </button>
                   <button
                     type="button"
                     aria-pressed={paymentMethod === "debit"}
                     onClick={() => setPaymentMethod("debit")}
-                    className={`flex h-9 items-center justify-center gap-1.5 rounded-lg border text-xs font-semibold transition-colors ${
+                    className={`flex h-9 items-center justify-center gap-1.5 rounded-[6px] border text-xs font-semibold transition-colors ${
                       paymentMethod === "debit"
-                        ? "border-[#008f58] bg-[#008f58] text-white"
+                        ? "border-[#4f86f7] bg-[#4f86f7] text-white"
                         : "border-slate-300 bg-white text-slate-600 hover:bg-slate-50"
                     }`}
                   >
-                    <CreditCard aria-hidden="true" className="size-3.5" />
-                    Débito
+                    <CreditCardIcon aria-hidden="true" className="h-4 w-4" />
+                    <span>Débito</span>
                   </button>
                 </div>
               </fieldset>
 
-              <div className="flex items-center justify-end gap-3 border-t border-black/10 pt-3">
+              <div className="flex items-center justify-end gap-4 pt-2">
                 <button
                   type="button"
                   onClick={closePaymentModal}
-                  className="rounded-md px-3 py-2 text-xs font-semibold text-black/60 transition-colors hover:bg-slate-100"
+                  className="text-xs font-semibold text-slate-600 hover:text-slate-900"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="inline-flex h-9 items-center gap-1.5 rounded-[8px] bg-[#008f58] px-4 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-[#007a4b]"
+                  className="inline-flex h-[34px] items-center gap-1.5 rounded-[6px] bg-[#0f766e] px-4 text-xs font-semibold text-white shadow-xs transition-colors hover:bg-[#0d645d]"
                 >
-                  <CheckCircle2 aria-hidden="true" className="size-3.5" />
-                  Confirmar Pagamento
+                  <CheckCircleIcon aria-hidden="true" className="h-4 w-4" />
+                  <span>Confirmar Pagamento</span>
                 </button>
               </div>
             </form>
@@ -918,12 +933,13 @@ export default function BookletScreen({
         </div>
       )}
 
-      {/* Drawer: Caderneta Digital (Extrato) */}
+      {/* Drawer: Caderneta Digital (Screenshot 110007.png) */}
       {statementCustomer && (
         <div
-          className="fixed inset-0 z-40 flex justify-end bg-slate-950/40 backdrop-blur-[2px]"
+          className="fixed inset-0 z-40 flex justify-end bg-slate-950/40 backdrop-blur-[1px]"
           onMouseDown={(event) => {
-            if (event.target === event.currentTarget) setStatementCustomerId(null);
+            if (event.target === event.currentTarget)
+              setStatementCustomerId(null);
           }}
         >
           <aside
@@ -934,8 +950,13 @@ export default function BookletScreen({
           >
             <header className="flex items-start justify-between gap-3 bg-[#153488] px-5 py-4 text-white">
               <div>
-                <p className="text-xs font-bold text-orange-400">Caderneta Digital</p>
-                <h2 id="statement-drawer-title" className="mt-0.5 text-base font-bold">
+                <p className="text-xs font-bold text-orange-400">
+                  Caderneta Digital
+                </p>
+                <h2
+                  id="statement-drawer-title"
+                  className="mt-0.5 text-base font-bold"
+                >
                   {statementCustomer.name}
                 </h2>
                 <p className="mt-0.5 text-[11px] text-blue-100">
@@ -948,12 +969,14 @@ export default function BookletScreen({
                 aria-label="Fechar extrato"
                 className="rounded p-1 text-blue-100 transition-colors hover:bg-white/10 hover:text-white"
               >
-                <X aria-hidden="true" className="size-4.5" />
+                <XMarkIcon aria-hidden="true" className="h-5 w-5" />
               </button>
             </header>
 
             <div className="border-b border-emerald-200 bg-emerald-50/70 px-5 py-4">
-              <p className="text-sm font-bold text-emerald-800">Saldo Devedor Atual:</p>
+              <p className="text-sm font-bold text-emerald-800">
+                Saldo Devedor Atual:
+              </p>
               <p className="text-lg font-bold text-emerald-700">
                 {formatCurrency(statementCustomer.balance)}
               </p>
@@ -968,24 +991,24 @@ export default function BookletScreen({
                 onClick={() => openPaymentModal(statementCustomer)}
                 className="inline-flex h-8 items-center justify-center gap-1 rounded-md border border-blue-400 bg-white px-2 text-[10px] font-semibold text-blue-700 transition-colors hover:bg-blue-50"
               >
-                <DollarSign aria-hidden="true" className="size-3" />
-                Receber Pagamento
+                <CurrencyDollarIcon aria-hidden="true" className="h-3.5 w-3.5" />
+                <span>Receber Pagamento</span>
               </button>
               <button
                 type="button"
                 onClick={() => openEditCustomerModal(statementCustomer)}
                 className="inline-flex h-8 items-center justify-center gap-1 rounded-md border border-orange-300 bg-white px-2 text-[10px] font-semibold text-[#9a3412] transition-colors hover:bg-orange-50"
               >
-                <Pencil aria-hidden="true" className="size-3" />
-                Editar Caderneta
+                <PencilSquareIcon aria-hidden="true" className="h-3.5 w-3.5" />
+                <span>Editar Caderneta</span>
               </button>
               <button
                 type="button"
                 onClick={() => window.print?.()}
                 className="inline-flex h-8 items-center justify-center gap-1 rounded-md border border-emerald-400 bg-white px-2 text-[10px] font-semibold text-emerald-700 transition-colors hover:bg-emerald-50"
               >
-                <Printer aria-hidden="true" className="size-3" />
-                Imprimir Extrato
+                <PrinterIcon aria-hidden="true" className="h-3.5 w-3.5" />
+                <span>Imprimir Extrato</span>
               </button>
             </div>
 
@@ -1009,16 +1032,22 @@ export default function BookletScreen({
                       >
                         <div className="flex items-start gap-2.5">
                           <span
-                            className={`mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full border ${
+                            className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border ${
                               isPayment
                                 ? "border-emerald-500 text-emerald-600"
                                 : "border-[#9a3412] text-[#9a3412]"
                             }`}
                           >
                             {isPayment ? (
-                              <ArrowDownLeft aria-hidden="true" className="size-3.5" />
+                              <ArrowDownLeftIcon
+                                aria-hidden="true"
+                                className="h-3.5 w-3.5"
+                              />
                             ) : (
-                              <ArrowUpRight aria-hidden="true" className="size-3.5" />
+                              <ArrowUpRightIcon
+                                aria-hidden="true"
+                                className="h-3.5 w-3.5"
+                              />
                             )}
                           </span>
                           <div>
@@ -1058,10 +1087,10 @@ export default function BookletScreen({
         </div>
       )}
 
-      {/* Modal: Termo de Abertura da Caderneta (A4 & Bobina 80mm) */}
+      {/* Modal: Termo de Abertura da Caderneta (Screenshots 110019.png & 110024.png) */}
       {termCustomer && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-[2px]"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-[1px]"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) setTermCustomerId(null);
           }}
@@ -1075,15 +1104,25 @@ export default function BookletScreen({
             <header className="bg-[#153488] text-white">
               <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5">
                 <div className="flex items-center gap-3">
-                  <FileSignature aria-hidden="true" className="size-6 text-orange-400" />
+                  <DocumentCheckIcon
+                    aria-hidden="true"
+                    className="h-6 w-6 text-orange-400"
+                  />
                   <div>
-                    <h2 id="term-modal-title" className="text-base font-bold leading-5">
+                    <h2
+                      id="term-modal-title"
+                      className="text-base font-bold leading-5"
+                    >
                       Termo de Abertura da Caderneta
                     </h2>
                     <p className="mt-0.5 text-[10px] text-blue-100">
-                      <span className="font-semibold text-orange-400">Cliente:</span>{" "}
+                      <span className="font-semibold text-orange-400">
+                        Cliente:
+                      </span>{" "}
                       {termCustomer.name}{" "}
-                      <span className="ml-2 font-semibold text-orange-400">Limite:</span>{" "}
+                      <span className="ml-2 font-semibold text-orange-400">
+                        Limite:
+                      </span>{" "}
                       {formatCurrency(termCustomer.creditLimit)}
                     </p>
                   </div>
@@ -1100,8 +1139,11 @@ export default function BookletScreen({
                         : "border-white/25 text-blue-100 hover:bg-white/10"
                     }`}
                   >
-                    <FileText aria-hidden="true" className="size-3.5 text-orange-400" />
-                    Folha A4
+                    <DocumentTextIcon
+                      aria-hidden="true"
+                      className="h-3.5 w-3.5 text-orange-400"
+                    />
+                    <span>Folha A4</span>
                   </button>
                   <button
                     type="button"
@@ -1113,8 +1155,11 @@ export default function BookletScreen({
                         : "border-white/25 text-blue-100 hover:bg-white/10"
                     }`}
                   >
-                    <Receipt aria-hidden="true" className="size-3.5 text-blue-200" />
-                    Bobina 80mm
+                    <DocumentTextIcon
+                      aria-hidden="true"
+                      className="h-3.5 w-3.5 text-blue-200"
+                    />
+                    <span>Bobina 80mm</span>
                   </button>
                   <button
                     type="button"
@@ -1122,14 +1167,17 @@ export default function BookletScreen({
                     aria-label="Fechar termo"
                     className="ml-1 rounded p-1 text-blue-100 transition-colors hover:bg-white/10 hover:text-white"
                   >
-                    <X aria-hidden="true" className="size-5" />
+                    <XMarkIcon aria-hidden="true" className="h-5 w-5" />
                   </button>
                 </div>
               </div>
 
               <div className="flex flex-wrap items-center gap-6 border-t border-white/15 px-5 py-2 text-[11px] text-blue-100">
                 <span className="inline-flex items-center gap-1.5">
-                  <ShieldCheck aria-hidden="true" className="size-4 text-orange-400" />
+                  <ShieldCheckIcon
+                    aria-hidden="true"
+                    className="h-4 w-4 text-orange-400"
+                  />
                   Documento Jurídico &amp; Comercial Válido
                 </span>
                 {termFormat === "a4" && (
@@ -1137,8 +1185,10 @@ export default function BookletScreen({
                     <input
                       type="checkbox"
                       checked={printTwoCopies}
-                      onChange={(event) => setPrintTwoCopies(event.target.checked)}
-                      className="size-3.5 rounded accent-orange-500"
+                      onChange={(event) =>
+                        setPrintTwoCopies(event.target.checked)
+                      }
+                      className="h-3.5 w-3.5 rounded accent-orange-500"
                     />
                     <span>Imprimir duas vias na folha</span>
                   </label>
@@ -1151,7 +1201,9 @@ export default function BookletScreen({
                 <div className="mx-auto max-w-2xl space-y-4 rounded-lg bg-white p-6 text-slate-800 shadow-sm">
                   <div className="flex items-start justify-between gap-4 border-b border-slate-300 pb-3">
                     <div>
-                      <h3 className="text-base font-bold text-slate-900">{companyName}</h3>
+                      <h3 className="text-base font-bold text-slate-900">
+                        {companyName}
+                      </h3>
                       <p className="text-[10px] font-semibold text-slate-700">
                         Amabily Comércio Varejista Ltda
                       </p>
@@ -1159,7 +1211,8 @@ export default function BookletScreen({
                         CNPJ: 18.421.902/0001-34 | IE: 109.832.441.110
                       </p>
                       <p className="text-[10px] text-slate-500">
-                        Rua Floriano Peixoto, 450 - Centro - Ingá - Fone/WhatsApp: (83) 98765-4321
+                        Rua Floriano Peixoto, 450 - Centro - Ingá -
+                        Fone/WhatsApp: (83) 98765-4321
                       </p>
                     </div>
                     <span className="rounded-md border border-slate-300 bg-slate-50 px-3 py-1.5 text-[10px] font-semibold text-slate-700">
@@ -1172,27 +1225,41 @@ export default function BookletScreen({
                       Termo de Abertura e Adesão de Conta na Caderneta
                     </h4>
                     <p className="text-[9px] text-slate-500">
-                      Autorização de Limite de Crédito Rotativo e Venda a Prazo no Balcão
+                      Autorização de Limite de Crédito Rotativo e Venda a Prazo
+                      no Balcão
                     </p>
                   </div>
 
                   <div className="rounded-lg border border-slate-300 p-4">
                     <h5 className="mb-3 flex items-center gap-1.5 border-b border-slate-100 pb-2 text-[10px] font-semibold uppercase text-slate-600">
-                      <User aria-hidden="true" className="size-3.5 text-slate-500" />
+                      <UserIcon
+                        aria-hidden="true"
+                        className="h-3.5 w-3.5 text-slate-500"
+                      />
                       1. DADOS CADASTRAIS DO(A) CLIENTE / TITULAR
                     </h5>
                     <div className="grid grid-cols-2 gap-3 text-[10px]">
                       <div>
-                        <span className="block text-slate-500">Nome Completo:</span>
-                        <strong className="text-xs text-slate-800">{termCustomer.name}</strong>
+                        <span className="block text-slate-500">
+                          Nome Completo:
+                        </span>
+                        <strong className="text-xs text-slate-800">
+                          {termCustomer.name}
+                        </strong>
                       </div>
                       <div>
                         <span className="block text-slate-500">CPF:</span>
-                        <strong className="text-xs text-slate-800">{termCustomer.cpf}</strong>
+                        <strong className="text-xs text-slate-800">
+                          {termCustomer.cpf}
+                        </strong>
                       </div>
                       <div>
-                        <span className="block text-slate-500">WhatsApp / Telefone:</span>
-                        <strong className="text-xs text-slate-800">{termCustomer.phone}</strong>
+                        <span className="block text-slate-500">
+                          WhatsApp / Telefone:
+                        </span>
+                        <strong className="text-xs text-slate-800">
+                          {termCustomer.phone}
+                        </strong>
                       </div>
                       <div>
                         <span className="block text-slate-500">RG:</span>
@@ -1205,7 +1272,10 @@ export default function BookletScreen({
 
                   <div className="rounded-lg border border-slate-300 p-4">
                     <h5 className="mb-3 flex items-center gap-1.5 border-b border-slate-100 pb-2 text-[10px] font-semibold uppercase text-slate-600">
-                      <CreditCard aria-hidden="true" className="size-3.5 text-slate-500" />
+                      <CreditCardIcon
+                        aria-hidden="true"
+                        className="h-3.5 w-3.5 text-slate-500"
+                      />
                       2. CONDIÇÕES COMERCIAIS DO CRÉDITO APROVADO
                     </h5>
                     <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
@@ -1235,41 +1305,36 @@ export default function BookletScreen({
                       </div>
                     </div>
                     <div className="mt-2.5 rounded-lg border border-slate-300 px-3 py-2 text-[10px] text-slate-600">
-                      <span className="font-semibold">Observações/Pessoas Autorizadas:</span>{" "}
+                      <span className="font-semibold">
+                        Observações/Pessoas Autorizadas:
+                      </span>{" "}
                       {termCustomer.notes || "Nenhuma observação registrada"}
                     </div>
                   </div>
 
                   <div className="rounded-lg border border-slate-300 p-4">
                     <h5 className="mb-3 flex items-center gap-1.5 border-b border-slate-100 pb-2 text-[10px] font-semibold uppercase text-slate-600">
-                      <ShieldCheck aria-hidden="true" className="size-3.5 text-slate-500" />
+                      <ShieldCheckIcon
+                        aria-hidden="true"
+                        className="h-3.5 w-3.5 text-slate-500"
+                      />
                       3. CLÁUSULAS E TERMOS DO ACORDO
                     </h5>
                     <div className="space-y-2 text-[10px] leading-4 text-slate-600">
                       <p>
-                        <strong>Cláusula 1ª (Concessão de Limite):</strong> O ESTABELECIMENTO
-                        concede ao(à) CLIENTE o crédito rotativo estipulado neste termo para
-                        aquisição exclusiva de produtos de consumo de primeira necessidade nas
+                        <strong>Cláusula 1ª (Concessão de Limite):</strong> O
+                        ESTABELECIMENTO concede ao(à) CLIENTE o crédito rotativo
+                        estipulado neste termo para aquisição exclusiva de
+                        produtos de consumo de primeira necessidade nas
                         dependências do comércio.
                       </p>
                       <p>
-                        <strong>Cláusula 2ª (Registro das Compras):</strong> A cada compra a prazo
-                        efetuada, o sistema informatizado emitirá o respectivo cupom detalhado de
-                        itens e registrará o débito correspondente na caderneta digital, cujo
-                        extrato poderá ser consultado ou solicitado a qualquer momento via WhatsApp
-                        ou balcão.
-                      </p>
-                      <p>
-                        <strong>Cláusula 3ª (Reconhecimento da Dívida):</strong> O(A) CLIENTE
-                        reconhece expressamente como dívida líquida, certa e exigível todos os
-                        valores oriundos das retiradas de mercadorias lançadas em seu nome ou por
-                        pessoas sob sua expressa autorização.
-                      </p>
-                      <p>
-                        <strong>Cláusula 4ª (Pontualidade e Bloqueio):</strong> O pagamento
-                        integral ou amortização do saldo devedor deverá ocorrer até a data
-                        acordada. A ausência de pagamento sem prévia repactuação acarretará a
-                        imediata suspensão de novas compras a prazo até a quitação.
+                        <strong>Cláusula 2ª (Registro das Compras):</strong> A
+                        cada compra a prazo efetuada, o sistema informatizado
+                        emitirá o respectivo cupom detalhado de itens e
+                        registrará o débito correspondente na caderneta digital,
+                        cujo extrato poderá ser consultado ou solicitado a
+                        qualquer momento via WhatsApp ou balcão.
                       </p>
                     </div>
                   </div>
@@ -1285,13 +1350,17 @@ export default function BookletScreen({
 
                   <div className="grid grid-cols-2 gap-8 pt-6 text-center text-[10px]">
                     <div className="border-t border-slate-400 pt-2">
-                      <strong className="block text-slate-800">{termCustomer.name}</strong>
+                      <strong className="block text-slate-800">
+                        {termCustomer.name}
+                      </strong>
                       <span className="text-slate-500">
                         Assinatura do(a) Titular da Conta (Cliente)
                       </span>
                     </div>
                     <div className="border-t border-slate-400 pt-2">
-                      <strong className="block text-slate-800">{companyName}</strong>
+                      <strong className="block text-slate-800">
+                        {companyName}
+                      </strong>
                       <span className="text-slate-500">
                         Pelo Estabelecimento Credor (Responsável)
                       </span>
@@ -1300,7 +1369,8 @@ export default function BookletScreen({
 
                   {printTwoCopies && (
                     <div className="border-t-2 border-blue-500 pt-2 text-center text-[9px] text-slate-400">
-                      [ 1 Via: Arquivo do Estabelecimento comercial | 2 Via: Titular do Crédito ]
+                      [ 1 Via: Arquivo do Estabelecimento comercial | 2 Via:
+                      Titular do Crédito ]
                     </div>
                   )}
                 </div>
@@ -1337,7 +1407,8 @@ export default function BookletScreen({
                       {formatCurrency(termCustomer.creditLimit)}
                     </p>
                     <p>
-                      <strong>VENCIMENTO:</strong> {extractDueDayLabel(termCustomer.dueDay)}
+                      <strong>VENCIMENTO:</strong>{" "}
+                      {extractDueDayLabel(termCustomer.dueDay)}
                     </p>
                     <p>
                       <strong>CHAVE PIX:</strong> 18421902000134
@@ -1345,15 +1416,18 @@ export default function BookletScreen({
                   </div>
 
                   <p className="text-[9px] leading-3.5 text-slate-700">
-                    O(A) titular declara ter ciência e reconhece expressamente como dívida líquida
-                    e certa todas as mercadorias retiradas na modalidade caderneta até o limite
-                    fixado, comprometendo-se ao pagamento pontual na data acordada.
+                    O(A) titular declara ter ciência e reconhece expressamente
+                    como dívida líquida e certa todas as mercadorias retiradas
+                    na modalidade caderneta até o limite fixado,
+                    comprometendo-se ao pagamento pontual na data acordada.
                   </p>
 
                   <div className="mt-6 space-y-6 border-t border-dashed border-slate-400 pt-6 text-center">
                     <div className="border-t border-slate-600 pt-1">
                       <p className="font-bold">{termCustomer.name}</p>
-                      <p className="text-[8px] uppercase text-slate-500">ASSINATURA DO CLIENTE</p>
+                      <p className="text-[8px] uppercase text-slate-500">
+                        ASSINATURA DO CLIENTE
+                      </p>
                     </div>
                     <div className="border-t border-slate-600 pt-1">
                       <p className="font-bold">{companyName}</p>
@@ -1361,7 +1435,9 @@ export default function BookletScreen({
                         VISTO DO ESTABELECIMENTO
                       </p>
                     </div>
-                    <p className="text-[9px] text-slate-500">{termCustomer.createdAt}</p>
+                    <p className="text-[9px] text-slate-500">
+                      {termCustomer.createdAt}
+                    </p>
                   </div>
                 </div>
               )}
@@ -1391,10 +1467,10 @@ export default function BookletScreen({
                 <button
                   type="button"
                   onClick={() => window.print?.()}
-                  className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-blue-600 px-4 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-700"
+                  className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#0f766e] px-4 text-xs font-semibold text-white shadow-xs transition-colors hover:bg-[#0d645d]"
                 >
-                  <Printer aria-hidden="true" className="size-3.5" />
-                  Imprimir Termo
+                  <CheckCircleIcon aria-hidden="true" className="h-4 w-4" />
+                  <span>Imprimir Termo</span>
                 </button>
               </div>
             </footer>

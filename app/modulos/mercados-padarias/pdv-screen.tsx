@@ -2,27 +2,29 @@
 
 import { useEffect, useId, useMemo, useState } from "react";
 import {
-  Banknote,
-  Barcode,
-  BookOpen,
-  CheckCircle2,
-  CreditCard,
-  DollarSign,
-  FileText,
-  Lock,
-  LockOpen,
-  Maximize2,
-  Minus,
-  Plus,
-  Printer,
-  QrCode,
-  Search,
-  ShoppingCart,
-  Trash2,
-  UserCheck,
-  Wallet,
-  X,
-} from "lucide-react";
+  ArrowsPointingOutIcon,
+  ArrowPathIcon,
+  ArrowUturnLeftIcon,
+  BanknotesIcon,
+  BookOpenIcon,
+  CheckCircleIcon,
+  ChevronDownIcon,
+  CreditCardIcon,
+  CurrencyDollarIcon,
+  DocumentTextIcon,
+  LockClosedIcon,
+  LockOpenIcon,
+  MagnifyingGlassIcon,
+  MinusIcon,
+  PlusIcon,
+  PrinterIcon,
+  QrCodeIcon,
+  ShoppingCartIcon,
+  TrashIcon,
+  ViewColumnsIcon,
+  WalletIcon,
+  XMarkIcon,
+} from "@heroicons/react/24/outline";
 import {
   EMPTY_POS_CART,
   formatPosPaymentMethod,
@@ -50,17 +52,29 @@ function formatCurrency(value: number): string {
   return brlFormatter.format(value);
 }
 
-const PAYMENT_OPTIONS: {
+const MODAL_PAYMENT_OPTIONS: {
   id: PosPaymentMethod;
   label: string;
   shortcut: string;
-  icon: typeof Banknote;
+  icon: typeof BanknotesIcon;
 }[] = [
-  { id: "cash", label: "Dinheiro", shortcut: "F6", icon: Banknote },
-  { id: "pix", label: "Pix", shortcut: "F7", icon: QrCode },
-  { id: "credit", label: "Crédito", shortcut: "F8", icon: CreditCard },
-  { id: "debit", label: "Débito", shortcut: "F9", icon: Wallet },
-  { id: "booklet", label: "Caderneta", shortcut: "F10", icon: BookOpen },
+  { id: "cash", label: "Dinheiro", shortcut: "F6", icon: CurrencyDollarIcon },
+  { id: "pix", label: "Pix", shortcut: "F7", icon: QrCodeIcon },
+  { id: "credit", label: "Crédito", shortcut: "F8", icon: CreditCardIcon },
+  { id: "debit", label: "Débito", shortcut: "F9", icon: WalletIcon },
+  { id: "booklet", label: "Caderneta", shortcut: "F10", icon: BookOpenIcon },
+];
+
+const FOOTER_PAYMENT_OPTIONS: {
+  id: PosPaymentMethod;
+  label: string;
+  shortcut: string;
+  icon: typeof BanknotesIcon;
+}[] = [
+  { id: "cash", label: "Dinheiro", shortcut: "F6", icon: CurrencyDollarIcon },
+  { id: "pix", label: "Pix", shortcut: "F7", icon: QrCodeIcon },
+  { id: "credit", label: "Crédito", shortcut: "F8", icon: CreditCardIcon },
+  { id: "booklet", label: "Caderneta", shortcut: "F9", icon: BookOpenIcon },
 ];
 
 export interface PdvScreenProps {
@@ -85,7 +99,7 @@ export interface PdvScreenProps {
 }
 
 export default function PdvScreen({
-  operatorName = "João Silva",
+  operatorName = "João",
   terminalName = "Caixa 01",
   isCashierOpen = true,
   initialCatalog = [],
@@ -99,12 +113,15 @@ export default function PdvScreen({
 }: PdvScreenProps) {
   const catalog = controlledCatalog ?? initialCatalog;
 
-  const [barcodeQuery, setBarcodeQuery] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("");
+  const [searchAndBarcodeQuery, setSearchAndBarcodeQuery] = useState("");
   const [inputQuantity, setInputQuantity] = useState(1);
 
   const [cart, setCart] = useState<PosCartItem[]>(initialCart);
+  const [lastScannedItem, setLastScannedItem] = useState<{
+    product: PosProduct;
+    quantity: number;
+  } | null>(null);
+
   const [selectedPayment, setSelectedPayment] =
     useState<PosPaymentMethod>("cash");
 
@@ -118,6 +135,8 @@ export default function PdvScreen({
   const [cashReceivedInput, setCashReceivedInput] = useState("");
   const [creditInstallments, setCreditInstallments] = useState(1);
   const [selectedCustomerId, setSelectedCustomerId] = useState("");
+  const [isCustomerDropdownOpen, setIsCustomerDropdownOpen] = useState(false);
+  const [customerSearchQuery, setCustomerSearchQuery] = useState("");
   const [paymentError, setPaymentError] = useState<string | null>(null);
 
   // Completed Sale Receipt Modal State
@@ -132,28 +151,17 @@ export default function PdvScreen({
     [catalog],
   );
 
-  const categories = useMemo(() => {
-    const set = new Set<string>();
-    for (const item of activeCatalog) {
-      if (item.category?.trim()) set.add(item.category.trim());
-    }
-    return Array.from(set);
-  }, [activeCatalog]);
-
   const filteredProducts = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    return activeCatalog.filter((item) => {
-      if (selectedCategory && item.category !== selectedCategory) {
-        return false;
-      }
-      if (!q) return true;
-      return (
+    const q = searchAndBarcodeQuery.trim().toLowerCase();
+    if (!q) return activeCatalog;
+    return activeCatalog.filter(
+      (item) =>
         item.name.toLowerCase().includes(q) ||
         item.barcode.toLowerCase().includes(q) ||
-        (item.code ?? "").toLowerCase().includes(q)
-      );
-    });
-  }, [activeCatalog, searchQuery, selectedCategory]);
+        (item.code ?? "").toLowerCase().includes(q) ||
+        (item.category ?? "").toLowerCase().includes(q),
+    );
+  }, [activeCatalog, searchAndBarcodeQuery]);
 
   const totalItems = useMemo(
     () => cart.reduce((sum, item) => sum + item.quantity, 0),
@@ -175,16 +183,15 @@ export default function PdvScreen({
   );
 
   const totalAmount = useMemo(
-    () => Math.max(0, Number((subtotalAmount - discountTotalAmount).toFixed(2))),
+    () =>
+      Math.max(0, Number((subtotalAmount - discountTotalAmount).toFixed(2))),
     [subtotalAmount, discountTotalAmount],
   );
 
   const paidSoFar = useMemo(
     () =>
       Number(
-        launchedPayments
-          .reduce((sum, p) => sum + p.amount, 0)
-          .toFixed(2),
+        launchedPayments.reduce((sum, p) => sum + p.amount, 0).toFixed(2),
       ),
     [launchedPayments],
   );
@@ -214,7 +221,12 @@ export default function PdvScreen({
       0,
       Number((parsedCashReceived - effectiveCashToPay).toFixed(2)),
     );
-  }, [parsedCashReceived, parsedCurrentPaymentAmount, remainingAmount, selectedPayment]);
+  }, [
+    parsedCashReceived,
+    parsedCurrentPaymentAmount,
+    remainingAmount,
+    selectedPayment,
+  ]);
 
   const selectedCustomer = useMemo(
     () =>
@@ -224,17 +236,26 @@ export default function PdvScreen({
     [bookletCustomers, selectedCustomerId],
   );
 
+  const filteredBookletCustomers = useMemo(() => {
+    const q = customerSearchQuery.trim().toLowerCase();
+    if (!q) return bookletCustomers;
+    return bookletCustomers.filter(
+      (c) =>
+        c.name.toLowerCase().includes(q) ||
+        c.cpf.toLowerCase().includes(q) ||
+        c.phone.toLowerCase().includes(q),
+    );
+  }, [bookletCustomers, customerSearchQuery]);
+
   const handleAddProductToCart = (product: PosProduct, qty = 1) => {
     const safeQty = Math.max(1, qty);
+    setLastScannedItem({ product, quantity: safeQty });
     setCart((current) => {
       const existingIndex = current.findIndex(
         (item) => item.product.id === product.id,
       );
       if (existingIndex === -1) {
-        return [
-          ...current,
-          { product, quantity: safeQty, discount: 0 },
-        ];
+        return [...current, { product, quantity: safeQty, discount: 0 }];
       }
       return current.map((item, idx) =>
         idx === existingIndex
@@ -244,21 +265,39 @@ export default function PdvScreen({
     });
   };
 
-  const handleBarcodeSubmit = (rawQuery: string) => {
+  const handleUndoLastScanned = () => {
+    if (!lastScannedItem) return;
+    const targetId = lastScannedItem.product.id;
+    const removeQty = lastScannedItem.quantity;
+
+    setCart((current) =>
+      current
+        .map((item) =>
+          item.product.id === targetId
+            ? { ...item, quantity: item.quantity - removeQty }
+            : item,
+        )
+        .filter((item) => item.quantity > 0),
+    );
+    setLastScannedItem(null);
+  };
+
+  const handleBarcodeOrSearchEnter = (rawQuery: string) => {
     const trimmed = rawQuery.trim();
     if (!trimmed) return;
 
-    const matchedProduct = activeCatalog.find(
-      (product) =>
-        product.barcode === trimmed ||
-        product.code === trimmed ||
-        product.name.toLowerCase() === trimmed.toLowerCase(),
-    );
+    const matchedProduct =
+      activeCatalog.find(
+        (product) =>
+          product.barcode === trimmed ||
+          product.code === trimmed ||
+          product.name.toLowerCase() === trimmed.toLowerCase(),
+      ) ?? filteredProducts[0];
 
     if (!matchedProduct) return;
 
     handleAddProductToCart(matchedProduct, inputQuantity);
-    setBarcodeQuery("");
+    setSearchAndBarcodeQuery("");
     setInputQuantity(1);
   };
 
@@ -274,12 +313,6 @@ export default function PdvScreen({
     );
   };
 
-  const handleRemoveCartItem = (productId: string) => {
-    setCart((current) =>
-      current.filter((item) => item.product.id !== productId),
-    );
-  };
-
   const handleOpenPaymentModal = (initialMethod?: PosPaymentMethod) => {
     if (cart.length === 0) return;
     const method = initialMethod ?? selectedPayment;
@@ -290,6 +323,7 @@ export default function PdvScreen({
     setCashReceivedInput(formattedTotal);
     setCreditInstallments(1);
     setSelectedCustomerId(bookletCustomers[0]?.id ?? "");
+    setIsCustomerDropdownOpen(false);
     setPaymentError(null);
     setIsPaymentModalOpen(true);
   };
@@ -328,12 +362,16 @@ export default function PdvScreen({
     }
 
     if (amountToApply > remainingAmount + 0.01) {
-      setPaymentError("O valor do pagamento não pode exceder o saldo restante.");
+      setPaymentError(
+        "O valor do pagamento não pode exceder o saldo restante.",
+      );
       return;
     }
 
     if (selectedPayment === "cash" && parsedCashReceived < amountToApply) {
-      setPaymentError("O valor recebido em dinheiro é menor que o valor lançado.");
+      setPaymentError(
+        "O valor recebido em dinheiro é menor que o valor lançado.",
+      );
       return;
     }
 
@@ -358,7 +396,8 @@ export default function PdvScreen({
       id: `pay-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       method: selectedPayment,
       amount: Math.min(amountToApply, remainingAmount),
-      installments: selectedPayment === "credit" ? creditInstallments : undefined,
+      installments:
+        selectedPayment === "credit" ? creditInstallments : undefined,
       receivedAmount:
         selectedPayment === "cash" ? parsedCashReceived : undefined,
       changeAmount: selectedPayment === "cash" ? changeAmount : undefined,
@@ -378,7 +417,6 @@ export default function PdvScreen({
     );
 
     if (nextRemaining > 0.009) {
-      // Partial payment launched — stay in modal for remaining balance
       setLaunchedPayments(updatedLaunches);
       const formattedRem = nextRemaining.toFixed(2).replace(".", ",");
       setPaymentAmountInput(formattedRem);
@@ -386,11 +424,10 @@ export default function PdvScreen({
       return;
     }
 
-    // Full balance paid — complete the sale!
-    const saleNumber = String(Math.floor(100000 + Math.random() * 900000));
+    const saleNumber = String(Math.floor(1000 + Math.random() * 9000));
     const completedSale: PosCompletedSale = {
       id: `sale-${Date.now()}`,
-      saleCode: `#${saleNumber}`,
+      saleCode: `#VD-${saleNumber}`,
       dateTime: new Date().toLocaleString("pt-BR"),
       operatorName,
       terminalName,
@@ -400,7 +437,7 @@ export default function PdvScreen({
       discountTotal: discountTotalAmount,
       total: totalAmount,
       payments: updatedLaunches,
-      protocolNumber: `${Math.floor(100000000000000 + Math.random() * 900000000000000)}`,
+      protocolNumber: `453851823165161321305165135135165151651651515`,
     };
 
     onFinishSale?.({
@@ -413,6 +450,7 @@ export default function PdvScreen({
     });
 
     setCart([]);
+    setLastScannedItem(null);
     setIsPaymentModalOpen(false);
     setLaunchedPayments([]);
     setCompletedSaleReceipt(completedSale);
@@ -453,7 +491,7 @@ export default function PdvScreen({
       } else if (event.key === "F9") {
         event.preventDefault();
         if (isPaymentModalOpen) handleSelectMethodInsideModal("debit");
-        else setSelectedPayment("debit");
+        else setSelectedPayment("booklet");
       } else if (event.key === "F10") {
         event.preventDefault();
         if (isPaymentModalOpen) handleSelectMethodInsideModal("booklet");
@@ -475,281 +513,305 @@ export default function PdvScreen({
     parsedCurrentPaymentAmount < remainingAmount - 0.009;
 
   return (
-    <div className="mx-auto grid w-full max-w-[1280px] grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_412px]">
-      {/* Left Area: Status Bar, Barcode Scanner, Search & Product Grid */}
-      <div className="flex min-h-[760px] flex-col gap-3.5">
-        {/* Top Terminal & Cashier Status Bar */}
-        <section className="flex flex-wrap items-center justify-between gap-3 rounded-[10px] border border-black/10 bg-white px-4 py-3 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
-          <div className="flex flex-wrap items-center gap-3">
-            <span
-              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[12px] font-bold ${
-                isCashierOpen
-                  ? "bg-[#008f58]/15 text-[#008f58]"
-                  : "bg-[#ff8d28]/20 text-[#c95c00]"
-              }`}
-            >
-              {isCashierOpen ? (
-                <LockOpen className="h-3.5 w-3.5" />
-              ) : (
-                <Lock className="h-3.5 w-3.5" />
-              )}
-              {isCashierOpen ? "Caixa Aberto" : "Caixa Fechado"}
-            </span>
-            <span className="text-[13px] font-semibold text-black/75">
-              {terminalName} • Operador: {operatorName}
-            </span>
-          </div>
+    <div className="mx-auto grid w-full max-w-[1320px] grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_375px]">
+      {/* Left Area: Status Card, Scanner Banner, Search Bar & Product Grid */}
+      <div className="flex flex-col gap-3">
+        {/* Card 1: Cashier Status Header Card */}
+        <section className="flex flex-wrap items-center justify-between gap-3 rounded-[10px] border border-slate-200/80 bg-white px-4 py-3 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-600">
+              <span
+                className={`h-2 w-2 rounded-full ${
+                  isCashierOpen ? "bg-[#00a86b]" : "bg-[#ff8d28]"
+                }`}
+              />
+              <strong className="font-bold text-slate-900">
+                {isCashierOpen ? "Caixa Aberto Hoje" : "Caixa Fechado"}
+              </strong>
+              <span>•</span>
+              <span>Aberto às 07:55 ({operatorName})</span>
+              <span>•</span>
+              <strong className="font-semibold text-slate-800">
+                Fundo: R$ 100,00
+              </strong>
+            </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() =>
-                isCashierOpen
-                  ? onRequestCloseCashier?.()
-                  : onRequestOpenCashier?.()
-              }
-              className="inline-flex h-[32px] items-center gap-1.5 rounded-[7px] border border-black/15 bg-[#f0f2f5] px-3 text-[12px] font-semibold text-black/75 transition-colors hover:bg-black/10"
-            >
-              <Lock className="h-3.5 w-3.5" />
-              <span>{isCashierOpen ? "Fechar Caixa" : "Abrir Caixa"}</span>
-              <kbd className="ml-1 rounded bg-black/10 px-1.5 py-0.5 text-[10px] font-bold">
-                F4
-              </kbd>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                if (typeof document !== "undefined") {
-                  if (!document.fullscreenElement) {
-                    document.documentElement.requestFullscreen?.().catch(() => {});
-                  } else {
-                    document.exitFullscreen?.().catch(() => {});
-                  }
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() =>
+                  isCashierOpen
+                    ? onRequestCloseCashier?.()
+                    : onRequestOpenCashier?.()
                 }
-              }}
-              className="inline-flex h-[32px] items-center gap-1.5 rounded-[7px] border border-black/15 bg-[#f0f2f5] px-3 text-[12px] font-semibold text-black/75 transition-colors hover:bg-black/10"
-            >
-              <Maximize2 className="h-3.5 w-3.5" />
-              <span>Tela Cheia</span>
-              <kbd className="ml-1 rounded bg-black/10 px-1.5 py-0.5 text-[10px] font-bold">
-                F11
-              </kbd>
-            </button>
+                className="inline-flex h-[26px] items-center gap-1.5 rounded-full border border-slate-300 bg-white px-3 text-[10px] font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+              >
+                <LockClosedIcon className="h-3 w-3 text-slate-600" />
+                <span>{isCashierOpen ? "Fechar Caixa" : "Abrir Caixa"}</span>
+                <kbd className="rounded bg-slate-100 px-1 py-0.5 text-[9px] font-bold text-slate-500">
+                  F4
+                </kbd>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (typeof document !== "undefined") {
+                    if (!document.fullscreenElement) {
+                      document.documentElement
+                        .requestFullscreen?.()
+                        .catch(() => {});
+                    } else {
+                      document.exitFullscreen?.().catch(() => {});
+                    }
+                  }
+                }}
+                className="inline-flex h-[26px] items-center gap-1.5 rounded-full bg-[#374151] px-3 text-[10px] font-semibold text-white transition-colors hover:bg-slate-700"
+              >
+                <ArrowsPointingOutIcon className="h-3 w-3" />
+                <span>Modo Terminal</span>
+                <kbd className="rounded bg-white/20 px-1 py-0.5 text-[9px] font-bold text-white">
+                  F11
+                </kbd>
+              </button>
+            </div>
           </div>
+
+          {lastScannedItem && (
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-[#008f58] px-3.5 py-1.5 text-[11px] font-semibold text-white shadow-xs">
+              <CheckCircleIcon className="h-4 w-4" />
+              <span>
+                + {lastScannedItem.quantity}x {lastScannedItem.product.name}
+              </span>
+            </div>
+          )}
         </section>
 
-        {/* Barcode Scanner & Quantity Multiplier Row */}
-        <section className="flex flex-col gap-3 rounded-[10px] border border-black/10 bg-white p-3.5 shadow-[0_1px_2px_rgba(0,0,0,0.05)] sm:flex-row sm:items-center">
-          {/* Quantity Multiplier Box */}
-          <div className="flex h-[46px] shrink-0 items-center justify-between gap-2 rounded-[10px] border border-black/20 bg-[#f8f9fb] px-3">
+        {/* Card 2: Scanner Status Banner (AGUARDANDO LEITURA vs ÚLTIMO ITEM BIPADO) */}
+        {!lastScannedItem ? (
+          <section className="flex items-center gap-3 rounded-[10px] border border-slate-200/80 bg-white px-4 py-3 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
+              <ViewColumnsIcon className="h-5 w-5" />
+            </div>
+            <div>
+              <span className="inline-block rounded bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-700">
+                AGUARDANDO LEITURA
+              </span>
+              <p className="mt-0.5 text-[11px] text-slate-400">
+                Bipe o código de barras ou use a busca para lançar itens no cupom.
+              </p>
+            </div>
+          </section>
+        ) : (
+          <section className="flex flex-wrap items-center justify-between gap-3 rounded-[10px] border border-[#10b981] bg-[#ecfdf5] px-4 py-2.5 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#008f58] text-white">
+                <ViewColumnsIcon className="h-5 w-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="rounded-full bg-[#008f58] px-2.5 py-0.5 text-[9px] font-bold uppercase text-white">
+                    ÚLTIMO ITEM BIPADO
+                  </span>
+                  <span className="text-[11px] font-semibold text-[#008f58]">
+                    EAN: {lastScannedItem.product.barcode}
+                  </span>
+                </div>
+                <p className="mt-0.5 text-[11px] font-semibold text-slate-800">
+                  {lastScannedItem.product.name}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <div className="text-right">
+                <span className="block text-[10px] font-semibold text-[#008f58]">
+                  {lastScannedItem.quantity}{" "}
+                  {lastScannedItem.product.unit ?? "UN"} x{" "}
+                  {formatCurrency(lastScannedItem.product.unitPrice)}
+                </span>
+                <strong className="text-[13px] font-bold text-slate-900">
+                  {formatCurrency(
+                    lastScannedItem.product.unitPrice *
+                      lastScannedItem.quantity,
+                  )}
+                </strong>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleUndoLastScanned}
+                className="inline-flex h-7 items-center gap-1 rounded-full bg-[#e11d48] px-3 text-[11px] font-semibold text-white transition-colors hover:bg-rose-700"
+              >
+                <ArrowUturnLeftIcon className="h-3 w-3" />
+                <span>Desfazer</span>
+              </button>
+            </div>
+          </section>
+        )}
+
+        {/* Card 3: QTD Multiplier & Search / Barcode Input */}
+        <section className="flex flex-col gap-3 rounded-[10px] border border-slate-200/80 bg-white p-3 shadow-[0_1px_2px_rgba(0,0,0,0.04)] sm:flex-row sm:items-center">
+          <div className="flex h-[40px] shrink-0 items-center justify-between gap-3 rounded-[8px] border border-slate-200 bg-[#f3f4f6] px-3">
             <div className="flex items-center gap-1.5">
-              <span className="text-[12px] font-bold text-black/60">Qtd</span>
-              <kbd className="rounded bg-black/10 px-1.5 py-0.5 text-[10px] font-bold text-black/60">
+              <span className="text-[13px] font-bold text-[#2563eb]">#</span>
+              <span className="text-[12px] font-bold text-slate-800">QTD:</span>
+              <kbd className="rounded border border-blue-200 bg-blue-50 px-1.5 py-0.5 text-[9px] font-semibold text-blue-600">
                 ALT+Q
               </kbd>
             </div>
+
             <div className="flex items-center gap-1.5">
               <button
                 type="button"
                 aria-label="Diminuir quantidade"
                 onClick={() => setInputQuantity((q) => Math.max(1, q - 1))}
-                className="flex h-7 w-7 items-center justify-center rounded-[6px] border border-black/15 bg-white text-black/70 hover:bg-black/5"
+                className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-slate-600 shadow-2xs hover:bg-slate-100"
               >
-                <Minus className="h-3.5 w-3.5" />
+                <MinusIcon className="h-3 w-3" />
               </button>
-              <span className="min-w-[28px] text-center text-[14px] font-bold text-black">
+              <span className="flex h-6 min-w-[30px] items-center justify-center rounded-full border border-slate-200 bg-white px-2 text-[12px] font-bold text-slate-800">
                 {inputQuantity}
               </span>
               <button
                 type="button"
                 aria-label="Aumentar quantidade"
                 onClick={() => setInputQuantity((q) => q + 1)}
-                className="flex h-7 w-7 items-center justify-center rounded-[6px] border border-black/15 bg-white text-black/70 hover:bg-black/5"
+                className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-[#2563eb] shadow-2xs hover:bg-slate-100"
               >
-                <Plus className="h-3.5 w-3.5" />
+                <PlusIcon className="h-3 w-3" />
               </button>
             </div>
           </div>
 
-          {/* Barcode Input */}
           <div className="relative flex-1">
-            <Barcode className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-[#203f9f]" />
+            <MagnifyingGlassIcon className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
-              value={barcodeQuery}
-              onChange={(event) => setBarcodeQuery(event.target.value)}
+              value={searchAndBarcodeQuery}
+              onChange={(event) => setSearchAndBarcodeQuery(event.target.value)}
               onKeyDown={(event) => {
                 if (event.key === "Enter") {
                   event.preventDefault();
-                  handleBarcodeSubmit(barcodeQuery);
+                  handleBarcodeOrSearchEnter(searchAndBarcodeQuery);
                 }
               }}
-              placeholder="Bipe o código de barras ou digite o código e pressione Enter..."
+              placeholder="Digite o código de barras ou busque o produto..."
               aria-label="Código de barras ou busca de produto"
-              className="h-[46px] w-full rounded-[10px] border border-black/25 bg-white pl-11 pr-4 text-[14px] font-medium text-black placeholder:text-black/40 focus:border-[#203f9f] focus:outline-none"
+              className="h-[40px] w-full rounded-[8px] border border-slate-200 bg-[#f3f4f6] pl-10 pr-4 text-[13px] text-slate-800 placeholder:text-slate-400 focus:border-[#203f9f] focus:bg-white focus:outline-none"
             />
           </div>
         </section>
 
-        {/* Search & Category Filter Row */}
-        <section className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <div className="relative flex-1">
-            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-black/45" />
-            <input
-              type="search"
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder="Buscar produtos por nome ou código..."
-              aria-label="Buscar produtos no catálogo"
-              className="h-[42px] w-full rounded-[10px] border border-black/20 bg-white pl-10 pr-4 text-[14px] text-black placeholder:text-black/45 focus:border-[#203f9f] focus:outline-none"
-            />
-          </div>
+        {/* Product Grid (3 Columns - Identical to Figma) */}
+        <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {filteredProducts.map((product) => (
+            <button
+              key={product.id}
+              type="button"
+              onClick={() => handleAddProductToCart(product, inputQuantity)}
+              className="group flex flex-col justify-between rounded-[10px] border border-slate-200/80 bg-white p-3.5 text-left shadow-[0_1px_2px_rgba(0,0,0,0.03)] transition-all hover:border-[#203f9f] hover:shadow-md"
+            >
+              <div>
+                <span className="inline-block rounded bg-[#f1f5f9] px-2 py-0.5 text-[10px] font-semibold text-slate-600">
+                  {product.category ?? "Bebidas"}
+                </span>
 
-          <select
-            aria-label="Filtrar catálogo por categoria"
-            value={selectedCategory}
-            onChange={(event) => setSelectedCategory(event.target.value)}
-            className="h-[42px] min-w-[200px] rounded-[10px] border border-black/20 bg-white px-3.5 text-[14px] font-medium text-black/80 focus:border-[#203f9f] focus:outline-none"
-          >
-            <option value="">Todas as Categorias</option>
-            {categories.map((cat) => (
-              <option key={cat} value={cat}>
-                {cat}
-              </option>
-            ))}
-          </select>
+                <h3 className="mt-1.5 truncate text-[12px] font-bold text-slate-800 group-hover:text-[#203f9f]">
+                  {product.name}
+                </h3>
+
+                <div className="mt-1 flex items-center gap-1 text-[10px] text-slate-400">
+                  <ViewColumnsIcon className="h-3 w-3 shrink-0" />
+                  <span>{product.barcode}</span>
+                </div>
+              </div>
+
+              <div className="mt-2.5 border-t border-slate-100 pt-2">
+                <span className="block text-[9px] text-slate-400">Preço</span>
+                <span className="text-[12px] font-bold text-[#203f9f]">
+                  {formatCurrency(product.unitPrice)}
+                </span>
+              </div>
+            </button>
+          ))}
         </section>
-
-        {/* Product Grid (3 Columns) */}
-        {filteredProducts.length === 0 ? (
-          <section className="flex flex-1 flex-col items-center justify-center rounded-[12px] border border-black/10 bg-white p-8 text-center">
-            <Barcode className="mb-2 h-8 w-8 text-black/30" />
-            <p className="text-[15px] font-semibold text-black/70">
-              Nenhum produto encontrado no catálogo
-            </p>
-            <p className="mt-1 text-[12px] text-black/45">
-              Cadastre novos produtos na aba Estoque ou ajuste os filtros de busca.
-            </p>
-          </section>
-        ) : (
-          <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {filteredProducts.map((product) => (
-              <button
-                key={product.id}
-                type="button"
-                onClick={() => handleAddProductToCart(product, inputQuantity)}
-                className="group flex min-h-[108px] flex-col justify-between rounded-[10px] border border-black/15 bg-white p-3.5 text-left shadow-[0_1px_2px_rgba(0,0,0,0.05)] transition-all hover:border-[#203f9f] hover:shadow-md"
-              >
-                <div>
-                  <div className="flex items-start justify-between gap-2">
-                    <h3 className="line-clamp-1 text-[14px] font-bold text-black group-hover:text-[#203f9f]">
-                      {product.name}
-                    </h3>
-                    <span className="shrink-0 rounded-[5px] bg-[#f0f2f5] px-2 py-0.5 text-[10px] font-bold text-black/65">
-                      {product.stockQuantity} {(product.unit ?? "un").toLowerCase()}
-                    </span>
-                  </div>
-
-                  <div className="mt-1 flex items-center gap-1.5 text-[11px] font-medium text-black/45">
-                    <Barcode className="h-3 w-3" />
-                    <span>{product.barcode}</span>
-                  </div>
-                </div>
-
-                <div className="mt-3 flex items-baseline justify-between border-t border-black/10 pt-2">
-                  <span className="text-[11px] font-semibold uppercase tracking-wide text-black/45">
-                    Preço
-                  </span>
-                  <span className="text-[16px] font-bold text-[#008f58]">
-                    {formatCurrency(product.unitPrice)}
-                  </span>
-                </div>
-              </button>
-            ))}
-          </section>
-        )}
       </div>
 
       {/* Right Panel: Cupom Fiscal */}
-      <aside className="flex min-h-[760px] flex-col overflow-hidden rounded-[8px] border border-black/10 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.08)]">
-        {/* Blue Header */}
-        <header className="flex min-h-[74px] items-center justify-between bg-[#203f9f] px-4 py-3 text-white">
-          <div className="flex items-center gap-3">
-            <ShoppingCart className="h-7 w-7 shrink-0 stroke-[2]" />
-            <div>
-              <h2 className="text-[20px] font-semibold leading-tight">
-                Cupom Fiscal
-              </h2>
-              <p className="text-[12px] font-medium text-white/85">
-                {terminalName} - Operador {operatorName}
-              </p>
-            </div>
+      <aside className="flex min-h-[740px] flex-col overflow-hidden rounded-[10px] border border-slate-200 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+        {/* Royal Blue Header */}
+        <header className="flex items-center justify-between bg-[#153488] px-5 py-4 text-white">
+          <div>
+            <h2 className="text-[20px] font-bold leading-tight">
+              Cupom Fiscal
+            </h2>
+            <p className="mt-0.5 text-[11px] text-blue-200">
+              {terminalName} - Operador {operatorName}
+            </p>
           </div>
 
-          <span className=" inline-flex h-[32px] min-w-[74px] items-center justify-center rounded-[8px] bg-[#f0f2f5]/35 px-3 text-[14px] font-semibold text-white">
+          <span className="sr-only">
             {totalItems} {totalItems === 1 ? "Item" : "Itens"}
           </span>
         </header>
 
         {/* Cart Items Area */}
-        <div className="flex flex-1 flex-col justify-center px-4 py-4">
+        <div className="flex flex-1 flex-col justify-center px-5 py-4">
           {cart.length === 0 ? (
             <div className="flex flex-col items-center justify-center text-center">
-              <div className="mb-3 flex h-[60px] w-[60px] items-center justify-center rounded-full bg-[#f0f2f5]">
-                <ShoppingCart className="h-7 w-7 text-black/45" />
-              </div>
-              <p className="text-[16px] font-semibold text-black/55">
-                Caixa Livre
+              <ShoppingCartIcon className="mb-3 h-14 w-14 stroke-[1.2] text-slate-300" />
+              <p className="text-[18px] font-bold text-slate-300">
+                Cupom Fiscal
               </p>
-              <p className="mt-1 max-w-[240px] text-[12px] leading-snug text-black/45">
-                Bipe um produto ou selecione no catálogo ao lado para iniciar a venda
+              <p className="mt-1 max-w-[230px] text-[11px] leading-relaxed text-slate-300">
+                Escaneie códigos de barras ou clique nos produtos no painel para
+                iniciar as vendas!
               </p>
             </div>
           ) : (
-            <ul className="w-full flex-1 space-y-2.5 self-start overflow-y-auto pr-1">
+            <ul className="w-full flex-1 divide-y divide-slate-100 self-start overflow-y-auto pr-1">
               {cart.map((item, idx) => {
                 const lineTotal = Math.max(
                   0,
                   item.product.unitPrice * item.quantity - item.discount,
                 );
                 return (
-                  <li
-                    key={item.product.id}
-                    className="rounded-[10px] border border-black/15 bg-[#f8f9fb] p-3 text-[13px]"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <span className="rounded bg-[#203f9f]/15 px-1.5 py-0.5 text-[11px] font-bold text-[#203f9f]">
+                  <li key={item.product.id} className="py-3 first:pt-0">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <p className="text-[12px] font-bold text-slate-800">
+                        <span className="mr-1 text-[10px] font-semibold text-slate-400">
                           #{idx + 1}
                         </span>
-                        <p className="font-bold text-black">
-                          {item.product.name}
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveCartItem(item.product.id)}
-                        aria-label={`Remover ${item.product.name}`}
-                        className="text-black/40 transition-colors hover:text-[#ff383c]"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                        {item.product.name}
+                      </p>
+                      <span className="shrink-0 text-[12px] font-bold text-slate-900">
+                        {formatCurrency(lineTotal)}
+                      </span>
                     </div>
 
+                    <p className="mt-0.5 text-[10px] text-slate-400">
+                      {item.quantity} {item.product.unit ?? "UN"} x{" "}
+                      {formatCurrency(item.product.unitPrice)}
+                    </p>
+
                     <div className="mt-2 flex items-center justify-between">
-                      <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] text-slate-400">
+                        EAN: {item.product.barcode}
+                      </span>
+
+                      <div className="inline-flex h-6 items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-2">
                         <button
                           type="button"
                           onClick={() =>
                             handleUpdateCartQuantity(item.product.id, -1)
                           }
                           aria-label={`Diminuir ${item.product.name}`}
-                          className="flex h-6 w-6 items-center justify-center rounded border border-black/15 bg-white text-black/70 hover:bg-black/5"
+                          className="text-slate-500 hover:text-slate-800"
                         >
-                          <Minus className="h-3 w-3" />
+                          <MinusIcon className="h-3 w-3" />
                         </button>
-                        <span className="min-w-[24px] text-center text-[12px] font-bold text-black">
+                        <span className="min-w-[16px] text-center text-[11px] font-bold text-slate-800">
                           {item.quantity}
                         </span>
                         <button
@@ -758,18 +820,11 @@ export default function PdvScreen({
                             handleUpdateCartQuantity(item.product.id, 1)
                           }
                           aria-label={`Aumentar ${item.product.name}`}
-                          className="flex h-6 w-6 items-center justify-center rounded border border-black/15 bg-white text-black/70 hover:bg-black/5"
+                          className="text-slate-500 hover:text-slate-800"
                         >
-                          <Plus className="h-3 w-3" />
+                          <PlusIcon className="h-3 w-3" />
                         </button>
-                        <span className="ml-1 text-[12px] text-black/55">
-                          x {formatCurrency(item.product.unitPrice)}
-                        </span>
                       </div>
-
-                      <span className="text-[14px] font-bold text-black">
-                        {formatCurrency(lineTotal)}
-                      </span>
                     </div>
                   </li>
                 );
@@ -779,95 +834,101 @@ export default function PdvScreen({
         </div>
 
         {/* Footer Totals & Payment Action */}
-        <footer className="border-t border-black/10 bg-[#f0f2f5] p-4">
+        <footer className="border-t border-slate-200 bg-white px-5 py-4">
           <div className="flex items-baseline justify-between">
-            <span className="text-[16px] font-semibold tracking-tight text-black">
+            <span className="text-[12px] font-bold uppercase tracking-wide text-slate-500">
               TOTAL A PAGAR
             </span>
-            <span className="text-[28px] font-semibold leading-none text-black">
+            <span className="text-[22px] font-bold leading-none text-[#153488]">
               {formatCurrency(totalAmount)}
             </span>
           </div>
 
-          {/* 5 Payment Method Quick Buttons */}
-          <div className="mt-3.5 grid grid-cols-5 gap-1.5">
-            {PAYMENT_OPTIONS.map((option) => {
-              const Icon = option.icon;
-              const isSelected = selectedPayment === option.id;
+          {cart.length === 0 && (
+            <div className="mt-4">
+              <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                FORMA DE PAGAMENTO
+              </p>
+              <div className="grid grid-cols-4 gap-2">
+                {FOOTER_PAYMENT_OPTIONS.map((option) => {
+                  const Icon = option.icon;
+                  const isSelected = selectedPayment === option.id;
 
-              return (
-                <button
-                  key={option.id}
-                  type="button"
-                  onClick={() => setSelectedPayment(option.id)}
-                  className={`flex h-[68px] flex-col items-center justify-center rounded-[10px] border px-1 text-center transition-colors ${
-                    isSelected
-                      ? "border-[#203f9f] bg-[#203f9f]/10 text-[#203f9f]"
-                      : "border-black/25 bg-white text-black/80 hover:bg-black/[0.03]"
-                  }`}
-                >
-                  <Icon className="mb-1 h-4 w-4 stroke-[2]" />
-                  <span className="text-[11px] font-semibold leading-tight">
-                    {option.label}
-                  </span>
-                  <span className="mt-0.5 text-[10px] font-medium text-black/45">
-                    {option.shortcut}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+                  return (
+                    <button
+                      key={option.id}
+                      type="button"
+                      onClick={() => setSelectedPayment(option.id)}
+                      className={`relative flex h-[52px] flex-col items-center justify-center rounded-[8px] border px-1 text-center transition-colors ${
+                        isSelected
+                          ? "border-[#153488] bg-blue-50/50 text-[#153488]"
+                          : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                      }`}
+                    >
+                      <span className="absolute right-1.5 top-1 text-[8px] font-semibold text-slate-400">
+                        {option.shortcut}
+                      </span>
+                      <Icon className="mb-1 h-4 w-4 text-[#153488]" />
+                      <span className="text-[10px] font-semibold leading-tight text-[#153488]">
+                        {option.label}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           <button
             type="button"
             disabled={cart.length === 0}
             onClick={() => handleOpenPaymentModal()}
-            className="mt-3.5 flex h-[48px] w-full items-center justify-center rounded-[10px] bg-[#008f58] text-[18px] font-semibold text-white shadow-sm transition-opacity hover:bg-[#007a4b] disabled:cursor-not-allowed disabled:opacity-50"
+            className="mt-4 flex h-[44px] w-full items-center justify-center rounded-[8px] bg-[#203f9f] text-[15px] font-semibold text-white shadow-xs transition-colors hover:bg-[#153488] disabled:cursor-not-allowed disabled:bg-[#4f67b0]"
           >
             Finalizar Venda (F5)
           </button>
         </footer>
       </aside>
 
-      {/* Modal: Pagamento da Venda (Nodes 1378:2944 to 1395:3057) */}
+      {/* Modal: Pagamento da Venda (Identical to Frames 1618873491..1618873497) */}
       {isPaymentModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-[1px]">
           <div
             role="dialog"
             aria-modal="true"
             aria-labelledby={paymentModalTitleId}
-            className="w-full max-w-[692px] overflow-hidden rounded-[16px] bg-white shadow-2xl"
+            className="w-full max-w-[692px] overflow-hidden rounded-[14px] bg-white shadow-2xl"
           >
             {/* Modal Header */}
-            <header className="flex flex-wrap items-center justify-between gap-3 border-b border-black/10 px-5 py-4">
+            <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
               <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#008f7a]/15 text-[#008f7a]">
-                  <DollarSign className="h-6 w-6" />
+                <div className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-[#008f58] text-[#008f58]">
+                  <span className="text-[22px] font-bold">$</span>
                 </div>
                 <div>
                   <h2
                     id={paymentModalTitleId}
-                    className="text-[20px] font-bold leading-tight text-black"
+                    className="text-[19px] font-bold leading-tight text-slate-900"
                   >
                     Pagamento da Venda
                   </h2>
-                  <p className="text-[12px] text-black/60">
+                  <p className="text-[12px] text-slate-400">
                     Selecione a forma e confirme o recebimento
                   </p>
                 </div>
               </div>
 
               <div className="flex items-center gap-3">
-                <label className="inline-flex cursor-pointer items-center gap-2 rounded-[8px] border border-black/15 bg-[#f8f9fb] px-3 py-1.5 text-[12px] font-semibold text-black/80">
+                <label className="inline-flex cursor-pointer items-center gap-1.5 text-[11px] font-semibold text-slate-700">
                   <input
                     type="checkbox"
                     checked={isNonFiscal}
                     onChange={(e) => setIsNonFiscal(e.target.checked)}
-                    className="h-3.5 w-3.5 rounded border-black/30 text-[#008f7a] focus:ring-[#008f7a]"
+                    className="h-3.5 w-3.5 rounded accent-[#ff6b00]"
                   />
-                  <FileText className="h-3.5 w-3.5 text-black/55" />
+                  <DocumentTextIcon className="h-3.5 w-3.5 text-slate-500" />
                   <span>Cupom Não Fiscal</span>
-                  <kbd className="rounded bg-black/10 px-1.5 py-0.5 text-[10px] font-bold text-black/65">
+                  <kbd className="rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600">
                     Alt+F
                   </kbd>
                 </label>
@@ -879,61 +940,62 @@ export default function PdvScreen({
                     setPaymentError(null);
                   }}
                   aria-label="Fechar modal de pagamento"
-                  className="rounded-full p-1 text-black/60 transition-colors hover:bg-black/5 hover:text-black"
+                  className="rounded-full p-1 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
                 >
-                  <X className="h-5 w-5" />
+                  <XMarkIcon className="h-5 w-5" />
                 </button>
               </div>
             </header>
 
             {/* Modal Body: 2 Columns */}
-            <div className="grid grid-cols-1 md:grid-cols-[265px_1fr]">
-              {/* Left Column: Totals, Lançados & Forma de Pagamento */}
-              <div className="border-b border-black/10 bg-white p-4 md:border-b-0 md:border-r">
-                {/* Summary Box */}
-                <div className="rounded-[10px] border border-black/15 bg-[#f8f9fb] p-3.5">
-                  <div className="flex items-center justify-between text-[12px] font-semibold text-black/65">
+            <div className="grid grid-cols-1 md:grid-cols-[260px_1fr]">
+              {/* Left Column: Summary, Lançados & Forma de Pagamento */}
+              <div className="border-b border-slate-200 bg-white p-4 md:border-b-0 md:border-r">
+                <div className="rounded-[10px] border border-slate-200/80 bg-[#f8fafc] p-3.5">
+                  <div className="flex items-center justify-between text-[11px] font-medium text-slate-600">
                     <span>Total da Venda</span>
-                    <span>{formatCurrency(totalAmount)}</span>
+                    <span className="font-semibold text-slate-800">
+                      {formatCurrency(totalAmount)}
+                    </span>
                   </div>
 
                   {paidSoFar > 0 && (
-                    <div className="mt-1.5 flex items-center justify-between text-[12px] font-bold text-[#008f58]">
+                    <div className="mt-1.5 flex items-center justify-between text-[11px] font-semibold text-[#008f58]">
                       <span>Já Pago</span>
                       <span>-{formatCurrency(paidSoFar)}</span>
                     </div>
                   )}
 
-                  <div className="my-2.5 border-t border-black/10" />
+                  <div className="my-2.5 border-t border-slate-200" />
 
                   <div className="flex items-baseline justify-between">
-                    <span className="text-[12px] font-bold uppercase text-black/75">
-                      {paidSoFar > 0 ? "Restante" : "Total a Pagar"}
+                    <span className="text-[12px] font-bold text-slate-800">
+                      {paidSoFar > 0 ? "Restante" : "Total da Venda"}
                     </span>
-                    <span className="text-[18px] font-bold text-black">
+                    <span className="text-[16px] font-bold text-slate-900">
                       {formatCurrency(remainingAmount)}
                     </span>
                   </div>
                 </div>
 
-                {/* Lançados (Partial Payments) */}
+                {/* Lançados */}
                 {launchedPayments.length > 0 && (
-                  <div className="mt-3.5">
-                    <p className="mb-1.5 text-[12px] font-bold text-black/70">
+                  <div className="mt-3">
+                    <p className="mb-1.5 text-[11px] font-semibold text-slate-600">
                       Lançados ({launchedPayments.length})
                     </p>
                     <ul className="space-y-1.5">
                       {launchedPayments.map((launch) => (
                         <li
                           key={launch.id}
-                          className="flex items-center justify-between rounded-[7px] border border-[#008f58]/30 bg-[#008f58]/10 px-2.5 py-1.5 text-[12px]"
+                          className="flex h-[28px] items-center justify-between rounded-[6px] border border-slate-200 bg-white px-2.5 text-[11px]"
                         >
-                          <div className="flex items-center gap-1.5 font-semibold text-black">
-                            <CheckCircle2 className="h-3.5 w-3.5 text-[#008f58]" />
+                          <div className="flex items-center gap-1.5 font-semibold text-slate-700">
+                            <CheckCircleIcon className="h-3.5 w-3.5 text-[#008f58]" />
                             <span>{formatPosPaymentMethod(launch.method)}</span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="font-bold text-black">
+                            <span className="font-bold text-slate-800">
                               {formatCurrency(launch.amount)}
                             </span>
                             <button
@@ -942,9 +1004,9 @@ export default function PdvScreen({
                                 handleRemoveLaunchedPayment(launch.id)
                               }
                               aria-label={`Remover pagamento ${formatPosPaymentMethod(launch.method)}`}
-                              className="text-black/45 hover:text-[#ff383c]"
+                              className="text-slate-400 hover:text-rose-600"
                             >
-                              <Trash2 className="h-3.5 w-3.5" />
+                              <TrashIcon className="h-3 w-3" />
                             </button>
                           </div>
                         </li>
@@ -954,12 +1016,12 @@ export default function PdvScreen({
                 )}
 
                 {/* Forma de Pagamento Selector */}
-                <div className="mt-4">
-                  <p className="mb-2 text-[12px] font-bold text-black/70">
+                <div className="mt-3.5">
+                  <p className="mb-1.5 text-[11px] font-semibold text-slate-700">
                     Forma de Pagamento
                   </p>
                   <div className="space-y-1.5">
-                    {PAYMENT_OPTIONS.map((option) => {
+                    {MODAL_PAYMENT_OPTIONS.map((option) => {
                       const Icon = option.icon;
                       const active = selectedPayment === option.id;
                       return (
@@ -969,25 +1031,23 @@ export default function PdvScreen({
                           onClick={() =>
                             handleSelectMethodInsideModal(option.id)
                           }
-                          className={`flex h-[34px] w-full items-center justify-between rounded-[8px] px-3 text-[12px] font-semibold transition-colors ${
+                          className={`flex h-[30px] w-full items-center justify-between rounded-[6px] px-2.5 text-[11px] font-semibold transition-colors ${
                             active
-                              ? "bg-[#008f7a] text-white shadow-sm"
-                              : "border border-black/15 bg-white text-black/80 hover:bg-black/5"
+                              ? "bg-[#008f7a] text-white"
+                              : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
                           }`}
                         >
                           <span className="flex items-center gap-2">
-                            <Icon className="h-4 w-4" />
+                            <Icon className="h-3.5 w-3.5" />
                             <span>{option.label}</span>
                           </span>
-                          <kbd
-                            className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${
-                              active
-                                ? "bg-white/20 text-white"
-                                : "bg-black/10 text-black/60"
+                          <span
+                            className={`text-[9px] font-bold ${
+                              active ? "text-white/90" : "text-slate-400"
                             }`}
                           >
                             {option.shortcut}
-                          </kbd>
+                          </span>
                         </button>
                       );
                     })}
@@ -995,58 +1055,70 @@ export default function PdvScreen({
                 </div>
               </div>
 
-              {/* Right Column: Dynamic Payment Form */}
-              <div className="flex flex-col justify-between bg-[#f8f9fb] p-5">
+              {/* Right Column: Dynamic Payment Content */}
+              <div className="flex flex-col justify-between bg-[#fbfcfd] p-5">
                 <div className="space-y-4">
                   {/* DINHEIRO */}
                   {selectedPayment === "cash" && (
                     <>
                       <div>
-                        <label className="mb-1.5 block text-[13px] font-bold text-black">
+                        <label className="mb-1.5 block text-[12px] font-bold text-slate-700">
                           Valor em Dinheiro
                         </label>
-                        <input
-                          type="text"
-                          aria-label="Valor em Dinheiro"
-                          value={paymentAmountInput}
-                          onChange={(e) => {
-                            setPaymentAmountInput(e.target.value);
-                            setCashReceivedInput(e.target.value);
-                          }}
-                          className="h-[48px] w-full rounded-[10px] border border-black/25 bg-white px-4 text-[20px] font-bold text-black focus:border-[#008f7a] focus:outline-none"
-                        />
+                        <div className="relative">
+                          <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[14px] font-bold text-slate-400">
+                            R$
+                          </span>
+                          <input
+                            type="text"
+                            aria-label="Valor em Dinheiro"
+                            value={paymentAmountInput}
+                            onChange={(e) => {
+                              setPaymentAmountInput(e.target.value);
+                              setCashReceivedInput(e.target.value);
+                            }}
+                            className="h-[46px] w-full rounded-[8px] border border-[#2563eb] bg-white pl-10 pr-4 text-[18px] font-bold text-slate-800 focus:outline-none"
+                          />
+                        </div>
                       </div>
 
-                      <div className="border-t border-black/10 pt-3">
-                        <label className="mb-1.5 block text-[13px] font-bold text-black">
+                      <div className="border-t border-slate-200 pt-3">
+                        <label className="mb-1.5 block text-[12px] font-bold text-slate-700">
                           Valor Recebido
                         </label>
-                        <input
-                          type="text"
-                          aria-label="Valor Recebido"
-                          value={cashReceivedInput}
-                          onChange={(e) => setCashReceivedInput(e.target.value)}
-                          className="h-[48px] w-full rounded-[10px] border border-black/25 bg-white px-4 text-[20px] font-bold text-black focus:border-[#008f7a] focus:outline-none"
-                        />
+                        <div className="relative">
+                          <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[14px] font-bold text-slate-400">
+                            R$
+                          </span>
+                          <input
+                            type="text"
+                            aria-label="Valor Recebido"
+                            value={cashReceivedInput}
+                            onChange={(e) =>
+                              setCashReceivedInput(e.target.value)
+                            }
+                            className="h-[46px] w-full rounded-[8px] border border-slate-200 bg-white pl-10 pr-4 text-[18px] font-bold text-slate-800 focus:border-[#2563eb] focus:outline-none"
+                          />
+                        </div>
                       </div>
 
-                      {/* Green Troco Box */}
-                      <div className="flex items-center justify-between rounded-[10px] border border-[#008f58]/30 bg-[#008f58]/10 p-3.5">
+                      {/* Troco Box */}
+                      <div className="flex items-center justify-between rounded-[8px] border border-[#00a86b]/40 bg-[#e6f9f1] p-3.5">
                         <div>
-                          <p className="text-[13px] font-bold text-[#008f58]">
+                          <p className="text-[12px] font-bold text-[#008f58]">
                             Troco
                           </p>
-                          <p className="mt-1 text-[22px] font-bold leading-none text-[#008f58]">
+                          <p className="mt-1 text-[20px] font-bold leading-none text-[#008f58]">
                             {formatCurrency(changeAmount)}
                           </p>
                         </div>
 
-                        <div className="text-right">
-                          <span className="inline-flex items-center gap-1.5 rounded-[7px] bg-[#008f58] px-2.5 py-1 text-[11px] font-semibold text-white">
-                            <LockOpen className="h-3.5 w-3.5" />
+                        <div className="text-center">
+                          <span className="inline-flex items-center gap-1.5 rounded-[6px] bg-[#008f58] px-3 py-1 text-[10px] font-semibold text-white">
+                            <LockOpenIcon className="h-3.5 w-3.5" />
                             Disparo Automático
                           </span>
-                          <p className="mt-1 text-[10px] font-medium text-black/55">
+                          <p className="mt-1 text-[9px] text-[#008f58]">
                             Abre gaveta física na conclusão
                           </p>
                         </div>
@@ -1058,45 +1130,48 @@ export default function PdvScreen({
                   {selectedPayment === "pix" && (
                     <>
                       <div>
-                        <label className="mb-1.5 block text-[13px] font-bold text-black">
+                        <label className="mb-1.5 block text-[12px] font-bold text-slate-700">
                           Valor em Pix
                         </label>
-                        <input
-                          type="text"
-                          aria-label="Valor em Pix"
-                          value={paymentAmountInput}
-                          onChange={(e) =>
-                            setPaymentAmountInput(e.target.value)
-                          }
-                          className="h-[48px] w-full rounded-[10px] border border-black/25 bg-white px-4 text-[20px] font-bold text-black focus:border-[#008f7a] focus:outline-none"
-                        />
+                        <div className="relative">
+                          <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[14px] font-bold text-slate-400">
+                            R$
+                          </span>
+                          <input
+                            type="text"
+                            aria-label="Valor em Pix"
+                            value={paymentAmountInput}
+                            onChange={(e) =>
+                              setPaymentAmountInput(e.target.value)
+                            }
+                            className="h-[46px] w-full rounded-[8px] border border-[#2563eb] bg-white pl-10 pr-4 text-[18px] font-bold text-slate-800 focus:outline-none"
+                          />
+                        </div>
                       </div>
 
-                      <div className="flex items-center gap-3 rounded-[10px] border border-[#008f7a]/30 bg-[#008f7a]/10 p-3.5">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[8px] bg-[#008f7a] text-white">
-                          <QrCode className="h-5 w-5" />
+                      <div className="flex items-center gap-3 rounded-[8px] border border-slate-200 bg-[#f8fafc] p-3.5">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] bg-[#e6f9f1] text-[#008f58]">
+                          <QrCodeIcon className="h-5 w-5" />
                         </div>
                         <div>
-                          <p className="text-[14px] font-bold text-black">
+                          <p className="text-[13px] font-bold text-slate-800">
                             Recebimento em Pix
                           </p>
-                          <p className="text-[12px] text-black/65">
+                          <p className="text-[11px] text-slate-500">
                             Pressione Enter para confirmar{" "}
-                            {formatCurrency(parsedCurrentPaymentAmount)} e{" "}
-                            {isPartialLaunch
-                              ? "lançar o pagamento parcial."
-                              : "concluir a venda."}
+                            {formatCurrency(parsedCurrentPaymentAmount)} e
+                            concluir a venda.
                           </p>
                         </div>
                       </div>
 
-                      <div className="space-y-1.5 rounded-[10px] border border-black/10 bg-white p-3 text-[12px]">
-                        <div className="flex items-center gap-2 font-medium text-black/75">
-                          <CheckCircle2 className="h-4 w-4 text-[#008f58]" />
+                      <div className="space-y-1.5 rounded-[8px] bg-[#eff6ff] p-3 text-[11px]">
+                        <div className="flex items-center gap-2 font-medium text-slate-700">
+                          <CheckCircleIcon className="h-4 w-4 text-[#2563eb]" />
                           <span>Pagamento sendo processado...</span>
                         </div>
-                        <div className="flex items-center gap-2 font-semibold text-[#008f58]">
-                          <CheckCircle2 className="h-4 w-4 text-[#008f58]" />
+                        <div className="flex items-center gap-2 font-medium text-slate-700">
+                          <CheckCircleIcon className="h-4 w-4 text-[#2563eb]" />
                           <span>Pagamento confirmado com sucesso!</span>
                         </div>
                       </div>
@@ -1107,31 +1182,41 @@ export default function PdvScreen({
                   {selectedPayment === "credit" && (
                     <>
                       <div>
-                        <label className="mb-1.5 block text-[13px] font-bold text-black">
+                        <label className="mb-1.5 block text-[12px] font-bold text-slate-700">
                           Valor em Cartão de Crédito
                         </label>
-                        <input
-                          type="text"
-                          aria-label="Valor em Cartão de Crédito"
-                          value={paymentAmountInput}
-                          onChange={(e) =>
-                            setPaymentAmountInput(e.target.value)
-                          }
-                          className="h-[48px] w-full rounded-[10px] border border-black/25 bg-white px-4 text-[20px] font-bold text-black focus:border-[#008f7a] focus:outline-none"
-                        />
+                        <div className="relative">
+                          <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[14px] font-bold text-slate-400">
+                            R$
+                          </span>
+                          <input
+                            type="text"
+                            aria-label="Valor em Cartão de Crédito"
+                            value={paymentAmountInput}
+                            onChange={(e) =>
+                              setPaymentAmountInput(e.target.value)
+                            }
+                            className="h-[46px] w-full rounded-[8px] border border-[#2563eb] bg-white pl-10 pr-4 text-[18px] font-bold text-slate-800 focus:outline-none"
+                          />
+                        </div>
                       </div>
 
                       <div>
-                        <label className="mb-1.5 block text-[13px] font-bold text-black">
-                          Parcelamento
-                        </label>
+                        <div className="mb-1.5 flex items-center justify-between">
+                          <label className="text-[12px] font-bold text-slate-700">
+                            Parcelamento
+                          </label>
+                          <span className="text-[10px] text-slate-400">
+                            Use ↑↓
+                          </span>
+                        </div>
                         <select
                           aria-label="Parcelamento"
                           value={creditInstallments}
                           onChange={(e) =>
                             setCreditInstallments(Number(e.target.value))
                           }
-                          className="h-[46px] w-full rounded-[10px] border border-black/25 bg-white px-3.5 text-[14px] font-semibold text-black focus:border-[#008f7a] focus:outline-none"
+                          className="h-[44px] w-full rounded-[8px] border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-800 focus:border-[#2563eb] focus:outline-none"
                         >
                           {[1, 2, 3, 4, 5, 6].map((n) => {
                             const perInstallment =
@@ -1148,13 +1233,13 @@ export default function PdvScreen({
                         </select>
                       </div>
 
-                      <div className="space-y-1.5 rounded-[10px] border border-black/10 bg-white p-3 text-[12px]">
-                        <div className="flex items-center gap-2 font-medium text-black/75">
-                          <CheckCircle2 className="h-4 w-4 text-[#008f58]" />
+                      <div className="space-y-1.5 rounded-[8px] bg-[#eff6ff] p-3 text-[11px]">
+                        <div className="flex items-center gap-2 font-medium text-slate-700">
+                          <CheckCircleIcon className="h-4 w-4 text-[#2563eb]" />
                           <span>Pagamento sendo processado...</span>
                         </div>
-                        <div className="flex items-center gap-2 font-semibold text-[#008f58]">
-                          <CheckCircle2 className="h-4 w-4 text-[#008f58]" />
+                        <div className="flex items-center gap-2 font-medium text-slate-700">
+                          <CheckCircleIcon className="h-4 w-4 text-[#2563eb]" />
                           <span>Pagamento confirmado com sucesso!</span>
                         </div>
                       </div>
@@ -1165,43 +1250,48 @@ export default function PdvScreen({
                   {selectedPayment === "debit" && (
                     <>
                       <div>
-                        <label className="mb-1.5 block text-[13px] font-bold text-black">
+                        <label className="mb-1.5 block text-[12px] font-bold text-slate-700">
                           Valor em Cartão de Débito
                         </label>
-                        <input
-                          type="text"
-                          aria-label="Valor em Cartão de Débito"
-                          value={paymentAmountInput}
-                          onChange={(e) =>
-                            setPaymentAmountInput(e.target.value)
-                          }
-                          className="h-[48px] w-full rounded-[10px] border border-black/25 bg-white px-4 text-[20px] font-bold text-black focus:border-[#008f7a] focus:outline-none"
-                        />
+                        <div className="relative">
+                          <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[14px] font-bold text-slate-400">
+                            R$
+                          </span>
+                          <input
+                            type="text"
+                            aria-label="Valor em Cartão de Débito"
+                            value={paymentAmountInput}
+                            onChange={(e) =>
+                              setPaymentAmountInput(e.target.value)
+                            }
+                            className="h-[46px] w-full rounded-[8px] border border-[#2563eb] bg-white pl-10 pr-4 text-[18px] font-bold text-slate-800 focus:outline-none"
+                          />
+                        </div>
                       </div>
 
-                      <div className="flex items-center gap-3 rounded-[10px] border border-[#008f7a]/30 bg-[#008f7a]/10 p-3.5">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[8px] bg-[#008f7a] text-white">
-                          <Wallet className="h-5 w-5" />
+                      <div className="flex items-center gap-3 rounded-[8px] border border-slate-200 bg-[#f8fafc] p-3.5">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] bg-[#e0f2fe] text-[#0284c7]">
+                          <CreditCardIcon className="h-5 w-5" />
                         </div>
                         <div>
-                          <p className="text-[14px] font-bold text-black">
+                          <p className="text-[13px] font-bold text-slate-800">
                             Cartão de Débito à Vista
                           </p>
-                          <p className="text-[12px] text-black/65">
+                          <p className="text-[11px] text-slate-500">
                             Pressione Enter para abater{" "}
                             {formatCurrency(parsedCurrentPaymentAmount)} do
-                            saldo.
+                            saldo e escolher a próxima forma.
                           </p>
                         </div>
                       </div>
 
-                      <div className="space-y-1.5 rounded-[10px] border border-black/10 bg-white p-3 text-[12px]">
-                        <div className="flex items-center gap-2 font-medium text-black/75">
-                          <CheckCircle2 className="h-4 w-4 text-[#008f58]" />
+                      <div className="space-y-1.5 rounded-[8px] bg-[#eff6ff] p-3 text-[11px]">
+                        <div className="flex items-center gap-2 font-medium text-slate-700">
+                          <CheckCircleIcon className="h-4 w-4 text-[#2563eb]" />
                           <span>Pagamento sendo processado...</span>
                         </div>
-                        <div className="flex items-center gap-2 font-semibold text-[#008f58]">
-                          <CheckCircle2 className="h-4 w-4 text-[#008f58]" />
+                        <div className="flex items-center gap-2 font-medium text-slate-700">
+                          <CheckCircleIcon className="h-4 w-4 text-[#2563eb]" />
                           <span>Pagamento confirmado com sucesso!</span>
                         </div>
                       </div>
@@ -1212,104 +1302,163 @@ export default function PdvScreen({
                   {selectedPayment === "booklet" && (
                     <>
                       <div>
-                        <label className="mb-1.5 block text-[13px] font-bold text-black">
+                        <label className="mb-1.5 block text-[12px] font-bold text-slate-700">
                           Valor em Caderneta
                         </label>
-                        <input
-                          type="text"
-                          aria-label="Valor em Caderneta"
-                          value={paymentAmountInput}
-                          onChange={(e) =>
-                            setPaymentAmountInput(e.target.value)
-                          }
-                          className="h-[48px] w-full rounded-[10px] border border-black/25 bg-white px-4 text-[20px] font-bold text-black focus:border-[#008f7a] focus:outline-none"
-                        />
+                        <div className="relative">
+                          <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[14px] font-bold text-slate-400">
+                            R$
+                          </span>
+                          <input
+                            type="text"
+                            aria-label="Valor em Caderneta"
+                            value={paymentAmountInput}
+                            onChange={(e) =>
+                              setPaymentAmountInput(e.target.value)
+                            }
+                            className="h-[46px] w-full rounded-[8px] border border-[#2563eb] bg-white pl-10 pr-4 text-[18px] font-bold text-slate-800 focus:outline-none"
+                          />
+                        </div>
                       </div>
 
-                      <div className="rounded-[10px] border border-[#008f7a]/35 bg-[#008f7a]/10 p-3.5">
-                        <label className="mb-1.5 flex items-center gap-1.5 text-[12px] font-bold text-[#008f7a]">
-                          <UserCheck className="h-4 w-4" />
-                          <span>Cliente da Caderneta</span>
-                        </label>
-                        <select
-                          aria-label="Selecionar Cliente da Caderneta"
-                          value={selectedCustomer?.id ?? ""}
-                          onChange={(e) =>
-                            setSelectedCustomerId(e.target.value)
-                          }
-                          className="h-[40px] w-full rounded-[8px] border border-black/20 bg-white px-3 text-[13px] font-semibold text-black focus:border-[#008f7a] focus:outline-none"
-                        >
-                          {bookletCustomers.length === 0 ? (
-                            <option value="">
-                              Nenhum cliente cadastrado na caderneta
-                            </option>
-                          ) : (
-                            bookletCustomers.map((c) => (
-                              <option key={c.id} value={c.id}>
-                                {c.name} — CPF: {c.cpf}
-                              </option>
-                            ))
-                          )}
-                        </select>
+                      {/* Teal Customer Box (Identical to Frame 1618873496) */}
+                      <div className="relative rounded-[8px] bg-[#008f7a] p-3.5 text-white">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <span className="block text-[11px] font-bold text-white/90">
+                              Cliente
+                            </span>
+                            <strong className="text-[12px] font-semibold text-white">
+                              {selectedCustomer?.name ??
+                                "Nenhum cliente selecionado"}
+                            </strong>
+                          </div>
 
-                        {selectedCustomer && (
-                          <div className="mt-3 grid grid-cols-3 gap-2 rounded-[8px] bg-white/90 p-2.5 text-center text-[11px]">
-                            <div>
-                              <span className="block font-semibold text-black/55">
-                                Dívida Atual
-                              </span>
-                              <span className="font-bold text-black">
-                                {formatCurrency(selectedCustomer.balance)}
-                              </span>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setIsCustomerDropdownOpen((prev) => !prev)
+                            }
+                            className="inline-flex items-center gap-1 text-[11px] font-semibold text-white/95 hover:underline"
+                          >
+                            <span>Selecionar</span>
+                            <ChevronDownIcon className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+
+                        <div className="mt-3 grid grid-cols-3 gap-2 border-t border-white/20 pt-2.5 text-[10px]">
+                          <div>
+                            <span className="block text-white/80">
+                              Dívida Atual
+                            </span>
+                            <strong className="font-bold text-white">
+                              {formatCurrency(selectedCustomer?.balance ?? 0)}
+                            </strong>
+                          </div>
+                          <div>
+                            <span className="block text-white/80">
+                              Nova Dívida
+                            </span>
+                            <strong className="font-bold text-white">
+                              {formatCurrency(
+                                (selectedCustomer?.balance ?? 0) +
+                                  parsedCurrentPaymentAmount,
+                              )}
+                            </strong>
+                          </div>
+                          <div className="text-right">
+                            <span className="block text-white/80">
+                              Crédito Restante
+                            </span>
+                            <strong className="font-bold text-white">
+                              {formatCurrency(
+                                Math.max(
+                                  0,
+                                  (selectedCustomer?.creditLimit ?? 0) -
+                                    ((selectedCustomer?.balance ?? 0) +
+                                      parsedCurrentPaymentAmount),
+                                ),
+                              )}
+                            </strong>
+                          </div>
+                        </div>
+
+                        {/* Searchable Customer Dropdown */}
+                        {isCustomerDropdownOpen && (
+                          <div className="absolute left-0 right-0 top-full z-20 mt-1 overflow-hidden rounded-[8px] border border-slate-200 bg-white text-slate-800 shadow-xl">
+                            <div className="border-b border-slate-100 p-2">
+                              <input
+                                type="text"
+                                value={customerSearchQuery}
+                                onChange={(e) =>
+                                  setCustomerSearchQuery(e.target.value)
+                                }
+                                placeholder="Buscar cliente por nome, CPF ou telefone..."
+                                className="h-8 w-full rounded border border-slate-200 px-2.5 text-[11px] text-slate-800 outline-none focus:border-[#008f7a]"
+                              />
                             </div>
-                            <div>
-                              <span className="block font-semibold text-black/55">
-                                Nova Dívida
-                              </span>
-                              <span className="font-bold text-[#ff8d28]">
-                                {formatCurrency(
-                                  selectedCustomer.balance +
-                                    parsedCurrentPaymentAmount,
-                                )}
-                              </span>
-                            </div>
-                            <div>
-                              <span className="block font-semibold text-black/55">
-                                Crédito Restante
-                              </span>
-                              <span className="font-bold text-[#008f58]">
-                                {formatCurrency(
-                                  Math.max(
-                                    0,
-                                    selectedCustomer.creditLimit -
-                                      (selectedCustomer.balance +
-                                        parsedCurrentPaymentAmount),
-                                  ),
-                                )}
-                              </span>
-                            </div>
+                            <ul className="max-h-40 divide-y divide-slate-100 overflow-y-auto text-[11px]">
+                              {filteredBookletCustomers.map((c) => (
+                                <li key={c.id}>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedCustomerId(c.id);
+                                      setIsCustomerDropdownOpen(false);
+                                    }}
+                                    className="flex w-full items-center justify-between px-3 py-2 text-left hover:bg-amber-50/60"
+                                  >
+                                    <span className="font-semibold text-slate-800">
+                                      {c.name}
+                                    </span>
+                                    <span className="font-mono text-slate-500">
+                                      Dívida: {formatCurrency(c.balance)}
+                                    </span>
+                                  </button>
+                                </li>
+                              ))}
+                            </ul>
                           </div>
                         )}
+                      </div>
+
+                      <div className="space-y-1 rounded-[8px] bg-[#eff6ff] p-3 text-[11px]">
+                        <div className="flex items-center gap-2 font-medium text-slate-700">
+                          <CheckCircleIcon className="h-3.5 w-3.5 text-[#2563eb]" />
+                          <span>Pagamento sendo processado...</span>
+                        </div>
+                        <div className="flex items-center gap-2 font-medium text-slate-700">
+                          <CheckCircleIcon className="h-3.5 w-3.5 text-[#2563eb]" />
+                          <span>Pagamento confirmado com sucesso!</span>
+                        </div>
+                        <div className="flex items-center gap-2 font-medium text-slate-700">
+                          <CheckCircleIcon className="h-3.5 w-3.5 text-[#2563eb]" />
+                          <span>Venda concluída com sucesso!</span>
+                        </div>
+                        <div className="flex items-center gap-2 font-medium text-slate-700">
+                          <ArrowPathIcon className="h-3.5 w-3.5 text-[#2563eb]" />
+                          <span>Emitindo comprovante...</span>
+                        </div>
                       </div>
                     </>
                   )}
 
                   {paymentError && (
-                    <p className="rounded-[8px] bg-[#ff383c]/10 px-3 py-2 text-[12px] font-semibold text-[#ff383c]">
+                    <p className="rounded-[8px] bg-rose-50 px-3 py-2 text-[11px] font-semibold text-rose-600">
                       {paymentError}
                     </p>
                   )}
                 </div>
 
                 {/* Footer Actions */}
-                <div className="mt-6 flex items-center justify-end gap-4 border-t border-black/10 pt-4">
+                <div className="mt-6 flex items-center justify-end gap-4 border-t border-slate-200 pt-3.5">
                   <button
                     type="button"
                     onClick={() => {
                       setIsPaymentModalOpen(false);
                       setPaymentError(null);
                     }}
-                    className="text-[14px] font-semibold text-black/60 hover:text-black"
+                    className="text-[12px] font-semibold text-slate-600 hover:text-slate-900"
                   >
                     Cancelar
                   </button>
@@ -1317,12 +1466,17 @@ export default function PdvScreen({
                   <button
                     type="button"
                     onClick={handleConfirmOrLaunchPayment}
-                    className="inline-flex h-[40px] items-center gap-2 rounded-[8px] bg-[#008f58] px-5 text-[14px] font-semibold text-white shadow-sm transition-colors hover:bg-[#007a4b]"
+                    className="inline-flex h-[36px] items-center gap-2 rounded-[8px] bg-[#0f766e] px-4 text-[12px] font-semibold text-white shadow-xs transition-colors hover:bg-[#0d645d]"
                   >
+                    {isPartialLaunch ? (
+                      <PlusIcon className="h-4 w-4" />
+                    ) : (
+                      <PrinterIcon className="h-4 w-4" />
+                    )}
                     <span>
                       {isPartialLaunch ? "Lançar Pagamento" : "Concluir Venda"}
                     </span>
-                    <kbd className="rounded bg-white/20 px-1.5 py-0.5 text-[11px] font-bold">
+                    <kbd className="rounded bg-white/15 px-1.5 py-0.5 text-[10px] font-bold">
                       Enter
                     </kbd>
                   </button>
@@ -1333,69 +1487,79 @@ export default function PdvScreen({
         </div>
       )}
 
-      {/* Modal: Cupom Fiscal NFC-e / Cupom Não Fiscal (Nodes 1252:2808 & 1255:2851) */}
+      {/* Modal: Cupom Fiscal DANFE NFC-e / Documento Não Fiscal (Screenshot 105739.png) */}
       {completedSaleReceipt && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4">
           <div
             role="dialog"
             aria-modal="true"
             aria-labelledby={receiptModalTitleId}
-            className="w-full max-w-[430px] overflow-hidden rounded-[14px] bg-white shadow-2xl"
+            className="w-full max-w-[420px] overflow-hidden rounded-[12px] bg-white shadow-2xl"
           >
-            <div className="max-h-[82vh] overflow-y-auto bg-[#fffef7] p-6 font-mono text-[12px] text-black">
-              <div className="border-b border-dashed border-black/30 pb-3 text-center">
+            <div className="max-h-[82vh] overflow-y-auto bg-white p-6 font-mono text-[11px] text-slate-800">
+              <div className="border-b border-dashed border-slate-300 pb-3 text-center">
                 <h2
                   id={receiptModalTitleId}
-                  className="text-[15px] font-bold uppercase"
+                  className="text-[14px] font-bold uppercase text-slate-900"
                 >
                   {storeSettings.nomeFantasia}
                 </h2>
-                <p className="text-[11px] text-black/70">
+                <p className="text-[10px] text-slate-600">
                   {storeSettings.razaoSocial}
                 </p>
-                <p className="text-[11px] text-black/70">
-                  CNPJ: {storeSettings.cnpj} • IE: {storeSettings.ie}
+                <p className="text-[10px] text-slate-600">
+                  CNPJ: {storeSettings.cnpj}
                 </p>
-                <p className="text-[11px] text-black/70">
+                <p className="text-[10px] text-slate-600">
                   {storeSettings.address}
+                </p>
+                <p className="text-[10px] text-slate-600">
+                  Tel: {storeSettings.phone}
                 </p>
               </div>
 
-              <div className="border-b border-dashed border-black/30 py-2.5 text-center">
+              <div className="border-b border-dashed border-slate-300 py-2.5 text-center">
                 {completedSaleReceipt.isNonFiscal ? (
-                  <>
-                    <p className="font-bold uppercase">
-                      Controle Interno de Venda
+                  <div className="rounded-[6px] border border-amber-200 bg-amber-50/70 px-3 py-2">
+                    <p className="font-bold uppercase text-slate-900">
+                      DOCUMENTO NÃO FISCAL - COMPROVANTE DE VENDA
                     </p>
-                    <p className="text-[11px] text-black/65">
-                      DOCUMENTO AUXILIAR DE CONFERÊNCIA (Sem Valor Fiscal)
+                    <p className="text-[10px] font-bold text-[#ff6b00]">
+                      SEM VALOR FISCAL - CONTROLE INTERNO DO CLIENTE
                     </p>
-                  </>
+                    <p className="mt-0.5 text-[10px] text-slate-600">
+                      {completedSaleReceipt.terminalName} - Operador:{" "}
+                      {completedSaleReceipt.operatorName}
+                    </p>
+                  </div>
                 ) : (
-                  <>
-                    <p className="font-bold uppercase">DANFE NFC-e</p>
-                    <p className="text-[11px] text-black/65">
+                  <div>
+                    <p className="font-bold text-slate-900">DANFE NFC-e</p>
+                    <p className="text-[10px] text-slate-600">
                       Documento Auxiliar da Nota Fiscal de Consumidor Eletrônica
                     </p>
-                  </>
+                    <p className="mt-0.5 text-[10px] text-slate-600">
+                      {completedSaleReceipt.terminalName} - Operador:{" "}
+                      {completedSaleReceipt.operatorName}
+                    </p>
+                  </div>
                 )}
               </div>
 
-              <div className="border-b border-dashed border-black/30 py-2.5">
-                <div className="flex justify-between font-bold">
-                  <span>ITEM / DESCRIÇÃO</span>
+              <div className="border-b border-dashed border-slate-300 py-2.5">
+                <div className="flex justify-between font-bold text-slate-900">
+                  <span>QTD x ITEM</span>
                   <span>TOTAL</span>
                 </div>
                 <div className="mt-1.5 space-y-1">
-                  {completedSaleReceipt.items.map((item, i) => (
+                  {completedSaleReceipt.items.map((item) => (
                     <div
                       key={item.product.id}
-                      className="flex justify-between text-[11px]"
+                      className="flex justify-between text-[10px]"
                     >
                       <span>
-                        {String(i + 1).padStart(2, "0")} {item.product.name} (
-                        {item.quantity}x{" "}
-                        {formatCurrency(item.product.unitPrice)})
+                        {item.quantity} {item.product.unit ?? "UN"} x{" "}
+                        {item.product.name}
                       </span>
                       <span className="font-semibold">
                         {formatCurrency(
@@ -1408,62 +1572,76 @@ export default function PdvScreen({
                 </div>
               </div>
 
-              <div className="border-b border-dashed border-black/30 py-2.5 space-y-1">
-                <div className="flex justify-between text-[13px] font-bold">
-                  <span>VALOR TOTAL R$</span>
+              <div className="border-b border-dashed border-slate-300 py-2.5 space-y-1">
+                <div className="flex justify-between text-[11px] text-slate-600">
+                  <span>Subtotal:</span>
+                  <span>{formatCurrency(completedSaleReceipt.subtotal)}</span>
+                </div>
+                <div className="flex justify-between text-[14px] font-bold text-slate-900">
+                  <span>TOTAL:</span>
                   <span>{formatCurrency(completedSaleReceipt.total)}</span>
                 </div>
+              </div>
+
+              <div className="border-b border-dashed border-slate-300 py-2.5 space-y-1 text-[10px]">
                 {completedSaleReceipt.payments.map((p) => (
-                  <div
-                    key={p.id}
-                    className="flex justify-between text-[11px] text-black/75"
-                  >
-                    <span>
-                      {formatPosPaymentMethod(p.method)}
-                      {p.installments && p.installments > 1
-                        ? ` (${p.installments}x)`
-                        : ""}
-                      {p.customerName ? ` - ${p.customerName}` : ""}
-                    </span>
-                    <span>{formatCurrency(p.amount)}</span>
+                  <div key={p.id} className="flex justify-between">
+                    <span>Forma de Pagamento:</span>
+                    <strong className="uppercase">
+                      {formatPosPaymentMethod(p.method)} (
+                      {formatCurrency(p.amount)})
+                    </strong>
                   </div>
                 ))}
               </div>
 
-              <div className="pt-3 text-center text-[11px] text-black/70">
-                <p>
-                  Venda {completedSaleReceipt.saleCode} •{" "}
-                  {completedSaleReceipt.dateTime}
-                </p>
-                <p>
-                  {completedSaleReceipt.terminalName} - Operador:{" "}
-                  {completedSaleReceipt.operatorName}
-                </p>
-                {!completedSaleReceipt.isNonFiscal && (
-                  <p className="mt-1 text-[10px] text-black/55">
-                    Protocolo SEFAZ: {completedSaleReceipt.protocolNumber}
-                  </p>
+              <div className="pt-3 text-center text-[10px] text-slate-600">
+                {completedSaleReceipt.isNonFiscal ? (
+                  <>
+                    <p className="font-semibold text-slate-800">
+                      Controle Interno de Venda:
+                    </p>
+                    <p>CÓDIGO: {completedSaleReceipt.saleCode}</p>
+                    <p>Data de Emissão: {completedSaleReceipt.dateTime}</p>
+                    <p className="mt-1 font-bold text-[#9a3412]">
+                      DOCUMENTO AUXILIAR DE CONFERÊNCIA
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="font-semibold text-slate-800">
+                      Protocolo de Autorização SEFAZ:
+                    </p>
+                    <p className="break-all text-[9px]">
+                      {completedSaleReceipt.protocolNumber}
+                    </p>
+                    <p>Data de Emissão: {completedSaleReceipt.dateTime}</p>
+                    <p className="mt-1 font-bold text-[#008f58]">
+                      Status: AUTORIZADA PELA SEFAZ
+                    </p>
+                  </>
                 )}
-                <p className="mt-2 font-semibold text-black">
+
+                <p className="mt-3 border-t border-slate-200 pt-2 text-[10px] text-slate-500">
                   {storeSettings.receiptFooter}
                 </p>
               </div>
             </div>
 
-            <footer className="flex items-center justify-between gap-3 border-t border-black/10 bg-white px-5 py-3.5">
+            <footer className="flex items-center justify-between gap-3 border-t border-slate-200 bg-white px-5 py-3">
               <button
                 type="button"
                 onClick={() => setCompletedSaleReceipt(null)}
-                className="h-[38px] flex-1 rounded-[8px] border border-black/20 bg-[#f0f2f5] text-[13px] font-semibold text-black/75 hover:bg-black/10"
+                className="h-[36px] flex-1 rounded-[8px] border border-slate-200 bg-slate-100 text-[12px] font-semibold text-slate-700 hover:bg-slate-200"
               >
                 Nova Venda (Esc)
               </button>
               <button
                 type="button"
                 onClick={() => window.print?.()}
-                className="inline-flex h-[38px] flex-1 items-center justify-center gap-2 rounded-[8px] bg-[#008f58] text-[13px] font-semibold text-white hover:bg-[#007a4b]"
+                className="inline-flex h-[36px] flex-1 items-center justify-center gap-1.5 rounded-[8px] bg-[#008f58] text-[12px] font-semibold text-white hover:bg-[#007a4b]"
               >
-                <Printer className="h-4 w-4" />
+                <PrinterIcon className="h-4 w-4" />
                 <span>Imprimir Cupom</span>
               </button>
             </footer>

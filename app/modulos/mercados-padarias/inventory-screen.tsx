@@ -2,18 +2,18 @@
 
 import { useEffect, useId, useMemo, useState, type FormEvent } from "react";
 import {
-  AlertTriangle,
-  ArrowUpDown,
-  Barcode,
-  CalendarClock,
-  CircleX,
-  Package,
-  Pencil,
-  Plus,
-  Search,
-  Trash2,
-  X,
-} from "lucide-react";
+  ArrowsRightLeftIcon,
+  CalendarDaysIcon,
+  CheckCircleIcon,
+  CubeIcon,
+  MagnifyingGlassIcon,
+  PencilSquareIcon,
+  PlusIcon,
+  TrashIcon,
+  ViewColumnsIcon,
+  XCircleIcon,
+  XMarkIcon,
+} from "@heroicons/react/24/outline";
 import {
   applyStockMovement,
   calculateSalePrice,
@@ -89,7 +89,7 @@ function createEmptyProductDraft(
 ): ProductFormDraft {
   return {
     code: String(nextCodeNumber),
-    barcode: "7891000100103",
+    barcode: "7921223330129",
     description: "",
     category: INVENTORY_CATEGORIES[0],
     unit: "UN",
@@ -523,47 +523,43 @@ export default function InventoryScreen({
   const metricCards = [
     {
       id: "total-items",
-      title: "Total de Itens",
+      title: "Itens Cadastrados",
       value: String(metrics.totalItems),
-      subtitle: "Produtos ativos no catálogo",
-      accentColor: "#0088ff",
-      icon: Package,
+      subtitle: "Produtos no catálogo",
+      colorClass: "text-[#008f58]",
     },
     {
       id: "low-stock",
       title: "Estoque Baixo",
       value: String(metrics.lowStockCount),
       subtitle: "Abaixo do estoque mínimo",
-      accentColor: "#ff8d28",
-      icon: AlertTriangle,
+      colorClass: "text-[#9a3412]",
     },
     {
       id: "expiring-soon",
       title: "Validade Próxima",
       value: String(metrics.expiringSoonCount),
-      subtitle: "Vencem nos próximos 30 dias",
-      accentColor: "#ffcc00",
-      icon: CalendarClock,
+      subtitle: "Vencem em até 30 dias",
+      colorClass: "text-slate-800",
     },
     {
       id: "expired",
       title: "Produtos Vencidos",
       value: String(metrics.expiredCount),
-      subtitle: "Exigem retirada imediata",
-      accentColor: "#ff383c",
-      icon: CircleX,
+      subtitle: "Remover do balcão",
+      colorClass: "text-[#203f9f]",
     },
   ];
 
   return (
-    <div className="mx-auto flex w-full max-w-[1250px] flex-col gap-5">
+    <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-4">
       {/* Page Header */}
       <header className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-[28px] font-semibold tracking-tight text-black">
+          <h1 className="text-[20px] font-bold tracking-tight text-[#203f9f]">
             Gestão de Estoque
           </h1>
-          <p className="text-[13px] text-black/60">
+          <p className="text-[11px] text-slate-400">
             Controle por categoria, posição do estoque e cadastro de produtos.
           </p>
         </div>
@@ -571,65 +567,42 @@ export default function InventoryScreen({
         <button
           type="button"
           onClick={handleOpenNewProduct}
-          className="inline-flex h-[41px] items-center gap-2 rounded-[8px] bg-[#203f9f] px-4 text-[15px] font-semibold text-white shadow-sm transition-colors hover:bg-[#193382]"
+          className="inline-flex h-[36px] items-center gap-1.5 rounded-[8px] bg-[#008f58] px-4 text-[13px] font-semibold text-white shadow-xs transition-colors hover:bg-[#007a4b]"
         >
-          <Plus className="h-4 w-4 stroke-[2.5]" />
+          <PlusIcon className="h-4 w-4 stroke-[2.5]" />
           <span>Novo Produto</span>
         </button>
       </header>
 
-      {/* 4 Summary Metric Cards */}
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {metricCards.map((card) => {
-          const Icon = card.icon;
-          return (
-            <article
-              key={card.id}
-              className="relative min-h-[121px] overflow-hidden rounded-[8px] bg-white p-4 pl-6 shadow-[0_1px_3px_rgba(0,0,0,0.12)]"
-            >
-              <div
-                className="absolute inset-y-0 left-0 w-[9px]"
-                style={{ backgroundColor: card.accentColor }}
-              />
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <h2 className="text-[12px] font-semibold text-black/60">
-                    {card.title}
-                  </h2>
-                  <p className="mt-1.5 text-[22px] font-semibold leading-none text-black">
-                    {card.value}
-                  </p>
-                  <p className="mt-3 text-[11px] font-medium text-black/45">
-                    {card.subtitle}
-                  </p>
-                </div>
-
-                <div
-                  className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[8px]"
-                  style={{
-                    backgroundColor: `${card.accentColor}26`,
-                    color: card.accentColor,
-                  }}
-                >
-                  <Icon className="h-[18px] w-[18px]" />
-                </div>
-              </div>
-            </article>
-          );
-        })}
+      {/* 4 Clean White Metric Cards (Screenshot 110154.png) */}
+      <section className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
+        {metricCards.map((card) => (
+          <article
+            key={card.id}
+            className="flex min-h-[100px] flex-col justify-between rounded-[10px] border border-slate-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
+          >
+            <h2 className="text-[12px] font-semibold text-slate-700">
+              {card.title}
+            </h2>
+            <p className={`my-1 text-[22px] font-bold ${card.colorClass}`}>
+              {card.value}
+            </p>
+            <p className="text-[11px] text-slate-400">{card.subtitle}</p>
+          </article>
+        ))}
       </section>
 
       {/* Search & Category Filter Bar */}
-      <section className="flex flex-col gap-3 rounded-[8px] border border-black/10 bg-white p-3 sm:flex-row sm:items-center">
+      <section className="flex flex-col gap-3 rounded-[10px] border border-slate-200/80 bg-white p-3 shadow-[0_1px_2px_rgba(0,0,0,0.04)] sm:flex-row sm:items-center">
         <div className="relative flex-1">
-          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-black/45" />
+          <MagnifyingGlassIcon className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input
             type="search"
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
-            placeholder="Buscar por nome, código de barras, código interno ou fornecedor..."
+            placeholder="Buscar por nome, código ou código de barras..."
             aria-label="Buscar produtos no estoque"
-            className="h-[42px] w-full rounded-[10px] border border-black/20 bg-white pl-10 pr-4 text-[14px] text-black placeholder:text-black/45 focus:border-[#203f9f] focus:outline-none"
+            className="h-[38px] w-full rounded-[8px] border border-slate-200 bg-[#f3f4f6] pl-10 pr-4 text-[12px] text-slate-800 placeholder:text-slate-400 focus:border-[#203f9f] focus:bg-white focus:outline-none"
           />
         </div>
 
@@ -637,7 +610,7 @@ export default function InventoryScreen({
           aria-label="Filtrar por categoria"
           value={selectedCategory}
           onChange={(event) => setSelectedCategory(event.target.value)}
-          className="h-[42px] min-w-[205px] rounded-[10px] border border-black/20 bg-[#f0f2f5] px-3.5 text-[14px] font-medium text-black/80 focus:border-[#203f9f] focus:outline-none"
+          className="h-[38px] min-w-[180px] rounded-[8px] border border-slate-200 bg-[#f3f4f6] px-3 text-[12px] font-medium text-slate-700 focus:border-[#203f9f] focus:bg-white focus:outline-none"
         >
           <option value="">Todas as Categorias</option>
           {categoriesOptions.map((category) => (
@@ -649,36 +622,30 @@ export default function InventoryScreen({
       </section>
 
       {/* Inventory Products Table */}
-      <section className="overflow-hidden rounded-[8px] border border-black/10 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.06)]">
-        <div className="flex items-center justify-between border-b border-black/10 px-5 py-3.5">
-          <h2 className="text-[15px] font-semibold text-black">
-            Produtos em Estoque
-          </h2>
-          <span className="text-[12px] font-semibold text-black/60">
-            {filteredProducts.length} item(ns)
-          </span>
-        </div>
+      <section className="overflow-hidden rounded-[10px] border border-slate-200/80 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+        <div className="sr-only">Produtos em Estoque</div>
 
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[980px] border-collapse text-left">
+          <table className="w-full min-w-[920px] border-collapse text-left">
             <thead>
-              <tr className="border-b border-black/10 bg-[#f8f9fb] text-[12px] font-semibold text-black">
+              <tr className="border-b border-slate-100 bg-[#f8fafc] text-[11px] font-semibold text-slate-600">
                 <th className="px-5 py-3">Descrição / Código</th>
                 <th className="px-4 py-3">Categoria</th>
-                <th className="px-4 py-3">Custo Uni.</th>
-                <th className="px-4 py-3">Preço Venda</th>
-                <th className="px-4 py-3">Estoque Atual</th>
+                <th className="px-4 py-3">Custo</th>
+                <th className="px-4 py-3">Venda</th>
+                <th className="px-4 py-3">Margem</th>
+                <th className="px-4 py-3">Estoque</th>
                 <th className="px-4 py-3">Validade</th>
                 <th className="px-4 py-3">Fornecedor</th>
                 <th className="px-5 py-3 text-right">Ações</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-black/10 text-[13px]">
+            <tbody className="divide-y divide-slate-100 text-[12px]">
               {filteredProducts.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={8}
-                    className="px-5 py-10 text-center text-[13px] text-black/50"
+                    colSpan={9}
+                    className="px-5 py-10 text-center text-[12px] text-slate-400"
                   >
                     Nenhum produto cadastrado no estoque.
                   </td>
@@ -690,82 +657,93 @@ export default function InventoryScreen({
                     product.expirationDate,
                     referenceDate,
                   );
+                  const marginPct =
+                    product.unitCost > 0
+                      ? (
+                          ((product.salePrice - product.unitCost) /
+                            product.salePrice) *
+                          100
+                        ).toFixed(1)
+                      : product.suggestedMargin.toFixed(1);
 
                   return (
                     <tr
                       key={product.id}
-                      className="transition-colors hover:bg-black/[0.015]"
+                      className="transition-colors hover:bg-slate-50/70"
                     >
-                      <td className="px-5 py-3">
+                      <td className="px-5 py-2.5">
                         <div className="flex items-center gap-2">
-                          <p className="font-semibold text-black">
+                          <p className="font-bold text-slate-800">
                             {product.description}
                           </p>
                           {product.active === false && (
-                            <span className="rounded bg-black/10 px-1.5 py-0.5 text-[10px] font-bold text-black/60">
+                            <span className="rounded bg-slate-200 px-1.5 py-0.5 text-[9px] font-bold text-slate-600">
                               Inativo
                             </span>
                           )}
                         </div>
-                        <div className="mt-0.5 flex items-center gap-1.5 text-[11px] font-medium text-black/55">
-                          <Barcode className="h-3.5 w-3.5 text-black/45" />
-                          <span>{product.barcode}</span>
-                          {product.code && (
-                            <span className="text-black/40">
-                              • Cód. {product.code}
-                            </span>
-                          )}
-                        </div>
+                        <p className="mt-0.5 text-[10px] text-slate-400">
+                          {product.code ?? "1001"} - {product.barcode}
+                        </p>
                       </td>
 
-                      <td className="px-4 py-3">
-                        <span className="inline-flex rounded-[6px] border border-black/15 bg-[#f0f2f5] px-2.5 py-1 text-[11px] font-semibold text-black/75">
-                          {product.category}
-                        </span>
+                      <td className="px-4 py-2.5 text-[11px] font-medium text-slate-700">
+                        {product.category}
                       </td>
 
-                      <td className="px-4 py-3 font-medium text-black/65">
+                      <td className="px-4 py-2.5 text-slate-600">
                         {formatCurrency(product.unitCost)}
                       </td>
 
-                      <td className="px-4 py-3 font-semibold text-black">
+                      <td className="px-4 py-2.5 font-bold text-[#0f766e]">
                         {formatCurrency(product.salePrice)}
                       </td>
 
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold text-black">
+                      <td className="px-4 py-2.5 font-semibold text-slate-700">
+                        {marginPct}%
+                      </td>
+
+                      <td className="px-4 py-2.5">
+                        <div className="flex items-center gap-1.5">
+                          <span
+                            className={`font-bold ${
+                              lowStock ? "text-[#ff6b00]" : "text-slate-800"
+                            }`}
+                          >
                             {product.currentStock} {product.unit.toLowerCase()}
                           </span>
                           {lowStock && (
-                            <span className="inline-flex items-center rounded-[5px] bg-[#ff383c]/20 px-2 py-0.5 text-[11px] font-semibold text-[#ff383c]">
+                            <span className="inline-flex items-center rounded bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold text-[#d97706]">
                               Baixo
                             </span>
                           )}
                         </div>
+                        <span className="block text-[9px] text-slate-400">
+                          Mín: {product.minStock}
+                        </span>
                       </td>
 
-                      <td className="px-4 py-3">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-medium text-black/75">
+                      <td className="px-4 py-2.5">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="text-[11px] text-slate-600">
                             {expiration.formattedDate}
                           </span>
                           {expiration.status === "expiring-soon" &&
                             expiration.label && (
-                              <span className="inline-flex items-center rounded-[5px] bg-[#ffcc00]/35 px-2 py-0.5 text-[10px] font-semibold text-[#9a6700]">
+                              <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[9px] font-semibold text-amber-800">
                                 {expiration.label}
                               </span>
                             )}
                           {expiration.status === "expired" &&
                             expiration.label && (
-                              <span className="inline-flex items-center rounded-[5px] bg-[#ff383c]/20 px-2 py-0.5 text-[10px] font-semibold text-[#ff383c]">
+                              <span className="rounded bg-rose-100 px-1.5 py-0.5 text-[9px] font-semibold text-rose-600">
                                 {expiration.label}
                               </span>
                             )}
                         </div>
                       </td>
 
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-2.5">
                         <button
                           type="button"
                           onClick={() =>
@@ -775,23 +753,23 @@ export default function InventoryScreen({
                             )
                           }
                           aria-label={`Editar fornecedor ${product.supplierName}`}
-                          className="inline-flex items-center gap-1.5 font-medium text-black/70 transition-colors hover:text-[#203f9f]"
+                          className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-600 hover:text-[#203f9f]"
                         >
                           <span>{product.supplierName}</span>
-                          <Pencil className="h-3.5 w-3.5 text-black/45" />
+                          <PencilSquareIcon className="h-3 w-3 text-slate-400" />
                         </button>
                       </td>
 
-                      <td className="px-5 py-3 text-right">
-                        <div className="inline-flex items-center gap-1.5">
+                      <td className="px-5 py-2.5 text-right">
+                        <div className="inline-flex items-center gap-1">
                           <button
                             type="button"
                             onClick={() => handleOpenEditProduct(product)}
                             aria-label={`Editar produto ${product.description}`}
                             title="Editar Produto"
-                            className="inline-flex h-8 w-8 items-center justify-center rounded-[6px] text-black/65 transition-colors hover:bg-black/5 hover:text-[#203f9f]"
+                            className="inline-flex h-7 w-7 items-center justify-center rounded-md text-slate-600 transition-colors hover:bg-slate-100 hover:text-[#203f9f]"
                           >
-                            <Pencil className="h-4 w-4" />
+                            <PencilSquareIcon className="h-4 w-4" />
                           </button>
 
                           <button
@@ -799,9 +777,9 @@ export default function InventoryScreen({
                             onClick={() => handleOpenMoveStock(product)}
                             aria-label={`Movimentar estoque ${product.description}`}
                             title="Movimentar Estoque"
-                            className="inline-flex h-8 w-8 items-center justify-center rounded-[6px] text-black/65 transition-colors hover:bg-[#008f58]/10 hover:text-[#008f58]"
+                            className="inline-flex h-7 w-7 items-center justify-center rounded-md text-slate-600 transition-colors hover:bg-emerald-50 hover:text-[#008f58]"
                           >
-                            <ArrowUpDown className="h-4 w-4" />
+                            <CubeIcon className="h-4 w-4" />
                           </button>
 
                           <button
@@ -809,9 +787,9 @@ export default function InventoryScreen({
                             onClick={() => setDeletingProduct(product)}
                             aria-label={`Excluir produto ${product.description}`}
                             title="Excluir Produto"
-                            className="inline-flex h-8 w-8 items-center justify-center rounded-[6px] text-black/65 transition-colors hover:bg-[#ff383c]/10 hover:text-[#ff383c]"
+                            className="inline-flex h-7 w-7 items-center justify-center rounded-md text-slate-600 transition-colors hover:bg-rose-50 hover:text-rose-600"
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <TrashIcon className="h-4 w-4" />
                           </button>
                         </div>
                       </td>
@@ -823,21 +801,20 @@ export default function InventoryScreen({
           </table>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-black/10 px-5 py-3 text-[12px] text-black/60">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 px-5 py-3 text-[11px] text-slate-500">
           <span>0 de {filteredProducts.length} linha(s) selecionadas</span>
 
           <div className="flex items-center gap-2">
             <button
               type="button"
               disabled
-              className="h-7 rounded-[4px] border border-black/10 bg-[#f0f2f5] px-3 text-[12px] font-medium text-black/60 disabled:opacity-60"
+              className="h-7 rounded-[4px] border border-slate-200 bg-slate-50 px-3 text-[11px] font-medium text-slate-400"
             >
               Anterior
             </button>
             <button
               type="button"
-              disabled
-              className="h-7 rounded-[4px] border border-black/10 bg-[#f0f2f5] px-3 text-[12px] font-medium text-black/60 disabled:opacity-60"
+              className="h-7 rounded-[4px] border border-slate-200 bg-slate-100 px-3 text-[11px] font-semibold text-slate-700 hover:bg-slate-200"
             >
               Próximo
             </button>
@@ -845,24 +822,24 @@ export default function InventoryScreen({
         </div>
       </section>
 
-      {/* Modal: Cadastrar / Editar Produto */}
+      {/* Modal: Novo Produto / Editar Produto (Screenshots 110203.png & 110210.png) */}
       {isProductModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-[1px]">
           <div
             role="dialog"
             aria-modal="true"
             aria-labelledby={productDialogTitleId}
-            className="w-full max-w-[491px] overflow-hidden rounded-[15px] bg-white shadow-2xl"
+            className="w-full max-w-[490px] overflow-hidden rounded-[14px] bg-white shadow-2xl"
           >
-            <header className="flex items-start justify-between border-b border-black/10 px-5 py-4">
+            <header className="flex items-start justify-between px-5 pt-5 pb-3">
               <div>
                 <h2
                   id={productDialogTitleId}
-                  className="text-[20px] font-bold text-black"
+                  className="text-[18px] font-bold text-slate-900"
                 >
                   {productDraft.id ? "Editar Produto" : "Cadastrar Produto"}
                 </h2>
-                <p className="text-[12px] text-black/55">
+                <p className="text-[11px] text-slate-400">
                   Código de barras, preços e quantidade em estoque do item.
                 </p>
               </div>
@@ -874,20 +851,20 @@ export default function InventoryScreen({
                   setProductError(null);
                 }}
                 aria-label="Fechar modal de produto"
-                className="rounded-full p-1 text-black/60 transition-colors hover:bg-black/5 hover:text-black"
+                className="rounded-full p-1 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
               >
-                <X className="h-5 w-5" />
+                <XMarkIcon className="h-5 w-5" />
               </button>
             </header>
 
             <form
               onSubmit={handleSaveProduct}
-              className="max-h-[82vh] space-y-3.5 overflow-y-auto px-5 py-4"
+              className="max-h-[82vh] space-y-3 overflow-y-auto px-5 pb-5"
             >
               {/* EAN-13 Box */}
-              <div className="rounded-[10px] border border-black/15 bg-[#f8f9fb] p-3">
-                <label className="mb-1.5 flex items-center gap-1.5 text-[12px] font-semibold text-black">
-                  <Barcode className="h-4 w-4 text-black/70" />
+              <div className="rounded-[10px] border border-blue-200/80 bg-[#f8fafc] p-3">
+                <label className="mb-1.5 flex items-center gap-1.5 text-[12px] font-bold text-[#153488]">
+                  <ViewColumnsIcon className="h-4 w-4 text-[#153488]" />
                   <span>Código de Barras (EAN - 13)</span>
                 </label>
 
@@ -902,7 +879,7 @@ export default function InventoryScreen({
                         barcode: event.target.value,
                       }))
                     }
-                    className="h-[38px] flex-1 rounded-[8px] border border-black/20 bg-white px-3 text-[13px] font-semibold text-black focus:border-[#203f9f] focus:outline-none"
+                    className="h-[34px] flex-1 rounded-[6px] border border-slate-300 bg-white px-3 text-[12px] font-semibold text-slate-800 focus:border-[#203f9f] focus:outline-none"
                   />
 
                   <button
@@ -913,19 +890,18 @@ export default function InventoryScreen({
                         barcode: generateEan13(),
                       }))
                     }
-                    className="inline-flex h-[38px] items-center gap-1.5 rounded-[8px] border border-black/20 bg-white px-3 text-[12px] font-semibold text-black transition-colors hover:bg-black/5"
+                    className="inline-flex h-[34px] items-center rounded-[6px] border border-blue-300 bg-white px-3 text-[11px] font-bold text-[#153488] transition-colors hover:bg-blue-50"
                   >
-                    <Barcode className="h-3.5 w-3.5" />
-                    <span>Gerar EAN</span>
+                    Gerar EAN
                   </button>
                 </div>
               </div>
 
-              {/* Nome do Produto / Descrição + Código Interno */}
+              {/* Nome do Produto & Código */}
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-12">
                 <div className="sm:col-span-8">
-                  <label className="mb-1 block text-[13px] font-semibold text-black">
-                    Descrição / Nome do Produto *
+                  <label className="mb-1 block text-[11px] font-semibold text-slate-800">
+                    Nome do Produto *
                   </label>
                   <input
                     type="text"
@@ -937,13 +913,13 @@ export default function InventoryScreen({
                         description: event.target.value,
                       }))
                     }
-                    placeholder="Ex: Café Torrado e Moído 500g"
-                    className="h-[38px] w-full rounded-[8px] border border-black/20 bg-white px-3 text-[13px] text-black placeholder:text-black/40 focus:border-[#203f9f] focus:outline-none"
+                    placeholder="Ex: Café torrado e Moído"
+                    className="h-[36px] w-full rounded-[6px] border border-slate-300 bg-white px-3 text-[12px] text-slate-800 placeholder:text-slate-400 focus:border-[#203f9f] focus:outline-none"
                   />
                 </div>
 
                 <div className="sm:col-span-4">
-                  <label className="mb-1 block text-[13px] font-semibold text-black">
+                  <label className="mb-1 block text-[11px] font-semibold text-slate-800">
                     Código *
                   </label>
                   <input
@@ -957,7 +933,7 @@ export default function InventoryScreen({
                       }))
                     }
                     placeholder="Ex: 1001"
-                    className="h-[38px] w-full rounded-[8px] border border-black/20 bg-white px-3 text-[13px] text-black placeholder:text-black/40 focus:border-[#203f9f] focus:outline-none"
+                    className="h-[36px] w-full rounded-[6px] border border-slate-300 bg-white px-3 text-[12px] text-slate-800 placeholder:text-slate-400 focus:border-[#203f9f] focus:outline-none"
                   />
                 </div>
               </div>
@@ -965,8 +941,8 @@ export default function InventoryScreen({
               {/* Categoria & Unidade de Medida */}
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-[13px] font-semibold text-black">
-                    Categoria *
+                  <label className="mb-1 block text-[11px] font-semibold text-slate-800">
+                    Categoria
                   </label>
                   <select
                     aria-label="Categoria"
@@ -977,7 +953,7 @@ export default function InventoryScreen({
                         category: event.target.value,
                       }))
                     }
-                    className="h-[38px] w-full rounded-[8px] border border-black/20 bg-white px-3 text-[13px] text-black focus:border-[#203f9f] focus:outline-none"
+                    className="h-[36px] w-full rounded-[6px] border border-slate-300 bg-white px-3 text-[12px] text-slate-800 focus:border-[#203f9f] focus:outline-none"
                   >
                     {categoriesOptions.map((cat) => (
                       <option key={cat} value={cat}>
@@ -988,8 +964,8 @@ export default function InventoryScreen({
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-[13px] font-semibold text-black">
-                    Unidade de Medida *
+                  <label className="mb-1 block text-[11px] font-semibold text-slate-800">
+                    Unidade de Medida
                   </label>
                   <select
                     aria-label="Unidade de Medida"
@@ -1000,7 +976,7 @@ export default function InventoryScreen({
                         unit: event.target.value as InventoryUnit,
                       }))
                     }
-                    className="h-[38px] w-full rounded-[8px] border border-black/20 bg-white px-3 text-[13px] text-black focus:border-[#203f9f] focus:outline-none"
+                    className="h-[36px] w-full rounded-[6px] border border-slate-300 bg-white px-3 text-[12px] text-slate-800 focus:border-[#203f9f] focus:outline-none"
                   >
                     {INVENTORY_UNITS.map((unit) => (
                       <option key={unit.value} value={unit.value}>
@@ -1011,11 +987,11 @@ export default function InventoryScreen({
                 </div>
               </div>
 
-              {/* Custo Unitário, Margem Sugerida, Preço de Venda */}
-              <div className="grid grid-cols-1 gap-2.5 rounded-[10px] border border-black/15 bg-[#f8f9fb] p-3 sm:grid-cols-3">
+              {/* Preço de Custo, Margem Sugerida, Preço de Venda */}
+              <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
                 <div>
-                  <label className="mb-1 block text-[12px] font-semibold text-black">
-                    Custo Unitário (R$)*
+                  <label className="mb-1 block text-[11px] font-semibold text-slate-800">
+                    Preço de Custo (R$)
                   </label>
                   <input
                     type="number"
@@ -1030,12 +1006,12 @@ export default function InventoryScreen({
                       )
                     }
                     placeholder="0,00"
-                    className="h-[38px] w-full rounded-[8px] border border-black/20 bg-white px-2.5 text-[13px] font-medium text-black focus:border-[#203f9f] focus:outline-none"
+                    className="h-[36px] w-full rounded-[6px] border border-slate-300 bg-white px-2.5 text-[12px] text-slate-800 focus:border-[#203f9f] focus:outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-[12px] font-semibold text-[#008f58]">
+                  <label className="mb-1 block text-[11px] font-semibold text-slate-800">
                     Margem Sugerida (%)
                   </label>
                   <input
@@ -1050,13 +1026,13 @@ export default function InventoryScreen({
                       )
                     }
                     placeholder="35"
-                    className="h-[38px] w-full rounded-[8px] border border-black/20 bg-white px-2.5 text-[13px] font-semibold text-[#008f58] focus:border-[#008f58] focus:outline-none"
+                    className="h-[36px] w-full rounded-[6px] border border-slate-300 bg-white px-2.5 text-[12px] font-semibold text-[#008f58] focus:border-[#008f58] focus:outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-[12px] font-semibold text-[#203f9f]">
-                    Preço de Venda (R$)*
+                  <label className="mb-1 block text-[11px] font-semibold text-slate-800">
+                    Preço de Venda (R$)
                   </label>
                   <input
                     type="number"
@@ -1071,7 +1047,7 @@ export default function InventoryScreen({
                       }))
                     }
                     placeholder="0,00"
-                    className="h-[38px] w-full rounded-[8px] border border-black/20 bg-white px-2.5 text-[13px] font-semibold text-[#203f9f] focus:border-[#203f9f] focus:outline-none"
+                    className="h-[36px] w-full rounded-[6px] border border-blue-200 bg-blue-50/40 px-2.5 text-[12px] font-semibold text-slate-800 focus:border-[#203f9f] focus:outline-none"
                   />
                 </div>
               </div>
@@ -1079,8 +1055,8 @@ export default function InventoryScreen({
               {/* Estoque Atual & Estoque Mínimo */}
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-[13px] font-semibold text-black">
-                    Estoque Atual *
+                  <label className="mb-1 block text-[11px] font-semibold text-slate-800">
+                    Estoque Atual (UN)
                   </label>
                   <input
                     type="number"
@@ -1094,13 +1070,13 @@ export default function InventoryScreen({
                       }))
                     }
                     placeholder="0"
-                    className="h-[38px] w-full rounded-[8px] border border-black/20 bg-white px-3 text-[13px] text-black focus:border-[#203f9f] focus:outline-none"
+                    className="h-[36px] w-full rounded-[6px] border border-slate-300 bg-white px-3 text-[12px] text-slate-800 focus:border-[#203f9f] focus:outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-[13px] font-semibold text-black">
-                    Estoque Mínimo (Alerta) *
+                  <label className="mb-1 block text-[11px] font-semibold text-slate-800">
+                    Estoque Mínimo
                   </label>
                   <input
                     type="number"
@@ -1113,44 +1089,47 @@ export default function InventoryScreen({
                         minStock: event.target.value,
                       }))
                     }
-                    placeholder="10"
-                    className="h-[38px] w-full rounded-[8px] border border-black/20 bg-white px-3 text-[13px] text-black focus:border-[#203f9f] focus:outline-none"
+                    placeholder="0"
+                    className="h-[36px] w-full rounded-[6px] border border-slate-300 bg-white px-3 text-[12px] text-slate-800 focus:border-[#203f9f] focus:outline-none"
                   />
                 </div>
               </div>
 
               {/* Data de Validade & Fornecedor */}
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div>
-                  <label className="mb-1 block text-[13px] font-semibold text-black">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-12">
+                <div className="sm:col-span-5">
+                  <label className="mb-1 block text-[11px] font-semibold text-slate-800">
                     Data de Validade
                   </label>
-                  <input
-                    type="text"
-                    aria-label="Data de Validade"
-                    value={productDraft.expirationDate}
-                    onChange={(event) =>
-                      setProductDraft((current) => ({
-                        ...current,
-                        expirationDate: formatDateDigits(event.target.value),
-                      }))
-                    }
-                    placeholder="dd/mm/aaaa"
-                    className="h-[38px] w-full rounded-[8px] border border-black/20 bg-white px-3 text-[13px] text-black placeholder:text-black/40 focus:border-[#203f9f] focus:outline-none"
-                  />
+                  <div className="relative">
+                    <input
+                      type="text"
+                      aria-label="Data de Validade"
+                      value={productDraft.expirationDate}
+                      onChange={(event) =>
+                        setProductDraft((current) => ({
+                          ...current,
+                          expirationDate: formatDateDigits(event.target.value),
+                        }))
+                      }
+                      placeholder="DD/MM/AAAA"
+                      className="h-[36px] w-full rounded-[6px] border border-slate-300 bg-white pl-3 pr-8 text-[12px] text-slate-800 placeholder:text-slate-400 focus:border-[#203f9f] focus:outline-none"
+                    />
+                    <CalendarDaysIcon className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+                  </div>
                 </div>
 
-                <div>
+                <div className="sm:col-span-7">
                   <div className="mb-1 flex items-center justify-between">
-                    <label className="text-[13px] font-semibold text-black">
+                    <label className="text-[11px] font-semibold text-slate-800">
                       Fornecedor
                     </label>
                     <button
                       type="button"
                       onClick={handleOpenNewSupplier}
-                      className="inline-flex items-center gap-0.5 text-[11px] font-semibold text-[#203f9f] hover:underline"
+                      className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-[#203f9f] hover:underline"
                     >
-                      <Plus className="h-3 w-3" />
+                      <PlusIcon className="h-3 w-3" />
                       <span>Novo</span>
                     </button>
                   </div>
@@ -1164,7 +1143,7 @@ export default function InventoryScreen({
                         supplierId: event.target.value,
                       }))
                     }
-                    className="h-[38px] w-full rounded-[8px] border border-black/20 bg-white px-3 text-[13px] text-black focus:border-[#203f9f] focus:outline-none"
+                    className="h-[36px] w-full rounded-[6px] border border-slate-300 bg-white px-3 text-[12px] text-slate-800 focus:border-[#203f9f] focus:outline-none"
                   >
                     <option value="">Sem fornecedor</option>
                     {suppliers.map((sup) => (
@@ -1177,12 +1156,12 @@ export default function InventoryScreen({
               </div>
 
               {/* Produto Ativo Toggle */}
-              <div className="flex items-center justify-between rounded-[10px] border border-black/15 bg-[#f8f9fb] px-3.5 py-2.5">
+              <div className="flex items-center justify-between rounded-[8px] border border-slate-200 bg-[#f8fafc] px-3 py-2">
                 <div>
-                  <p className="text-[13px] font-semibold text-black">
+                  <p className="text-[11px] font-bold text-slate-800">
                     Produto Ativo
                   </p>
-                  <p className="text-[11px] text-black/55">
+                  <p className="text-[10px] text-slate-400">
                     Produtos inativos não aparecem na frente de caixa.
                   </p>
                 </div>
@@ -1198,40 +1177,42 @@ export default function InventoryScreen({
                       active: !curr.active,
                     }))
                   }
-                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
-                    productDraft.active ? "bg-[#008f58]" : "bg-black/25"
+                  className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
+                    productDraft.active ? "bg-[#0f766e]" : "bg-slate-300"
                   }`}
                 >
                   <span
-                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
-                      productDraft.active ? "translate-x-5" : "translate-x-0"
+                    className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                      productDraft.active ? "translate-x-4" : "translate-x-0"
                     }`}
                   />
                 </button>
               </div>
 
               {productError && (
-                <p className="text-[12px] font-medium text-[#ff383c]">
+                <p className="text-[11px] font-medium text-rose-600">
                   {productError}
                 </p>
               )}
 
-              <footer className="flex items-center justify-end gap-4 border-t border-black/10 pt-3">
+              <footer className="flex items-center justify-end gap-4 pt-2">
                 <button
                   type="button"
                   onClick={() => {
                     setIsProductModalOpen(false);
                     setProductError(null);
                   }}
-                  className="text-[14px] font-semibold text-black/60 transition-colors hover:text-black"
+                  className="text-[12px] font-semibold text-slate-600 hover:text-slate-900"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="inline-flex h-[36px] items-center gap-2 rounded-[8px] bg-[#008f58] px-4 text-[14px] font-semibold text-white shadow-sm transition-colors hover:bg-[#007a4b]"
+                  aria-label="Salvar no Estoque"
+                  className="inline-flex h-[34px] items-center gap-1.5 rounded-[6px] bg-[#0f766e] px-4 text-[12px] font-semibold text-white shadow-xs transition-colors hover:bg-[#0d645d]"
                 >
-                  <span>Salvar no Estoque</span>
+                  <CheckCircleIcon className="h-4 w-4" />
+                  <span>Salvar Produto</span>
                 </button>
               </footer>
             </form>
@@ -1239,25 +1220,26 @@ export default function InventoryScreen({
         </div>
       )}
 
-      {/* Modal: Movimentar Estoque (Entrada / Saída / Ajuste) */}
+      {/* Modal: Movimentar Estoque (Screenshots 110221.png, 110227.png, 110232.png) */}
       {movingProduct && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-[1px]">
           <div
             role="dialog"
             aria-modal="true"
             aria-labelledby={movementDialogTitleId}
-            className="w-full max-w-[445px] overflow-hidden rounded-[15px] bg-white shadow-2xl"
+            className="w-full max-w-[420px] overflow-hidden rounded-[14px] bg-white shadow-2xl"
           >
-            <header className="flex items-start justify-between border-b border-black/10 px-5 py-4">
+            <header className="flex items-start justify-between px-5 pt-5 pb-3">
               <div>
                 <h2
                   id={movementDialogTitleId}
-                  className="text-[20px] font-bold text-black"
+                  className="text-[18px] font-bold text-slate-900"
                 >
                   Movimentar Estoque
                 </h2>
-                <p className="text-[12px] text-black/55">
-                  Registre entradas de mercadorias, baixas manuais ou ajuste por contagem.
+                <p className="text-[11px] text-slate-400">
+                  Registre entradas de mercadorias, baixas manuais ou ajuste por
+                  contagem.
                 </p>
               </div>
               <button
@@ -1267,31 +1249,31 @@ export default function InventoryScreen({
                   setMovementError(null);
                 }}
                 aria-label="Fechar modal de movimentação"
-                className="rounded-full p-1 text-black/60 transition-colors hover:bg-black/5 hover:text-black"
+                className="rounded-full p-1 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
               >
-                <X className="h-5 w-5" />
+                <XMarkIcon className="h-5 w-5" />
               </button>
             </header>
 
             <form
               onSubmit={handleConfirmMoveStock}
-              className="space-y-4 px-5 py-4"
+              className="space-y-3.5 px-5 pb-5"
             >
               {/* Product Banner */}
-              <div className="rounded-[10px] border border-black/15 bg-[#f8f9fb] p-3">
-                <p className="text-[14px] font-bold text-black">
+              <div className="rounded-[8px] border border-slate-200 bg-[#f8fafc] px-3 py-2.5">
+                <p className="text-[12px] font-bold text-slate-800">
                   {movingProduct.description}
                 </p>
-                <p className="mt-0.5 text-[12px] text-black/60">
+                <p className="text-[10px] text-slate-500">
                   Estoque atual: {movingProduct.currentStock}{" "}
                   {movingProduct.unit.toLowerCase()} - custo atual{" "}
                   {formatCurrency(movingProduct.unitCost)}
                 </p>
               </div>
 
-              {/* Tipo de Movimentação 3-Tab Selector */}
+              {/* Tipo de Movimentação */}
               <div>
-                <label className="mb-1.5 block text-[13px] font-semibold text-black">
+                <label className="mb-1.5 block text-[11px] font-semibold text-slate-800">
                   Tipo de Movimentação
                 </label>
                 <div className="grid grid-cols-3 gap-2">
@@ -1308,10 +1290,10 @@ export default function InventoryScreen({
                         key={tab.id}
                         type="button"
                         onClick={() => setMovementType(tab.id)}
-                        className={`h-[34px] rounded-[8px] border text-[12px] font-semibold transition-colors ${
+                        className={`h-[32px] rounded-[6px] border text-[11px] font-semibold transition-colors ${
                           active
-                            ? "border-[#008f58] bg-[#008f58]/15 text-[#008f58]"
-                            : "border-black/20 bg-white text-black/70 hover:bg-black/5"
+                            ? "border-[#0f766e] bg-[#e6f9f1] text-[#0f766e]"
+                            : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
                         }`}
                       >
                         {tab.label}
@@ -1323,11 +1305,11 @@ export default function InventoryScreen({
 
               {/* Quantity Input */}
               <div>
-                <label className="mb-1 block text-[13px] font-semibold text-black">
+                <label className="mb-1 block text-[11px] font-semibold text-slate-800">
                   {movementType === "entry"
                     ? "Quantidade Recebida"
                     : movementType === "exit"
-                      ? "Quantidade Retirada"
+                      ? "Quantidade a Baixar"
                       : "Quantidade Contada"}
                 </label>
                 <input
@@ -1340,14 +1322,14 @@ export default function InventoryScreen({
                   placeholder={
                     movementType === "adjustment" ? "Ex: 24" : "Ex: 12"
                   }
-                  className="h-[38px] w-full rounded-[8px] border border-black/20 bg-white px-3 text-[13px] text-black focus:border-[#203f9f] focus:outline-none"
+                  className="h-[36px] w-full rounded-[6px] border border-slate-300 bg-white px-3 text-[12px] text-slate-800 focus:border-[#0f766e] focus:outline-none"
                 />
               </div>
 
               {/* Purchase Unit Cost (only for Entrada) */}
               {movementType === "entry" && (
                 <div>
-                  <label className="mb-1 block text-[13px] font-semibold text-black">
+                  <label className="mb-1 block text-[11px] font-semibold text-slate-800">
                     Custo Unitário da Compra
                   </label>
                   <input
@@ -1358,17 +1340,18 @@ export default function InventoryScreen({
                     value={movementCost}
                     onChange={(e) => setMovementCost(e.target.value)}
                     placeholder="Ex: 4,90"
-                    className="h-[38px] w-full rounded-[8px] border border-black/20 bg-white px-3 text-[13px] text-black focus:border-[#203f9f] focus:outline-none"
+                    className="h-[36px] w-full rounded-[6px] border border-slate-300 bg-white px-3 text-[12px] text-slate-800 focus:border-[#0f766e] focus:outline-none"
                   />
-                  <p className="mt-1 text-[11px] text-black/50">
-                    Fica gravado nesta entrada e atualiza o preço de custo do produto
+                  <p className="mt-1 text-[9px] text-slate-400">
+                    Fica gravado nesta entrada e atualiza o preço de custo do
+                    produto
                   </p>
                 </div>
               )}
 
               {/* Motivo */}
               <div>
-                <label className="mb-1 block text-[13px] font-semibold text-black">
+                <label className="mb-1 block text-[11px] font-semibold text-slate-800">
                   Motivo
                 </label>
                 <input
@@ -1377,21 +1360,22 @@ export default function InventoryScreen({
                   value={movementReason}
                   onChange={(e) => setMovementReason(e.target.value)}
                   placeholder="Ex: compra do fornecedor, quebra, perda"
-                  className="h-[38px] w-full rounded-[8px] border border-black/20 bg-white px-3 text-[13px] text-black placeholder:text-black/40 focus:border-[#203f9f] focus:outline-none"
+                  className="h-[36px] w-full rounded-[6px] border border-slate-300 bg-white px-3 text-[12px] text-slate-800 placeholder:text-slate-400 focus:border-[#0f766e] focus:outline-none"
                 />
               </div>
 
               {movementError && (
-                <p className="text-[12px] font-medium text-[#ff383c]">
+                <p className="text-[11px] font-medium text-rose-600">
                   {movementError}
                 </p>
               )}
 
               <button
                 type="submit"
-                className="h-[40px] w-full rounded-[8px] bg-[#008f58] text-[14px] font-semibold text-white shadow-sm transition-colors hover:bg-[#007a4b]"
+                className="inline-flex h-[38px] w-full items-center justify-center gap-1.5 rounded-[6px] bg-[#0f766e] text-[12px] font-semibold text-white shadow-xs transition-colors hover:bg-[#0d645d]"
               >
-                Confirmar Movimentação
+                <CheckCircleIcon className="h-4 w-4" />
+                <span>Confirmar Movimentação</span>
               </button>
             </form>
           </div>
@@ -1400,17 +1384,17 @@ export default function InventoryScreen({
 
       {/* Modal: Cadastrar / Editar Fornecedor (Quick Modal from Inventory) */}
       {isSupplierModalOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/50 p-4">
           <div
             role="dialog"
             aria-modal="true"
             aria-labelledby={supplierDialogTitleId}
-            className="w-full max-w-[421px] overflow-hidden rounded-[15px] bg-white shadow-2xl"
+            className="w-full max-w-[421px] overflow-hidden rounded-[14px] bg-white shadow-2xl"
           >
-            <header className="flex items-center justify-between border-b border-black/10 px-5 py-4">
+            <header className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
               <h2
                 id={supplierDialogTitleId}
-                className="text-[18px] font-bold text-black"
+                className="text-[16px] font-bold text-slate-900"
               >
                 {supplierDraft.id
                   ? "Editar Fornecedor"
@@ -1424,9 +1408,9 @@ export default function InventoryScreen({
                   setSupplierError(null);
                 }}
                 aria-label="Fechar modal de fornecedor"
-                className="rounded-full p-1 text-black/60 transition-colors hover:bg-black/5 hover:text-black"
+                className="rounded-full p-1 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
               >
-                <X className="h-5 w-5" />
+                <XMarkIcon className="h-5 w-5" />
               </button>
             </header>
 
@@ -1435,7 +1419,7 @@ export default function InventoryScreen({
               className="space-y-3.5 px-5 py-4"
             >
               <div>
-                <label className="mb-1 block text-[13px] font-semibold text-black">
+                <label className="mb-1 block text-[12px] font-semibold text-slate-800">
                   Nome / Razão Social *
                 </label>
                 <input
@@ -1449,13 +1433,13 @@ export default function InventoryScreen({
                     }))
                   }
                   placeholder="Ex: JDE Jacobs Douwe"
-                  className="h-[38px] w-full rounded-[8px] border border-black/20 bg-white px-3 text-[13px] text-black focus:border-[#203f9f] focus:outline-none"
+                  className="h-[36px] w-full rounded-[6px] border border-slate-300 bg-white px-3 text-[12px] text-slate-800 focus:border-[#203f9f] focus:outline-none"
                 />
               </div>
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-[13px] font-semibold text-black">
+                  <label className="mb-1 block text-[12px] font-semibold text-slate-800">
                     CNPJ / CPF
                   </label>
                   <input
@@ -1469,12 +1453,12 @@ export default function InventoryScreen({
                       }))
                     }
                     placeholder="00.000.000/0000-00"
-                    className="h-[38px] w-full rounded-[8px] border border-black/20 bg-white px-3 text-[13px] text-black focus:border-[#203f9f] focus:outline-none"
+                    className="h-[36px] w-full rounded-[6px] border border-slate-300 bg-white px-3 text-[12px] text-slate-800 focus:border-[#203f9f] focus:outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-[13px] font-semibold text-black">
+                  <label className="mb-1 block text-[12px] font-semibold text-slate-800">
                     Vendedor / Representante
                   </label>
                   <input
@@ -1488,14 +1472,14 @@ export default function InventoryScreen({
                       }))
                     }
                     placeholder="Nome do contato"
-                    className="h-[38px] w-full rounded-[8px] border border-black/20 bg-white px-3 text-[13px] text-black focus:border-[#203f9f] focus:outline-none"
+                    className="h-[36px] w-full rounded-[6px] border border-slate-300 bg-white px-3 text-[12px] text-slate-800 focus:border-[#203f9f] focus:outline-none"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-[13px] font-semibold text-black">
+                  <label className="mb-1 block text-[12px] font-semibold text-slate-800">
                     Contato (WhatsApp) *
                   </label>
                   <input
@@ -1509,12 +1493,12 @@ export default function InventoryScreen({
                       }))
                     }
                     placeholder="(11) 98451-6521"
-                    className="h-[38px] w-full rounded-[8px] border border-black/20 bg-white px-3 text-[13px] text-black focus:border-[#203f9f] focus:outline-none"
+                    className="h-[36px] w-full rounded-[6px] border border-slate-300 bg-white px-3 text-[12px] text-slate-800 focus:border-[#203f9f] focus:outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-[13px] font-semibold text-black">
+                  <label className="mb-1 block text-[12px] font-semibold text-slate-800">
                     E-mail
                   </label>
                   <input
@@ -1528,13 +1512,13 @@ export default function InventoryScreen({
                       }))
                     }
                     placeholder="pedidos@fornecedor.com.br"
-                    className="h-[38px] w-full rounded-[8px] border border-black/20 bg-white px-3 text-[13px] text-black focus:border-[#203f9f] focus:outline-none"
+                    className="h-[36px] w-full rounded-[6px] border border-slate-300 bg-white px-3 text-[12px] text-slate-800 focus:border-[#203f9f] focus:outline-none"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="mb-1 block text-[13px] font-semibold text-black">
+                <label className="mb-1 block text-[12px] font-semibold text-slate-800">
                   Observações (Prazo, dia de visita)
                 </label>
                 <input
@@ -1548,30 +1532,30 @@ export default function InventoryScreen({
                     }))
                   }
                   placeholder="Ex: Entrega toda quarta-feira, boleto 28 dias"
-                  className="h-[38px] w-full rounded-[8px] border border-black/20 bg-white px-3 text-[13px] text-black focus:border-[#203f9f] focus:outline-none"
+                  className="h-[36px] w-full rounded-[6px] border border-slate-300 bg-white px-3 text-[12px] text-slate-800 focus:border-[#203f9f] focus:outline-none"
                 />
               </div>
 
               {supplierError && (
-                <p className="text-[12px] font-medium text-[#ff383c]">
+                <p className="text-[11px] font-medium text-rose-600">
                   {supplierError}
                 </p>
               )}
 
-              <footer className="flex items-center justify-end gap-4 border-t border-black/10 pt-3">
+              <footer className="flex items-center justify-end gap-4 pt-2">
                 <button
                   type="button"
                   onClick={() => {
                     setIsSupplierModalOpen(false);
                     setSupplierError(null);
                   }}
-                  className="text-[14px] font-semibold text-black/60 transition-colors hover:text-black"
+                  className="text-[12px] font-semibold text-slate-600 hover:text-slate-900"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="h-[34px] rounded-[8px] bg-[#008f58] px-4 text-[13px] font-semibold text-white transition-colors hover:bg-[#007a4b]"
+                  className="h-[34px] rounded-[6px] bg-[#0f766e] px-4 text-[12px] font-semibold text-white transition-colors hover:bg-[#0d645d]"
                 >
                   {supplierDraft.id ? "Salvar Alterações" : "Salvar Fornecedor"}
                 </button>
@@ -1581,42 +1565,43 @@ export default function InventoryScreen({
         </div>
       )}
 
-      {/* Modal: Excluir Produto */}
+      {/* Modal: Excluir Produto (Screenshot 110215.png) */}
       {deletingProduct && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-[1px]">
           <div
             role="dialog"
             aria-modal="true"
             aria-labelledby={deleteDialogTitleId}
-            className="w-full max-w-[333px] rounded-[15px] bg-white p-6 text-center shadow-2xl"
+            className="w-full max-w-[333px] rounded-[14px] bg-white p-6 text-center shadow-2xl"
           >
-            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-[#ff383c]/10 text-[#ff383c]">
-              <CircleX className="h-8 w-8" />
+            <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full text-rose-500">
+              <XCircleIcon className="h-9 w-9 stroke-[1.5]" />
             </div>
 
             <h2
               id={deleteDialogTitleId}
-              className="text-[20px] font-semibold text-black"
+              className="text-[16px] font-bold text-slate-900"
             >
               Excluir Produto
             </h2>
 
-            <p className="mt-2 text-[13px] leading-snug text-black/60">
-              Atenção: Todos os dados desse produto serão perdidos. Confirmar exclusão?
+            <p className="mt-1.5 text-[11px] leading-snug text-slate-500">
+              Atenção: Todos os dados desse produto serão perdidos. Confirmar
+              exclusão?
             </p>
 
-            <div className="mt-5 flex items-center justify-center gap-3">
+            <div className="mt-5 flex items-center justify-center gap-4">
               <button
                 type="button"
                 onClick={() => setDeletingProduct(null)}
-                className="h-[33px] min-w-[115px] rounded-[8px] border border-black/30 bg-[#d9d9d9]/40 px-4 text-[14px] font-semibold text-black/60 transition-colors hover:bg-black/10"
+                className="text-[12px] font-semibold text-slate-600 hover:text-slate-900"
               >
                 Cancelar
               </button>
               <button
                 type="button"
                 onClick={handleConfirmDeleteProduct}
-                className="h-[33px] min-w-[115px] rounded-[8px] bg-[#ff383c] px-4 text-[14px] font-semibold text-white transition-colors hover:bg-[#e0282c]"
+                className="h-[32px] rounded-[6px] bg-[#ef4444] px-5 text-[12px] font-semibold text-white transition-colors hover:bg-rose-600"
               >
                 Confirmar
               </button>

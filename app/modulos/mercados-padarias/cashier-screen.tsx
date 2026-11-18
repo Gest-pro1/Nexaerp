@@ -2,23 +2,25 @@
 
 import { useEffect, useId, useMemo, useState, type FormEvent } from "react";
 import {
-  AlertTriangle,
-  ArrowDownCircle,
-  ArrowUpCircle,
-  Banknote,
-  BookOpen,
-  Calendar,
-  CheckCircle2,
-  CreditCard,
-  DollarSign,
-  Eye,
-  Lock,
-  Plus,
-  QrCode,
-  ShieldAlert,
-  User,
-  X,
-} from "lucide-react";
+  ArrowDownCircleIcon,
+  ArrowDownLeftIcon,
+  ArrowUpCircleIcon,
+  ArrowUpRightIcon,
+  BanknotesIcon,
+  BookOpenIcon,
+  CheckCircleIcon,
+  ClockIcon,
+  CreditCardIcon,
+  DocumentTextIcon,
+  ExclamationCircleIcon,
+  ExclamationTriangleIcon,
+  EyeIcon,
+  LockClosedIcon,
+  PlusIcon,
+  QrCodeIcon,
+  UserIcon,
+  XMarkIcon,
+} from "@heroicons/react/24/outline";
 
 const brlFormatter = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -57,18 +59,23 @@ export interface ShiftSalesSummary {
 export interface CashierClosingRecord {
   id: string;
   closedAt: string;
+  shiftTimeRange?: string;
   operatorName: string;
+  terminalName?: string;
   initialFund: number;
   totalSales: number;
   expectedDrawer: number;
   physicalCount: number;
   difference: number;
+  statusLabel?: "Aberto" | "Fechado";
   notes?: string;
   movements: CashierMovement[];
 }
 
 export interface CashierScreenProps {
   operatorName?: string;
+  initialIsOpen?: boolean;
+  initialFundAmount?: number;
   initialShiftSales?: ShiftSalesSummary;
   shiftSales?: ShiftSalesSummary;
   initialClosings?: CashierClosingRecord[];
@@ -86,6 +93,8 @@ const DEFAULT_SHIFT_SALES: ShiftSalesSummary = {
 
 export default function CashierScreen({
   operatorName = "João Silva",
+  initialIsOpen = false,
+  initialFundAmount = 0,
   initialShiftSales = DEFAULT_SHIFT_SALES,
   shiftSales: controlledShiftSales,
   initialClosings = [],
@@ -94,9 +103,9 @@ export default function CashierScreen({
 }: CashierScreenProps) {
   const shiftSales = controlledShiftSales ?? initialShiftSales;
 
-  const [isCashierOpen, setIsCashierOpen] = useState(false);
-  const [openedAtTime, setOpenedAtTime] = useState("08:00");
-  const [initialFund, setInitialFund] = useState(0);
+  const [isCashierOpen, setIsCashierOpen] = useState(initialIsOpen);
+  const [openedAtTime, setOpenedAtTime] = useState("13:36:05 (05/03/2026)");
+  const [initialFund, setInitialFund] = useState(initialFundAmount);
 
   // Open cashier modal & 2-step routine state
   const [isOpenModalVisible, setIsOpenModalVisible] = useState(false);
@@ -104,8 +113,8 @@ export default function CashierScreen({
     initialPendingPreviousShift,
   );
   const [previousShiftCountInput, setPreviousShiftCountInput] =
-    useState("250.00");
-  const [openingFundInput, setOpeningFundInput] = useState("0.00");
+    useState("300.00");
+  const [openingFundInput, setOpeningFundInput] = useState("100.00");
 
   // Movements (Sangria / Suprimento) state
   const [movements, setMovements] = useState<CashierMovement[]>([]);
@@ -208,7 +217,7 @@ export default function CashierScreen({
     const day = String(now.getDate()).padStart(2, "0");
     const month = String(now.getMonth() + 1).padStart(2, "0");
     const year = now.getFullYear();
-    return `${day}/${month}/${year}`;
+    return `Hoje (${day}/${month}/${year})`;
   }, []);
 
   const handleOpenCashierModal = () => {
@@ -221,25 +230,20 @@ export default function CashierScreen({
   ) => {
     event.preventDefault();
     const counted = Number(previousShiftCountInput.replace(",", "."));
-    const safeCount = Number.isFinite(counted) && counted >= 0 ? counted : 250;
+    const safeCount = Number.isFinite(counted) && counted >= 0 ? counted : 300;
     const prevRecord: CashierClosingRecord = {
       id: `close-prev-${Date.now()}`,
-      closedAt: "Ontem, 22:15",
-      operatorName,
-      initialFund: 100,
-      totalSales: 150,
-      expectedDrawer: 250,
+      closedAt: "29/10/2026",
+      shiftTimeRange: "07:05 - 18:00",
+      operatorName: "João Silva",
+      terminalName: "Caixa 01",
+      initialFund: 300,
+      totalSales: 0,
+      expectedDrawer: 300,
       physicalCount: safeCount,
-      difference: Number((safeCount - 250).toFixed(2)),
-      movements: [
-        {
-          id: "m-prev-1",
-          type: "sale",
-          amount: 150,
-          reason: "Vendas em dinheiro do turno anterior",
-          createdAt: "Ontem, 18:30",
-        },
-      ],
+      difference: Number((safeCount - 300).toFixed(2)),
+      statusLabel: "Fechado",
+      movements: [],
     };
     setClosingHistory((curr) => [prevRecord, ...curr]);
     setHasPendingPreviousShift(false);
@@ -288,12 +292,9 @@ export default function CashierScreen({
     }
 
     const now = new Date();
-    const createdAt = `${String(now.getDate()).padStart(2, "0")}/${String(
-      now.getMonth() + 1,
-    ).padStart(2, "0")}/${now.getFullYear()}, ${String(now.getHours()).padStart(
-      2,
-      "0",
-    )}:${String(now.getMinutes()).padStart(2, "0")}`;
+    const createdAt = `${String(now.getHours()).padStart(2, "0")}:${String(
+      now.getMinutes(),
+    ).padStart(2, "0")}:${String(now.getSeconds()).padStart(2, "0")}`;
 
     const newMovement: CashierMovement = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
@@ -330,12 +331,15 @@ export default function CashierScreen({
     const newRecord: CashierClosingRecord = {
       id: `${Date.now()}`,
       closedAt: `${datePart}, ${timePart}`,
+      shiftTimeRange: `${openedAtTime} - ${timePart}`,
       operatorName,
+      terminalName: "Caixa 01",
       initialFund,
       totalSales: totalSoldInShift,
       expectedDrawer: expectedCashInDrawer,
       physicalCount: parsedCountedDrawer,
       difference: drawerDifference,
+      statusLabel: "Fechado",
       notes: closingNotesInput.trim() || undefined,
       movements: [...movements],
     };
@@ -349,15 +353,16 @@ export default function CashierScreen({
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-[1250px] flex-col gap-5">
+    <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-4">
       {/* Header */}
       <header className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-[28px] font-semibold tracking-tight text-black">
+          <h1 className="text-[20px] font-bold tracking-tight text-[#203f9f]">
             Controle de Turno &amp; Fechamento de Caixa
           </h1>
-          <p className="text-[13px] text-black/60">
-            Abertura de caixa, sangrias de segurança, suprimento de troco e conciliação de valores.
+          <p className="text-[11px] text-slate-400">
+            Abertura de caixa, sangrias de segurança, suprimento de troco e
+            conciliação de valores.
           </p>
         </div>
 
@@ -365,9 +370,9 @@ export default function CashierScreen({
           <button
             type="button"
             onClick={handleOpenCloseCashierModal}
-            className="inline-flex h-[41px] items-center gap-2 rounded-[8px] bg-[#008f58] px-4 text-[15px] font-semibold text-white shadow-sm transition-colors hover:bg-[#007a4b]"
+            className="inline-flex h-[36px] items-center gap-2 rounded-[8px] bg-[#008f58] px-4 text-[13px] font-semibold text-white shadow-xs transition-colors hover:bg-[#007a4b]"
           >
-            <Lock className="h-4 w-4" />
+            <LockClosedIcon className="h-4 w-4" />
             <span>Fechar Caixa</span>
           </button>
         )}
@@ -375,175 +380,138 @@ export default function CashierScreen({
 
       {/* Closed Cashier Banner vs Open Cashier Dashboard */}
       {!isCashierOpen ? (
-        <section className="flex min-h-[259px] flex-col items-center justify-center rounded-[15px] border border-[#ff8d28] bg-white px-6 py-8 text-center shadow-[0_1px_3px_rgba(0,0,0,0.08)]">
-          <div className="mb-3.5 flex h-[50px] w-[50px] items-center justify-center rounded-full bg-[#ff8d28]/25 text-[#ff8d28]">
-            <Lock className="h-6 w-6 stroke-[2.2]" />
+        <section className="flex min-h-[195px] flex-col items-center justify-center rounded-[12px] border border-[#ff8d28] bg-white px-6 py-7 text-center shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+          <div className="mb-2.5 text-[#ff8d28]">
+            <LockClosedIcon className="mx-auto h-8 w-8 stroke-[1.8]" />
           </div>
 
-          <h2 className="text-[20px] font-semibold text-black">
+          <h2 className="text-[18px] font-bold text-[#203f9f]">
             O caixa está fechado no momento
           </h2>
-          <p className="mt-1 max-w-md text-[12px] font-semibold text-[#ff8d28]">
-            Abra o turno informando o fundo de troco inicial para registrar vendas.
+          <p className="mt-0.5 max-w-md text-[11px] font-medium text-[#ff8d28]">
+            Abra o turno informando o fundo de troco inicial para registrar
+            vendas.
           </p>
 
           <button
             type="button"
             onClick={handleOpenCashierModal}
-            className="mt-5 inline-flex h-[41px] items-center justify-center rounded-[8px] bg-[#008f58] px-6 text-[16px] font-semibold text-white shadow-sm transition-colors hover:bg-[#007a4b]"
+            className="mt-4 inline-flex h-[36px] items-center justify-center rounded-[8px] bg-[#008f58] px-5 text-[13px] font-semibold text-white shadow-xs transition-colors hover:bg-[#007a4b]"
           >
             Abrir Caixa Agora
           </button>
         </section>
       ) : (
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3.5">
           {/* Active Shift Status Card */}
-          <section className="flex flex-wrap items-center justify-between gap-4 rounded-[8px] border border-[#008f58] bg-white px-5 py-4 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
-            <div className="flex items-center gap-3.5">
-              <div className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-[8px] bg-[#008f58]/20 text-[#008f58]">
-                <CheckCircle2 className="h-6 w-6" />
+          <section className="flex flex-wrap items-center justify-between gap-4 rounded-[10px] border border-[#008f58] bg-white px-5 py-3.5 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] text-[#008f58]">
+                <LockClosedIcon className="h-6 w-6 stroke-[1.8]" />
               </div>
 
               <div>
-                <div className="flex flex-wrap items-center gap-2.5">
-                  <h2 className="text-[18px] font-semibold text-black">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="text-[16px] font-bold text-slate-900">
                     Turno em Operação
                   </h2>
-                  <span className="rounded-[8px] bg-[#008f58]/20 px-2.5 py-0.5 text-[11px] font-semibold text-[#008f58]">
+                  <span className="rounded-full border border-[#008f58]/40 bg-[#e6f9f1] px-2.5 py-0.5 text-[10px] font-semibold text-[#008f58]">
                     Caixa Aberto
                   </span>
                 </div>
-                <p className="mt-0.5 text-[12px] font-medium text-black/60">
-                  Operador: {operatorName} &nbsp;&nbsp; Abertura às{" "}
+                <p className="mt-0.5 text-[11px] font-medium text-[#008f58]">
+                  Operador: {operatorName} &nbsp;•&nbsp; Abertura às{" "}
                   {openedAtTime}
                 </p>
               </div>
             </div>
 
             <div className="text-right">
-              <span className="block text-[12px] font-semibold text-black/55">
+              <span className="block text-[11px] font-semibold text-slate-600">
                 Fundo de Troco Inicial
               </span>
-              <span className="text-[20px] font-semibold text-black">
+              <span className="text-[16px] font-bold text-[#008f58]">
                 {formatCurrency(initialFund)}
               </span>
             </div>
           </section>
 
-          {/* 4 Payment Method Summary Cards */}
-          <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {/* Lucro Total / Vendas no Turno */}
-            <article className="relative min-h-[121px] overflow-hidden rounded-[8px] bg-white p-4 pl-6 shadow-[0_1px_3px_rgba(0,0,0,0.12)]">
-              <div className="absolute inset-y-0 left-0 w-[9px] bg-[#008f58]" />
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <h3 className="text-[12px] font-semibold text-black/60">
-                    Lucro Total
-                  </h3>
-                  <p className="mt-1.5 text-[20px] font-semibold text-black">
-                    {formatCurrency(totalSoldInShift)}
-                  </p>
-                </div>
-                <div className="flex h-[32px] w-[32px] items-center justify-center rounded-[8px] bg-[#34c759]/20 text-[#008f58]">
-                  <DollarSign className="h-4 w-4" />
-                </div>
-              </div>
-              <p className="mt-3 text-[11px] font-medium text-black/45">
-                Soma de todos os meios no turno
+          {/* 4 Payment Method Summary Cards (Clean White Cards - Screenshot 105815.png) */}
+          <section className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
+            <article className="flex min-h-[104px] flex-col justify-between rounded-[10px] border border-slate-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+              <h3 className="text-[12px] font-semibold text-slate-700">
+                Lucro Total
+              </h3>
+              <p className="my-1 font-mono text-[22px] font-bold text-[#008f58]">
+                {formatCurrency(totalSoldInShift)}
+              </p>
+              <p className="text-[11px] font-medium text-[#008f58]">
+                Vendas totais
               </p>
             </article>
 
-            {/* Vendas em Pix */}
-            <article className="relative min-h-[121px] overflow-hidden rounded-[8px] bg-white p-4 pl-6 shadow-[0_1px_3px_rgba(0,0,0,0.12)]">
-              <div className="absolute inset-y-0 left-0 w-[9px] bg-[#ff8d28]" />
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <h3 className="text-[12px] font-semibold text-black/60">
-                    Vendas em Pix
-                  </h3>
-                  <p className="mt-1.5 text-[20px] font-semibold text-black">
-                    {formatCurrency(shiftSales.pixSales)}
-                  </p>
-                </div>
-                <div className="flex h-[32px] w-[32px] items-center justify-center rounded-[8px] bg-[#ff8d28]/25 text-[#ff8d28]">
-                  <QrCode className="h-4 w-4" />
-                </div>
-              </div>
-              <p className="mt-3 text-[11px] font-medium text-black/45">
-                Cai direto na conta bancária
+            <article className="flex min-h-[104px] flex-col justify-between rounded-[10px] border border-slate-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+              <h3 className="text-[12px] font-semibold text-slate-700">
+                Vendas em Pix
+              </h3>
+              <p className="my-1 font-mono text-[22px] font-bold text-[#ff6b00]">
+                {formatCurrency(shiftSales.pixSales)}
+              </p>
+              <p className="text-[11px] font-medium text-[#ff6b00]">
+                Creditado em conta
               </p>
             </article>
 
-            {/* Cartões (Débito / Crédito) */}
-            <article className="relative min-h-[121px] overflow-hidden rounded-[8px] bg-white p-4 pl-6 shadow-[0_1px_3px_rgba(0,0,0,0.12)]">
-              <div className="absolute inset-y-0 left-0 w-[9px] bg-[#0088ff]" />
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <h3 className="text-[12px] font-semibold text-black/60">
-                    Cartões (Débito / Crédito)
-                  </h3>
-                  <p className="mt-1.5 text-[20px] font-semibold text-black">
-                    {formatCurrency(shiftSales.cardSales)}
-                  </p>
-                </div>
-                <div className="flex h-[32px] w-[32px] items-center justify-center rounded-[8px] bg-[#0088ff]/20 text-[#0088ff]">
-                  <CreditCard className="h-4 w-4" />
-                </div>
-              </div>
-              <p className="mt-3 text-[11px] font-medium text-black/45">
-                Conferir comprovantes da maquininha
+            <article className="flex min-h-[104px] flex-col justify-between rounded-[10px] border border-slate-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+              <h3 className="text-[12px] font-semibold text-slate-700">
+                Cartões (Débito / Crédito)
+              </h3>
+              <p className="my-1 font-mono text-[22px] font-bold text-[#153488]">
+                {formatCurrency(shiftSales.cardSales)}
+              </p>
+              <p className="text-[11px] font-medium text-[#153488]">
+                Transações via maquininha
               </p>
             </article>
 
-            {/* Lançado na Caderneta */}
-            <article className="relative min-h-[121px] overflow-hidden rounded-[8px] bg-white p-4 pl-6 shadow-[0_1px_3px_rgba(0,0,0,0.12)]">
-              <div className="absolute inset-y-0 left-0 w-[9px] bg-[#ac7f5e]" />
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <h3 className="text-[12px] font-semibold text-black/60">
-                    Lançado na Caderneta
-                  </h3>
-                  <p className="mt-1.5 text-[20px] font-semibold text-black">
-                    {formatCurrency(shiftSales.bookletSales)}
-                  </p>
-                </div>
-                <div className="flex h-[32px] w-[32px] items-center justify-center rounded-[8px] bg-[#ac7f5e]/25 text-[#ac7f5e]">
-                  <BookOpen className="h-4 w-4" />
-                </div>
-              </div>
-              <p className="mt-3 text-[11px] font-medium text-black/45">
-                Vendas a prazo no turno
+            <article className="flex min-h-[104px] flex-col justify-between rounded-[10px] border border-slate-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+              <h3 className="text-[12px] font-semibold text-slate-700">
+                Lançado na Caderneta
+              </h3>
+              <p className="my-1 font-mono text-[22px] font-bold text-[#9a3412]">
+                {formatCurrency(shiftSales.bookletSales)}
+              </p>
+              <p className="text-[11px] font-medium text-[#9a3412]">
+                A receber na caderneta
               </p>
             </article>
           </section>
 
-          {/* Sangria & Suprimento Cards */}
-          <section className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          {/* Sangria & Suprimento Cards (Screenshot 105815.png) */}
+          <section className="grid grid-cols-1 gap-3.5 md:grid-cols-2">
             {/* Sangrias Card */}
             <button
               type="button"
               onClick={() => handleOpenMovementModal("withdrawal")}
-              className="flex min-h-[113px] flex-col justify-between rounded-[8px] border border-black/10 bg-white p-4 text-left shadow-[0_1px_2px_rgba(0,0,0,0.06)] transition-colors hover:border-[#cb6f00]/50"
+              className="flex flex-col justify-between rounded-[10px] border border-slate-200/80 bg-white p-3.5 text-left shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-colors hover:border-[#ff8d28]"
             >
               <div className="flex w-full items-center justify-between">
-                <div className="flex items-center gap-2 text-[#cb6f00]">
-                  <ArrowDownCircle className="h-5 w-5" />
-                  <span className="text-[14px] font-semibold">
-                    Sangrias Registradas no Turno
-                  </span>
+                <div className="flex items-center gap-1.5 text-[12px] font-semibold text-slate-800">
+                  <ArrowUpRightIcon className="h-4 w-4 text-[#ff6b00]" />
+                  <span>Sangrias Registradas no Turno</span>
                 </div>
-                <span className="inline-flex h-7 w-7 items-center justify-center rounded-[6px] bg-[#cb6f00]/10 text-[#cb6f00]">
-                  <Plus className="h-4 w-4" />
+                <span className="text-[#ff6b00]">
+                  <PlusIcon className="h-4 w-4 stroke-[2.5]" />
                 </span>
               </div>
 
-              <div className="mt-3 flex w-full items-baseline justify-between">
-                <span className="text-[22px] font-semibold text-[#cb6f00]">
-                  -{formatCurrency(totalWithdrawals)}
-                </span>
-                <span className="text-[12px] font-medium text-black/45">
+              <div className="mt-2.5 flex w-full items-center justify-between rounded-[6px] border border-amber-300 bg-amber-50/40 px-3 py-1.5">
+                <span className="text-[11px] font-medium text-slate-600">
                   {withdrawals.length}{" "}
                   {withdrawals.length === 1 ? "movimentação" : "movimentações"}
+                </span>
+                <span className="text-[12px] font-bold text-[#cb6f00]">
+                  -{formatCurrency(totalWithdrawals)}
                 </span>
               </div>
             </button>
@@ -552,27 +520,25 @@ export default function CashierScreen({
             <button
               type="button"
               onClick={() => handleOpenMovementModal("supply")}
-              className="flex min-h-[113px] flex-col justify-between rounded-[8px] border border-black/10 bg-white p-4 text-left shadow-[0_1px_2px_rgba(0,0,0,0.06)] transition-colors hover:border-[#008f58]/50"
+              className="flex flex-col justify-between rounded-[10px] border border-slate-200/80 bg-white p-3.5 text-left shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-colors hover:border-[#008f58]"
             >
               <div className="flex w-full items-center justify-between">
-                <div className="flex items-center gap-2 text-[#008f58]">
-                  <ArrowUpCircle className="h-5 w-5" />
-                  <span className="text-[14px] font-semibold">
-                    Suprimento de Troco no Turno
-                  </span>
+                <div className="flex items-center gap-1.5 text-[12px] font-semibold text-slate-800">
+                  <ArrowDownLeftIcon className="h-4 w-4 text-[#008f58]" />
+                  <span>Suprimento de Troco no Turno</span>
                 </div>
-                <span className="inline-flex h-7 w-7 items-center justify-center rounded-[6px] bg-[#008f58]/10 text-[#008f58]">
-                  <Plus className="h-4 w-4" />
+                <span className="text-[#008f58]">
+                  <PlusIcon className="h-4 w-4 stroke-[2.5]" />
                 </span>
               </div>
 
-              <div className="mt-3 flex w-full items-baseline justify-between">
-                <span className="text-[22px] font-semibold text-[#008f58]">
-                  +{formatCurrency(totalSupplies)}
-                </span>
-                <span className="text-[12px] font-medium text-black/45">
+              <div className="mt-2.5 flex w-full items-center justify-between rounded-[6px] border border-emerald-400 bg-emerald-50/30 px-3 py-1.5">
+                <span className="text-[11px] font-medium text-slate-600">
                   {supplies.length}{" "}
                   {supplies.length === 1 ? "movimentação" : "movimentações"}
+                </span>
+                <span className="text-[12px] font-bold text-[#008f58]">
+                  +{formatCurrency(totalSupplies)}
                 </span>
               </div>
             </button>
@@ -580,37 +546,38 @@ export default function CashierScreen({
         </div>
       )}
 
-      {/* Closing History Table */}
-      <section className="overflow-hidden rounded-[8px] border border-black/10 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.06)]">
-        <div className="flex items-center justify-between border-b border-black/10 px-5 py-3.5">
-          <h2 className="text-[15px] font-semibold text-black">
+      {/* Closing History Table (Screenshots 105807.png & 105815.png) */}
+      <section className="overflow-hidden rounded-[10px] border border-slate-200/80 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+        <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3.5">
+          <h2 className="text-[14px] font-bold text-slate-800">
             Histórico de Fechamento de Caixa
           </h2>
-          <span className="text-[12px] font-semibold text-black/60">
+          <span className="text-[11px] font-semibold text-slate-400">
             {closingHistory.length} fechamento(s)
           </span>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[780px] border-collapse text-left">
+          <table className="w-full min-w-[860px] border-collapse text-left">
             <thead>
-              <tr className="border-b border-black/10 bg-[#f8f9fb] text-[12px] font-semibold text-black">
-                <th className="px-5 py-3">Turno / Data</th>
-                <th className="px-4 py-3">Operador(a)</th>
-                <th className="px-4 py-3">Fundo Uni.</th>
-                <th className="px-4 py-3">Vendas Totais</th>
-                <th className="px-4 py-3">Gaveta Esperada</th>
-                <th className="px-4 py-3">Contagem Física</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-5 py-3 text-right">Ações</th>
+              <tr className="border-b border-slate-100 bg-[#f8fafc] text-[11px] font-semibold text-slate-600">
+                <th className="px-5 py-2.5">Turno / Data</th>
+                <th className="px-4 py-2.5">Operador (a)</th>
+                <th className="px-4 py-2.5">Fundo Uni.</th>
+                <th className="px-4 py-2.5">Vendas Totais</th>
+                <th className="px-4 py-2.5">Gaveta Esperada</th>
+                <th className="px-4 py-2.5">Contagem Física</th>
+                <th className="px-4 py-2.5">Diferença</th>
+                <th className="px-4 py-2.5">Status</th>
+                <th className="px-5 py-2.5 text-right">Ações</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-black/10 text-[13px]">
+            <tbody className="divide-y divide-slate-100 text-[12px]">
               {closingHistory.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={8}
-                    className="px-5 py-9 text-center text-[13px] text-black/50"
+                    colSpan={9}
+                    className="px-5 py-9 text-center text-[12px] text-slate-400"
                   >
                     Nenhum fechamento de caixa registrado.
                   </td>
@@ -621,39 +588,64 @@ export default function CashierScreen({
                   const isShort = record.difference < -0.01;
 
                   return (
-                    <tr key={record.id} className="hover:bg-black/[0.015]">
-                      <td className="px-5 py-3 font-medium text-black/80">
-                        {record.closedAt}
+                    <tr key={record.id} className="hover:bg-slate-50/70">
+                      <td className="px-5 py-3">
+                        <span className="block font-bold text-slate-800">
+                          {record.closedAt}
+                        </span>
+                        {record.shiftTimeRange && (
+                          <span className="text-[10px] text-slate-400">
+                            {record.shiftTimeRange}
+                          </span>
+                        )}
                       </td>
-                      <td className="px-4 py-3 font-semibold text-black">
-                        {record.operatorName}
+                      <td className="px-4 py-3">
+                        <span className="block font-semibold text-slate-800">
+                          {record.operatorName}
+                        </span>
+                        {record.terminalName && (
+                          <span className="text-[10px] text-slate-400">
+                            {record.terminalName}
+                          </span>
+                        )}
                       </td>
-                      <td className="px-4 py-3 text-black/75">
+                      <td className="px-4 py-3 text-slate-700">
                         {formatCurrency(record.initialFund)}
                       </td>
-                      <td className="px-4 py-3 font-semibold text-[#008f58]">
+                      <td className="px-4 py-3 font-bold text-[#008f58]">
                         {formatCurrency(record.totalSales)}
                       </td>
-                      <td className="px-4 py-3 font-semibold text-black">
+                      <td className="px-4 py-3 font-medium text-slate-700">
                         {formatCurrency(record.expectedDrawer)}
                       </td>
-                      <td className="px-4 py-3 font-semibold text-black">
+                      <td className="px-4 py-3 font-medium text-slate-700">
                         {formatCurrency(record.physicalCount)}
                       </td>
                       <td className="px-4 py-3">
                         {isExact ? (
-                          <span className="inline-flex items-center gap-1 rounded-[5px] bg-[#34c759]/20 px-2.5 py-0.5 text-[11px] font-semibold text-[#008f58]">
-                            ✓ Caixa Exato
+                          <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[10px] font-semibold text-[#008f58]">
+                            Exato (R$ 0,00)
                           </span>
                         ) : isShort ? (
-                          <span className="inline-flex items-center gap-1 rounded-[5px] bg-[#ff383c]/15 px-2.5 py-0.5 text-[11px] font-semibold text-[#ff383c]">
-                            Falta ({formatCurrency(record.difference)})
+                          <span className="inline-flex items-center rounded-full border border-rose-200 bg-rose-50 px-2.5 py-0.5 text-[10px] font-semibold text-rose-600">
+                            {formatCurrency(record.difference)}
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 rounded-[5px] bg-[#0088ff]/15 px-2.5 py-0.5 text-[11px] font-semibold text-[#0088ff]">
-                            Sobra (+{formatCurrency(record.difference)})
+                          <span className="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-[10px] font-semibold text-blue-600">
+                            +{formatCurrency(record.difference)}
                           </span>
                         )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-semibold ${
+                            record.statusLabel === "Aberto"
+                              ? "border-emerald-200 bg-emerald-50 text-[#008f58]"
+                              : "border-slate-200 bg-slate-100 text-slate-600"
+                          }`}
+                        >
+                          {record.statusLabel ?? "Fechado"}
+                        </span>
                       </td>
                       <td className="px-5 py-3 text-right">
                         <button
@@ -661,9 +653,9 @@ export default function CashierScreen({
                           onClick={() => setViewingClosingMovements(record)}
                           aria-label={`Ver movimentações do turno ${record.closedAt}`}
                           title="Ver movimentações do caixa"
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-[6px] text-black/60 transition-colors hover:bg-[#203f9f]/10 hover:text-[#203f9f]"
+                          className="inline-flex h-7 w-7 items-center justify-center rounded-md text-slate-600 transition-colors hover:bg-slate-100 hover:text-[#203f9f]"
                         >
-                          <Eye className="h-4 w-4" />
+                          <EyeIcon className="h-4 w-4" />
                         </button>
                       </td>
                     </tr>
@@ -674,21 +666,20 @@ export default function CashierScreen({
           </table>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-black/10 px-5 py-3 text-[12px] text-black/60">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 px-5 py-3 text-[11px] text-slate-500">
           <span>0 de {closingHistory.length} linha(s) selecionadas</span>
 
           <div className="flex items-center gap-2">
             <button
               type="button"
               disabled
-              className="h-7 rounded-[4px] border border-black/10 bg-[#f0f2f5] px-3 text-[12px] font-medium text-black/60 disabled:opacity-60"
+              className="h-7 rounded-[4px] border border-slate-200 bg-slate-50 px-3 text-[11px] font-medium text-slate-400"
             >
               Anterior
             </button>
             <button
               type="button"
-              disabled
-              className="h-7 rounded-[4px] border border-black/10 bg-[#f0f2f5] px-3 text-[12px] font-medium text-black/60 disabled:opacity-60"
+              className="h-7 rounded-[4px] border border-slate-200 bg-slate-100 px-3 text-[11px] font-semibold text-slate-700 hover:bg-slate-200"
             >
               Próximo
             </button>
@@ -696,50 +687,41 @@ export default function CashierScreen({
         </div>
       </section>
 
-      {/* Modal 1: Rotina Diária de Caixa (Etapa 1: Caixa Pendente / Etapa 2: Abertura Hoje) */}
+      {/* Modal 1: Rotina Diária de Caixa (Screenshots 105824.png & 105832.png) */}
       {isOpenModalVisible && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-[1px]">
           <div
             role="dialog"
             aria-modal="true"
             aria-labelledby={openDialogTitleId}
-            className="w-full max-w-[445px] overflow-hidden rounded-[15px] bg-white shadow-2xl"
+            className="w-full max-w-[445px] overflow-hidden rounded-[14px] bg-white shadow-2xl"
           >
-            {/* Clean White Header with Step Indicator */}
-            <header className="flex items-start justify-between border-b border-black/10 px-5 py-4">
+            <header className="flex items-start justify-between px-5 pt-5 pb-3">
               <div>
                 <h2
                   id={openDialogTitleId}
-                  className="text-[20px] font-bold leading-tight text-black"
+                  className="text-[18px] font-bold leading-tight text-slate-900"
                 >
                   Rotina Diária de Caixa
                 </h2>
-                <p className="mt-0.5 text-[12px] text-black/60">
-                  {hasPendingPreviousShift
-                    ? "Etapa 1 de 2: Fechamento pendente do turno anterior."
-                    : "Etapa 2 de 2: Abertura de Caixa para Vendas."}
+                <p className="mt-0.5 text-[11px] text-slate-400">
+                  Etapa 1 de 2: Abertura de Caixa para Vendas.
                 </p>
               </div>
 
               <div className="flex items-center gap-2">
                 <div className="flex items-center gap-1 text-[11px] font-bold">
                   <span
-                    className={`flex h-5 w-5 items-center justify-center rounded-full ${
+                    className={`flex h-5 w-5 items-center justify-center rounded-full border ${
                       hasPendingPreviousShift
-                        ? "bg-[#203f9f] text-white"
-                        : "bg-[#008f58]/20 text-[#008f58]"
+                        ? "border-[#ff6b00] text-[#ff6b00]"
+                        : "border-[#ff6b00] bg-[#ff6b00] text-white"
                     }`}
                   >
                     1
                   </span>
-                  <span className="text-black/30">→</span>
-                  <span
-                    className={`flex h-5 w-5 items-center justify-center rounded-full ${
-                      !hasPendingPreviousShift
-                        ? "bg-[#203f9f] text-white"
-                        : "bg-black/10 text-black/50"
-                    }`}
-                  >
+                  <span className="text-slate-400">→</span>
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full border border-slate-300 text-slate-600">
                     2
                   </span>
                 </div>
@@ -748,9 +730,9 @@ export default function CashierScreen({
                   type="button"
                   onClick={() => setIsOpenModalVisible(false)}
                   aria-label="Fechar modal"
-                  className="rounded-full p-1 text-black/60 transition-colors hover:bg-black/5 hover:text-black"
+                  className="rounded-full p-1 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
                 >
-                  <X className="h-5 w-5" />
+                  <XMarkIcon className="h-5 w-5" />
                 </button>
               </div>
             </header>
@@ -758,103 +740,133 @@ export default function CashierScreen({
             {hasPendingPreviousShift ? (
               <form
                 onSubmit={handleClosePreviousPendingShift}
-                className="space-y-4 p-5"
+                className="space-y-3.5 px-5 pb-5"
               >
-                <div className="flex items-start gap-2.5 rounded-[10px] border border-[#ff8d28] bg-[#ff8d28]/10 p-3">
-                  <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-[#cb6f00]" />
+                <div className="flex items-start gap-2.5 rounded-[8px] border border-[#ff8d28] bg-[#fffbeb] p-3">
+                  <ExclamationTriangleIcon className="mt-0.5 h-4 w-4 shrink-0 text-[#d97706]" />
                   <div>
-                    <p className="text-[13px] font-bold text-[#cb6f00]">
+                    <p className="text-[12px] font-bold text-[#d97706]">
                       Caixa do dia anterior ainda aberto!
                     </p>
-                    <p className="text-[11px] text-black/70">
-                      Confirme a contagem física do turno anterior antes de abrir o caixa de hoje.
+                    <p className="mt-0.5 text-[10px] leading-snug text-slate-600">
+                      Para iniciar as vendas de hoje, é obrigatório encerrar o
+                      caixa anterior aberto em{" "}
+                      <strong className="text-[#d97706]">
+                        29/10/2026 às 07:05
+                      </strong>{" "}
+                      pelo operador <strong>João Silva</strong>.
                     </p>
                   </div>
                 </div>
 
-                <div className="rounded-[10px] border border-black/10 bg-[#f8f9fb] p-3 text-[12px] space-y-1.5">
-                  <p className="font-bold text-black">
-                    Resumo das Vendas do Turno Anterior
+                <div className="rounded-[8px] border border-slate-200 bg-white p-3.5 text-[11px] space-y-2">
+                  <div className="flex justify-between font-bold text-slate-800">
+                    <span>Resumo das Vendas do Turno</span>
+                    <span>Total: R$ 0,00</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 border-y border-slate-100 py-2 text-[10px] text-slate-500">
+                    <div className="flex justify-between">
+                      <span>Dinheiro:</span>
+                      <strong className="text-slate-800">R$ 0,00</strong>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Pix Recebido:</span>
+                      <strong className="text-slate-800">R$ 0,00</strong>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Cartões (C/D):</span>
+                      <strong className="text-slate-800">R$ 0,00</strong>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Caderneta Lançada:</span>
+                      <strong className="text-slate-800">R$ 0,00</strong>
+                    </div>
+                  </div>
+                  <p className="text-[11px] font-semibold text-slate-700">
+                    Fundo Inicial de Troco:
                   </p>
-                  <div className="flex justify-between text-black/70">
-                    <span>Fundo Inicial de Troco</span>
-                    <span className="font-semibold">R$ 100,00</span>
-                  </div>
-                  <div className="flex justify-between text-black/70">
-                    <span>Vendas em Dinheiro</span>
-                    <span className="font-semibold">R$ 150,00</span>
-                  </div>
-                  <div className="flex justify-between border-t border-black/10 pt-1.5 font-bold text-black">
-                    <span>Saldo Esperado em Dinheiro</span>
-                    <span>R$ 250,00</span>
+                  <div className="flex items-center justify-between rounded-[6px] border border-[#00a86b]/40 bg-[#e6f9f1] px-3 py-2 text-[11px] font-bold text-[#008f58]">
+                    <span>Saldo Esperado em Dinheiro:</span>
+                    <span>R$ 300,00</span>
                   </div>
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-[13px] font-semibold text-black">
-                    Dinheiro Contado na Gaveta (R$)
+                  <label className="mb-1 block text-[12px] font-semibold text-slate-700">
+                    Dinheiro Contado na Gaveta
                   </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={previousShiftCountInput}
-                    onChange={(e) => setPreviousShiftCountInput(e.target.value)}
-                    className="h-[42px] w-full rounded-[8px] border border-black/25 bg-white px-3 text-[15px] font-bold text-black focus:border-[#008f58] focus:outline-none"
-                  />
+                  <div className="relative">
+                    <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[13px] font-bold text-slate-400">
+                      R$
+                    </span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={previousShiftCountInput}
+                      onChange={(e) =>
+                        setPreviousShiftCountInput(e.target.value)
+                      }
+                      className="h-[40px] w-full rounded-[8px] border border-slate-300 bg-white pl-9 pr-3 text-[15px] font-bold text-slate-800 focus:border-[#008f58] focus:outline-none"
+                    />
+                  </div>
                 </div>
 
                 <button
                   type="submit"
-                  className="h-[42px] w-full rounded-[8px] bg-[#008f58] text-[14px] font-semibold text-white hover:bg-[#007a4b]"
+                  className="inline-flex h-[40px] w-full items-center justify-center gap-2 rounded-[8px] bg-[#008f58] text-[13px] font-semibold text-white hover:bg-[#007a4b]"
                 >
-                  Fechar Caixa do Dia Anterior
+                  <LockClosedIcon className="h-4 w-4" />
+                  <span>Fechar Caixa do Dia Anterior</span>
+                  <kbd className="rounded bg-white/20 px-1.5 py-0.5 text-[10px]">
+                    Enter
+                  </kbd>
                 </button>
               </form>
             ) : (
               <form
                 onSubmit={handleConfirmOpenCashier}
-                className="space-y-4 p-5"
+                className="space-y-3.5 px-5 pb-5"
               >
-                {/* Info Box */}
-                <div className="rounded-[12px] border border-[#0088ff] bg-[#0088ff]/10 p-3.5">
-                  <p className="text-[13px] font-semibold text-[#203f9f]">
-                    Abertura de Caixa para Vendas de Hoje
-                  </p>
-                  <p className="mt-1 text-[11px] leading-relaxed text-[#203f9f]">
-                    Informe o valor em dinheiro disponível na gaveta para troco no início deste turno.
+                <div className="rounded-[8px] border border-[#3b82f6]/40 bg-[#eff6ff] p-3">
+                  <div className="flex items-center gap-1.5 text-[12px] font-bold text-[#1e40af]">
+                    <LockClosedIcon className="h-4 w-4" />
+                    <span>Abertura de Caixa para Vendas de Hoje</span>
+                  </div>
+                  <p className="mt-1 text-[10px] leading-relaxed text-[#1e40af]">
+                    O caixa anterior está devidamente encerrado. Informe o valor
+                    físico de moedas e cédulas (fundo de troco) para liberar o
+                    balcão.
                   </p>
                 </div>
 
-                {/* Date & Operator */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="rounded-[10px] border border-black/10 bg-[#f0f2f5] p-3">
-                    <div className="flex items-center gap-1.5 text-[11px] font-semibold text-black/55">
-                      <Calendar className="h-3.5 w-3.5" />
-                      <span>Data de Abertura</span>
-                    </div>
-                    <p className="mt-1 text-[13px] font-semibold text-black">
+                <div className="grid grid-cols-2 gap-3 rounded-[8px] border border-slate-200 bg-white p-2.5 text-[11px]">
+                  <div>
+                    <span className="block text-[10px] font-semibold text-slate-500">
+                      Data de Abertura
+                    </span>
+                    <span className="mt-0.5 inline-flex items-center gap-1 font-semibold text-slate-800">
+                      <ClockIcon className="h-3.5 w-3.5 text-[#ff6b00]" />
                       {formattedTodayDate}
-                    </p>
+                    </span>
                   </div>
 
-                  <div className="rounded-[10px] border border-black/10 bg-[#f0f2f5] p-3">
-                    <div className="flex items-center gap-1.5 text-[11px] font-semibold text-black/55">
-                      <User className="h-3.5 w-3.5" />
-                      <span>Operador responsável</span>
-                    </div>
-                    <p className="mt-1 text-[13px] font-semibold text-black">
+                  <div>
+                    <span className="block text-[10px] font-semibold text-slate-500">
+                      Operador responsável
+                    </span>
+                    <span className="mt-0.5 inline-flex items-center gap-1 font-semibold text-slate-800">
+                      <UserIcon className="h-3.5 w-3.5 text-[#203f9f]" />
                       {operatorName}
-                    </p>
+                    </span>
                   </div>
                 </div>
 
-                {/* Initial Fund Input */}
                 <div>
-                  <label className="mb-1.5 block text-[14px] font-semibold text-black">
+                  <label className="mb-1 block text-[12px] font-semibold text-slate-700">
                     Fundo Inicial de Troco:
                   </label>
                   <div className="relative">
-                    <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] font-semibold text-black/45">
+                    <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[14px] font-bold text-slate-400">
                       R$
                     </span>
                     <input
@@ -866,47 +878,62 @@ export default function CashierScreen({
                       onChange={(event) =>
                         setOpeningFundInput(event.target.value)
                       }
-                      className="h-[46px] w-full rounded-[10px] border border-black/25 bg-white pl-11 pr-4 text-[18px] font-semibold text-black focus:border-[#008f58] focus:outline-none"
+                      className="h-[42px] w-full rounded-[8px] border border-[#008f58] bg-white pl-10 pr-3 text-[16px] font-bold text-slate-800 focus:outline-none"
                     />
                   </div>
 
-                  {/* Quick Amount Pills */}
                   <div className="mt-2.5 grid grid-cols-4 gap-2">
-                    {QUICK_OPENING_AMOUNTS.map(({ amount, shortcut }) => (
-                      <button
-                        key={amount}
-                        type="button"
-                        onClick={() => setOpeningFundInput(amount.toFixed(2))}
-                        className="flex h-[28px] items-center justify-center gap-1 rounded-[5px] border border-black/20 bg-[#f0f2f5] text-[11px] font-semibold text-black/75 transition-colors hover:bg-black/10"
-                      >
-                        <span>R$ {amount},00</span>
-                        <span className="text-[10px] text-black/45">
-                          [{shortcut}]
-                        </span>
-                      </button>
-                    ))}
+                    {QUICK_OPENING_AMOUNTS.map(({ amount, shortcut }) => {
+                      const isPicked =
+                        Number(openingFundInput.replace(",", ".")) === amount;
+                      return (
+                        <button
+                          key={amount}
+                          type="button"
+                          onClick={() => setOpeningFundInput(amount.toFixed(2))}
+                          className={`flex h-[42px] flex-col items-center justify-center rounded-[8px] border text-[11px] font-semibold transition-colors ${
+                            isPicked
+                              ? "border-[#008f58] bg-[#008f58] text-white"
+                              : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                          }`}
+                        >
+                          <span>R$ {amount},00</span>
+                          <span
+                            className={`mt-0.5 rounded px-1 text-[9px] ${
+                              isPicked
+                                ? "bg-white/20 text-white"
+                                : "border border-slate-200 text-slate-400"
+                            }`}
+                          >
+                            {shortcut}
+                          </span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
-                {/* Actions */}
-                <div className="space-y-2.5 pt-1">
+                <div className="space-y-2 pt-1">
                   <button
                     type="submit"
-                    className="flex h-[42px] w-full items-center justify-center gap-2 rounded-[8px] bg-[#008f58] text-[15px] font-semibold text-white shadow-sm transition-colors hover:bg-[#007a4b]"
+                    className="flex h-[40px] w-full items-center justify-center gap-2 rounded-[8px] bg-[#008f58] text-[13px] font-semibold text-white shadow-xs transition-colors hover:bg-[#007a4b]"
                   >
+                    <LockClosedIcon className="h-4 w-4" />
                     <span>Abrir Caixa e Iniciar Vendas</span>
-                    <span className="rounded bg-white/20 px-1.5 py-0.5 text-[11px]">
-                      [Enter]
-                    </span>
+                    <kbd className="rounded bg-white/20 px-1.5 py-0.5 text-[10px]">
+                      Enter
+                    </kbd>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setIsOpenModalVisible(false)}
-                    className="flex h-[38px] w-full items-center justify-center gap-1.5 rounded-[8px] border border-black/10 bg-[#f0f2f5] text-[13px] font-semibold text-black/65 transition-colors hover:bg-black/10"
+                    className="flex h-[36px] w-full items-center justify-center gap-1.5 rounded-[8px] border border-slate-200 bg-white text-[12px] font-semibold text-slate-700 transition-colors hover:bg-slate-50"
                   >
                     <span>Cancelar e Retornar ao PDV</span>
-                    <span className="text-[11px] text-black/45">[Esc]</span>
+                    <kbd className="rounded border border-slate-200 px-1.5 py-0.5 text-[10px] text-slate-400">
+                      Esc
+                    </kbd>
                   </button>
                 </div>
               </form>
@@ -915,26 +942,26 @@ export default function CashierScreen({
         </div>
       )}
 
-      {/* Modal 2: Registrar Sangria / Suprimento (Nodes 1164:2873 & 1165:3182) */}
+      {/* Modal 2: Sangria de Caixa / Suprimento de Caixa (Screenshots 105844.png & 105851.png) */}
       {activeMovementModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-[1px]">
           <div
             role="dialog"
             aria-modal="true"
             aria-labelledby={movementDialogTitleId}
-            className="w-full max-w-[443px] overflow-hidden rounded-[15px] bg-white shadow-2xl"
+            className="w-full max-w-[420px] overflow-hidden rounded-[14px] bg-white shadow-2xl"
           >
-            <header className="flex items-start justify-between border-b border-black/10 px-5 py-4">
+            <header className="flex items-start justify-between px-5 pt-5 pb-2">
               <div>
                 <h2
                   id={movementDialogTitleId}
-                  className="text-[18px] font-bold text-black"
+                  className="text-[18px] font-bold text-slate-900"
                 >
                   {activeMovementModal === "withdrawal"
                     ? "Registrar Sangria (Retirada)"
                     : "Registrar Suprimento (Entrada de Troco)"}
                 </h2>
-                <p className="mt-0.5 text-[12px] text-black/55">
+                <p className="mt-0.5 text-[11px] text-slate-400">
                   {activeMovementModal === "withdrawal"
                     ? "Retire dinheiro do caixa registrando o motivo."
                     : "Adicione dinheiro ao caixa registrando o motivo."}
@@ -947,18 +974,18 @@ export default function CashierScreen({
                   setMovementError(null);
                 }}
                 aria-label="Fechar modal"
-                className="rounded-full p-1 text-black/60 transition-colors hover:bg-black/5 hover:text-black"
+                className="rounded-full p-1 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
               >
-                <X className="h-5 w-5" />
+                <XMarkIcon className="h-4 w-4" />
               </button>
             </header>
 
             <form
               onSubmit={handleConfirmMovement}
-              className="space-y-4 px-5 py-4"
+              className="space-y-3.5 px-5 py-4"
             >
               <div>
-                <label className="mb-1 block text-[13px] font-semibold text-black">
+                <label className="mb-1 block text-[12px] font-semibold text-slate-800">
                   Valor (R$) *
                 </label>
                 <input
@@ -971,13 +998,13 @@ export default function CashierScreen({
                     setMovementAmountInput(event.target.value)
                   }
                   placeholder="0,00"
-                  className="h-[42px] w-full rounded-[8px] border border-black/25 bg-white px-3 text-[16px] font-semibold text-black focus:border-[#008f58] focus:outline-none"
+                  className="h-[40px] w-full rounded-[8px] border border-slate-300 bg-white px-3 text-[14px] font-medium text-slate-800 focus:border-[#0f766e] focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="mb-1 block text-[13px] font-semibold text-black">
-                  Descrição / Motivo *
+                <label className="mb-1 block text-[12px] font-semibold text-slate-800">
+                  Descrição *
                 </label>
                 <input
                   type="text"
@@ -988,63 +1015,55 @@ export default function CashierScreen({
                   }
                   placeholder={
                     activeMovementModal === "withdrawal"
-                      ? "Ex: Depósito bancário, pagamento fornecedor..."
-                      : "Ex: Troco adicional em moedas e notas..."
+                      ? "Ex: depósito bancário"
+                      : "Ex: Troco adicional"
                   }
-                  className="h-[42px] w-full rounded-[8px] border border-black/25 bg-white px-3 text-[13px] text-black placeholder:text-black/40 focus:border-[#008f58] focus:outline-none"
+                  className="h-[40px] w-full rounded-[8px] border border-slate-300 bg-white px-3 text-[13px] text-slate-800 placeholder:text-slate-400 focus:border-[#0f766e] focus:outline-none"
                 />
               </div>
 
               {movementError && (
-                <p className="text-[12px] font-medium text-[#ff383c]">
+                <p className="text-[11px] font-medium text-rose-600">
                   {movementError}
                 </p>
               )}
 
-              <div className="flex items-center justify-end gap-3 pt-1">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveMovementModal(null);
-                    setMovementError(null);
-                  }}
-                  className="text-[14px] font-semibold text-black/55 hover:text-black"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="h-[38px] rounded-[8px] bg-[#008f58] px-5 text-[14px] font-semibold text-white transition-colors hover:bg-[#007a4b]"
-                >
+              <button
+                type="submit"
+                className="mt-1 inline-flex h-[38px] w-full items-center justify-center gap-1.5 rounded-[8px] bg-[#0f766e] text-[13px] font-semibold text-white transition-colors hover:bg-[#0d645d]"
+              >
+                <CheckCircleIcon className="h-4 w-4" />
+                <span>
                   {activeMovementModal === "withdrawal"
                     ? "Confirmar Sangria"
                     : "Confirmar Suprimento"}
-                </button>
-              </div>
+                </span>
+              </button>
             </form>
           </div>
         </div>
       )}
 
-      {/* Modal 3: Fechamento de Caixa (Node 1146:2822) */}
+      {/* Modal 3: Fechamento de Caixa (Screenshot 105837.png) */}
       {isCloseModalVisible && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-[1px]">
           <div
             role="dialog"
             aria-modal="true"
             aria-labelledby={closeDialogTitleId}
-            className="w-full max-w-[465px] overflow-hidden rounded-[15px] bg-white shadow-2xl"
+            className="w-full max-w-[440px] overflow-hidden rounded-[14px] bg-white shadow-2xl"
           >
-            <header className="flex items-start justify-between border-b border-black/10 px-5 py-4">
+            <header className="flex items-start justify-between px-5 pt-5 pb-3">
               <div>
                 <h2
                   id={closeDialogTitleId}
-                  className="text-[20px] font-bold leading-tight text-black"
+                  className="text-[18px] font-bold leading-tight text-slate-900"
                 >
                   Fechamento de Caixa
                 </h2>
-                <p className="mt-0.5 text-[12px] text-black/55">
-                  Conferência da gaveta física e consolidação de todos os meios de pagamento do turno.
+                <p className="mt-0.5 text-[11px] text-slate-400">
+                  Conferência da gaveta física e consolidação de todos os meios
+                  de pagamento do turno.
                 </p>
               </div>
 
@@ -1052,292 +1071,271 @@ export default function CashierScreen({
                 type="button"
                 onClick={() => setIsCloseModalVisible(false)}
                 aria-label="Fechar modal"
-                className="rounded-full p-1 text-black/60 transition-colors hover:bg-black/5 hover:text-black"
+                className="rounded-full p-1 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
               >
-                <X className="h-5 w-5" />
+                <XMarkIcon className="h-5 w-5" />
               </button>
             </header>
 
             <form
               onSubmit={handleConfirmCloseCashier}
-              className="max-h-[82vh] space-y-3.5 overflow-y-auto px-5 py-4"
+              className="max-h-[82vh] space-y-3 overflow-y-auto px-5 pb-5"
             >
               {/* Total Vendido Card */}
-              <div className="flex items-center justify-between rounded-[10px] border border-black/15 bg-[#f8f9fb] px-4 py-3">
-                <div>
-                  <span className="block text-[12px] font-bold text-black/60">
-                    Total Vendido
-                  </span>
-                  <span className="text-[11px] text-black/45">
-                    {shiftSales.salesCount} venda(s) realizadas
-                  </span>
-                </div>
-                <span className="text-[20px] font-bold text-[#008f58]">
-                  {formatCurrency(totalSoldInShift)}
-                </span>
-              </div>
-
-              {/* Payment Method Breakdown */}
-              <div className="space-y-1.5 rounded-[10px] border border-black/10 bg-white p-3 text-[12px]">
-                <p className="mb-1 text-[11px] font-bold uppercase tracking-wider text-black/50">
-                  Recebimento por Forma de Pagamento
-                </p>
-                <div className="flex justify-between text-black/75">
-                  <span className="flex items-center gap-1.5">
-                    <QrCode className="h-3.5 w-3.5 text-[#ff8d28]" />
-                    Pix
-                  </span>
-                  <span className="font-semibold">
-                    {formatCurrency(shiftSales.pixSales)}
-                  </span>
-                </div>
-                <div className="flex justify-between text-black/75">
-                  <span className="flex items-center gap-1.5">
-                    <Banknote className="h-3.5 w-3.5 text-[#008f58]" />
-                    Dinheiro
-                  </span>
-                  <span className="font-semibold">
-                    {formatCurrency(shiftSales.cashSales)}
-                  </span>
-                </div>
-                <div className="flex justify-between text-black/75">
-                  <span className="flex items-center gap-1.5">
-                    <CreditCard className="h-3.5 w-3.5 text-[#0088ff]" />
-                    Cartões (Débito / Crédito)
-                  </span>
-                  <span className="font-semibold">
-                    {formatCurrency(shiftSales.cardSales)}
-                  </span>
-                </div>
-                <div className="flex justify-between text-black/75">
-                  <span className="flex items-center gap-1.5">
-                    <BookOpen className="h-3.5 w-3.5 text-[#ac7f5e]" />
-                    Caderneta
-                  </span>
-                  <span className="font-semibold">
-                    {formatCurrency(shiftSales.bookletSales)}
-                  </span>
-                </div>
-              </div>
-
-              {/* Drawer Summary */}
-              <div className="space-y-1.5 rounded-[10px] border border-black/15 bg-[#f8f9fb] p-3.5 text-[12px]">
-                <div className="flex items-center justify-between text-black/65">
-                  <span>Fundo de troco abertura</span>
-                  <span className="font-semibold text-black">
-                    {formatCurrency(initialFund)}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-black/65">
-                  <span>(+) Vendas em dinheiro</span>
-                  <span className="font-semibold text-[#008f58]">
-                    +{formatCurrency(shiftSales.cashSales)}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-black/65">
-                  <span>(+) Suprimentos</span>
-                  <span className="font-semibold text-[#008f58]">
-                    +{formatCurrency(totalSupplies)}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-black/65">
-                  <span>(-) Sangrias</span>
-                  <span className="font-semibold text-[#cb6f00]">
-                    -{formatCurrency(totalWithdrawals)}
+              <div className="rounded-[8px] border border-slate-200 bg-white p-3.5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="block text-[11px] font-medium text-slate-500">
+                      Total Vendido
+                    </span>
+                    <strong className="text-[18px] font-bold text-slate-900">
+                      {formatCurrency(totalSoldInShift)}
+                    </strong>
+                  </div>
+                  <span className="text-[10px] text-slate-400">
+                    {shiftSales.salesCount} vendas realizadas
                   </span>
                 </div>
 
-                <div className="my-2 border-t border-black/10" />
+                <div className="mt-3 border-t border-slate-100 pt-2.5 space-y-1.5 text-[11px]">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                    RECEBIMENTO POR FORMA DE PAGAMENTO
+                  </p>
+                  <div className="flex justify-between py-0.5 text-slate-700">
+                    <span className="flex items-center gap-1.5">
+                      <QrCodeIcon className="h-3.5 w-3.5 text-[#008f58]" />
+                      Pix
+                    </span>
+                    <strong className="font-semibold">
+                      {formatCurrency(shiftSales.pixSales)}
+                    </strong>
+                  </div>
+                  <div className="flex justify-between py-0.5 text-slate-700">
+                    <span className="flex items-center gap-1.5">
+                      <BanknotesIcon className="h-3.5 w-3.5 text-[#ff6b00]" />
+                      Dinheiro
+                    </span>
+                    <strong className="font-semibold">
+                      {formatCurrency(shiftSales.cashSales)}
+                    </strong>
+                  </div>
+                  <div className="flex justify-between py-0.5 text-slate-700">
+                    <span className="flex items-center gap-1.5">
+                      <CreditCardIcon className="h-3.5 w-3.5 text-[#153488]" />
+                      Cartões
+                    </span>
+                    <strong className="font-semibold">
+                      {formatCurrency(shiftSales.cardSales)}
+                    </strong>
+                  </div>
+                  <div className="flex justify-between py-0.5 text-slate-700">
+                    <span className="flex items-center gap-1.5">
+                      <BookOpenIcon className="h-3.5 w-3.5 text-[#9a3412]" />
+                      Caderneta
+                    </span>
+                    <strong className="font-semibold">
+                      {formatCurrency(shiftSales.bookletSales)}
+                    </strong>
+                  </div>
+                </div>
 
-                <div className="flex items-center justify-between pt-0.5 text-[13px] font-bold text-black">
-                  <span>Dinheiro esperado na gaveta</span>
-                  <span className="text-[15px]">
-                    {formatCurrency(expectedCashInDrawer)}
-                  </span>
+                {/* Drawer Summary */}
+                <div className="mt-2.5 border-t border-slate-100 pt-2.5 space-y-1 text-[10px] text-slate-500">
+                  <div className="flex justify-between">
+                    <span>Fundo de troco (abertura)</span>
+                    <span>{formatCurrency(initialFund)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Vendas em dinheiro</span>
+                    <span>{formatCurrency(shiftSales.cashSales)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Suprimentos</span>
+                    <span>+{formatCurrency(totalSupplies)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Sangrias</span>
+                    <span>-{formatCurrency(totalWithdrawals)}</span>
+                  </div>
+
+                  <div className="flex justify-between pt-1.5 text-[11px] font-bold text-[#0f766e]">
+                    <span>Dinheiro esperado na gaveta</span>
+                    <span>{formatCurrency(expectedCashInDrawer)}</span>
+                  </div>
                 </div>
               </div>
 
               {/* Physical Count Input */}
               <div>
-                <label className="mb-1 block text-[13px] font-semibold text-black">
+                <label className="mb-1 block text-[12px] font-semibold text-slate-800">
                   Valor contado na gaveta (R$) *
                 </label>
-                <div className="relative">
-                  <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[16px] font-semibold text-black/45">
-                    R$
-                  </span>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    aria-label="Total contado na gaveta"
-                    value={countedDrawerInput}
-                    onChange={(event) =>
-                      setCountedDrawerInput(event.target.value)
-                    }
-                    className="h-[44px] w-full rounded-[10px] border border-black/25 bg-white pl-10 pr-4 text-[17px] font-semibold text-black focus:border-[#008f58] focus:outline-none"
-                  />
-                </div>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  aria-label="Total contado na gaveta"
+                  value={countedDrawerInput}
+                  onChange={(event) =>
+                    setCountedDrawerInput(event.target.value)
+                  }
+                  className="h-[40px] w-full rounded-[8px] border border-slate-300 bg-white px-3 text-[15px] font-semibold text-slate-800 focus:border-[#0f766e] focus:outline-none"
+                />
               </div>
 
               {/* Reconciliation Status Alert */}
               {Math.abs(drawerDifference) < 0.01 ? (
-                <div className="flex items-start gap-2.5 rounded-[10px] border border-[#008f58] bg-[#34c759]/15 p-3">
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#008f58]" />
-                  <div>
-                    <p className="text-[12px] font-semibold text-[#008f58]">
-                      Caixa Exato
-                    </p>
-                    <p className="text-[11px] font-medium text-[#008f58]/90">
-                      A contagem confere perfeitamente com as movimentações.
-                    </p>
-                  </div>
+                <div className="flex items-center gap-2 rounded-[8px] border border-[#00a86b] bg-[#e6f9f1] px-3 py-2 text-[10px]">
+                  <CheckCircleIcon className="h-4 w-4 shrink-0 text-[#008f58]" />
+                  <p className="text-slate-700">
+                    <strong className="font-bold text-[#008f58]">
+                      Caixa Exato:
+                    </strong>{" "}
+                    A contagem confere perfeitamente com as movimentações.
+                  </p>
                 </div>
               ) : (
-                <div className="flex items-start gap-2.5 rounded-[10px] border border-[#ff383c]/40 bg-[#ff383c]/10 p-3">
-                  <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-[#ff383c]" />
-                  <div>
-                    <p className="text-[12px] font-semibold text-[#ff383c]">
-                      {drawerDifference < 0
-                        ? "Falta de caixa"
-                        : "Sobra de caixa"}
-                      : {formatCurrency(drawerDifference)}
-                    </p>
-                    <p className="text-[11px] font-medium text-[#ff383c]/90">
-                      Confira novamente as notas e moedas antes de confirmar o encerramento.
+                <div className="flex items-center justify-between gap-2 rounded-[8px] border border-rose-300 bg-rose-50 px-3 py-2 text-[10px]">
+                  <div className="flex items-center gap-1.5">
+                    <ExclamationCircleIcon className="h-4 w-4 shrink-0 text-rose-600" />
+                    <p className="text-slate-700">
+                      <strong className="font-bold text-rose-600">
+                        {drawerDifference < 0
+                          ? "Falta de caixa:"
+                          : "Sobra de caixa:"}
+                      </strong>{" "}
+                      Falta dinheiro na gaveta em relação ao registrado no
+                      sistema.
                     </p>
                   </div>
+                  <strong className="shrink-0 font-bold text-rose-600">
+                    {formatCurrency(drawerDifference)}
+                  </strong>
                 </div>
               )}
 
               {/* Observações */}
               <div>
-                <label className="mb-1 block text-[12px] font-semibold text-black/75">
-                  Observações (Opcional)
+                <label className="mb-1 block text-[12px] font-semibold text-slate-800">
+                  Observações
                 </label>
                 <input
                   type="text"
                   aria-label="Observações do fechamento"
                   value={closingNotesInput}
                   onChange={(e) => setClosingNotesInput(e.target.value)}
-                  placeholder="Alguma observação sobre o turno..."
-                  className="h-[38px] w-full rounded-[8px] border border-black/20 bg-white px-3 text-[13px] text-black focus:border-[#008f58] focus:outline-none"
+                  placeholder="Opcional"
+                  className="h-[38px] w-full rounded-[8px] border border-slate-300 bg-white px-3 text-[13px] text-slate-800 placeholder:text-slate-400 focus:border-[#0f766e] focus:outline-none"
                 />
               </div>
 
-              {/* Actions */}
-              <div className="flex items-center justify-end gap-4 pt-1">
-                <button
-                  type="button"
-                  onClick={() => setIsCloseModalVisible(false)}
-                  className="text-[14px] font-semibold text-black/60 transition-colors hover:text-black"
-                >
-                  Cancelar
-                </button>
-
-                <button
-                  type="submit"
-                  className="inline-flex h-[40px] items-center gap-2 rounded-[8px] bg-[#008f58] px-4 text-[14px] font-semibold text-white shadow-sm transition-colors hover:bg-[#007a4b]"
-                >
-                  <Lock className="h-4 w-4" />
-                  <span>Confirmar e Encerrar Caixa</span>
-                </button>
-              </div>
+              <button
+                type="submit"
+                className="inline-flex h-[40px] w-full items-center justify-center gap-2 rounded-[8px] bg-[#0f766e] text-[13px] font-semibold text-white shadow-xs transition-colors hover:bg-[#0d645d]"
+              >
+                <LockClosedIcon className="h-4 w-4" />
+                <span>Confirmar e Encerrar Caixa</span>
+                <kbd className="rounded bg-white/20 px-1.5 py-0.5 text-[10px]">
+                  Enter
+                </kbd>
+              </button>
             </form>
           </div>
         </div>
       )}
 
-      {/* Modal 4: Movimentações do Caixa (Node 1373:3645 - Triggered by Eye Icon) */}
+      {/* Modal 4: Movimentações do Caixa (Screenshot 105755.png) */}
       {viewingClosingMovements && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-[1px]">
           <div
             role="dialog"
             aria-modal="true"
             aria-labelledby={historyMovementsTitleId}
-            className="w-full max-w-[445px] overflow-hidden rounded-[15px] bg-white shadow-2xl"
+            className="w-full max-w-[445px] overflow-hidden rounded-[14px] bg-white shadow-2xl"
           >
-            <header className="flex items-start justify-between border-b border-black/10 px-5 py-4">
+            <header className="flex items-start justify-between px-5 pt-5 pb-3">
               <div>
                 <h2
                   id={historyMovementsTitleId}
-                  className="text-[20px] font-bold text-black"
+                  className="text-[18px] font-bold text-slate-900"
                 >
                   Movimentações do Caixa
                 </h2>
-                <p className="text-[12px] text-black/55">
-                  Vendas, sangrias e suprimentos registrados ({viewingClosingMovements.closedAt}).
+                <p className="text-[11px] text-slate-400">
+                  Vendas, sangrias e suprimentos registrados.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setViewingClosingMovements(null)}
                 aria-label="Fechar modal de movimentações"
-                className="rounded-full p-1 text-black/60 transition-colors hover:bg-black/5 hover:text-black"
+                className="rounded-full p-1 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
               >
-                <X className="h-5 w-5" />
+                <XMarkIcon className="h-5 w-5" />
               </button>
             </header>
 
-            <div className="max-h-[65vh] space-y-2.5 overflow-y-auto px-5 py-4">
-              {viewingClosingMovements.movements.length === 0 ? (
-                <p className="py-6 text-center text-[13px] text-black/50">
-                  Nenhuma sangria ou suprimento registrado neste turno.
-                </p>
-              ) : (
-                viewingClosingMovements.movements.map((mov) => {
-                  const isWithdrawal = mov.type === "withdrawal";
-                  const isSupply = mov.type === "supply";
-                  return (
-                    <div
-                      key={mov.id}
-                      className="flex items-center justify-between rounded-[10px] border border-black/10 bg-[#f8f9fb] p-3 text-[13px]"
-                    >
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={`rounded px-2 py-0.5 text-[10px] font-bold uppercase ${
-                              isWithdrawal
-                                ? "bg-[#cb6f00]/15 text-[#cb6f00]"
-                                : isSupply
-                                  ? "bg-[#008f58]/15 text-[#008f58]"
-                                  : "bg-[#203f9f]/15 text-[#203f9f]"
-                            }`}
-                          >
-                            {isWithdrawal
-                              ? "Sangria"
-                              : isSupply
-                                ? "Suprimento"
-                                : "Venda"}
-                          </span>
-                          <span className="font-semibold text-black">
-                            {mov.reason}
-                          </span>
-                        </div>
-                        <p className="mt-1 text-[11px] text-black/50">
-                          {mov.createdAt}
-                        </p>
-                      </div>
-
-                      <span
-                        className={`text-[14px] font-bold ${
-                          isWithdrawal ? "text-[#cb6f00]" : "text-[#008f58]"
-                        }`}
+            <div className="max-h-[62vh] overflow-y-auto px-5 py-2">
+              <div className="divide-y divide-slate-100 rounded-[10px] border border-slate-200 bg-white">
+                {viewingClosingMovements.movements.length === 0 ? (
+                  <p className="py-8 text-center text-[12px] text-slate-400">
+                    Nenhuma movimentação registrada neste turno.
+                  </p>
+                ) : (
+                  viewingClosingMovements.movements.map((mov) => {
+                    const isWithdrawal = mov.type === "withdrawal";
+                    const isSupply = mov.type === "supply";
+                    return (
+                      <div
+                        key={mov.id}
+                        className="flex items-center justify-between px-3.5 py-2.5 text-[12px]"
                       >
-                        {isWithdrawal ? "-" : "+"}
-                        {formatCurrency(mov.amount)}
-                      </span>
-                    </div>
-                  );
-                })
-              )}
+                        <div className="flex items-center gap-2.5">
+                          {isWithdrawal ? (
+                            <ArrowDownCircleIcon className="h-5 w-5 shrink-0 text-rose-500" />
+                          ) : isSupply ? (
+                            <ArrowUpCircleIcon className="h-5 w-5 shrink-0 text-[#008f58]" />
+                          ) : (
+                            <DocumentTextIcon className="h-5 w-5 shrink-0 text-[#008f58]" />
+                          )}
+                          <div>
+                            <p className="font-bold text-slate-800">
+                              {isWithdrawal
+                                ? "Sangria"
+                                : isSupply
+                                  ? "Suprimento"
+                                  : mov.reason}
+                            </p>
+                            <p className="text-[10px] text-slate-400">
+                              {mov.createdAt}
+                              {isWithdrawal || isSupply
+                                ? ` - ${mov.reason}`
+                                : ""}{" "}
+                              - Operador: {viewingClosingMovements.operatorName}
+                            </p>
+                          </div>
+                        </div>
+
+                        <span
+                          className={`text-[12px] font-bold ${
+                            isWithdrawal ? "text-rose-500" : "text-slate-800"
+                          }`}
+                        >
+                          {isWithdrawal ? "-" : ""}
+                          {formatCurrency(mov.amount)}
+                        </span>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
             </div>
 
-            <footer className="border-t border-black/10 px-5 py-3.5">
+            <footer className="px-5 py-4">
               <button
                 type="button"
                 onClick={() => setViewingClosingMovements(null)}
-                className="h-[40px] w-full rounded-[8px] bg-[#008f58] text-[14px] font-semibold text-white transition-colors hover:bg-[#007a4b]"
+                className="h-[40px] w-full rounded-[8px] bg-[#008f58] text-[13px] font-semibold text-white transition-colors hover:bg-[#007a4b]"
               >
                 Fechar Movimentações do Caixa
               </button>
